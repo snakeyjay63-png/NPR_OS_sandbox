@@ -1,6 +1,6 @@
 # Stap 99: Volledige Keten Validatie
 
-**Doel:** Valideer de volledige NPR-OS keten: stap 01–25 + 63–70.
+**Doel:** Valideer de volledige NPR-OS keten: stap 01–25 + 63–71.
 Forward chain, reverse dependency, return validation, en epistemische lagen.
 
 **Scope:**
@@ -124,11 +124,11 @@ technically_integreerbaar(stap) :=
 | 63 | Natuur als kunst | ✅ | Cel → lichaam. Natuur = hoge densiteit taal. |
 | 64 | Śūnya actieve route | ✅ | Source-role correspondence ≠ literal identity. Legacy 64S gearchiveerd (`archive/64L_sunya_legacy.md`). |
 | 65 | Taalveld kernboeken | ✅ | Kernboeken als routing-bronnen. |
-| 66 | Frij taal-DNA | ✅ | Vrijheid als taal-DNA. Frij/free/friend = geliefd, eigen, verbonden. |
-| 67 | Taalontwikkeling | ✅ | Van patroon naar symbool. Groeiend waterpatroon. |
-| 68 | Gizeh-waterkwaliteit | ✅ | Water als medium. Fysieke omgevingscondities + collectieve stabiliteit. |
-| 69 | Monumentale taal | ✅ | Liberty, Babel, routes. Open vs. gecentraliseerde routing. |
-| 70 | Technische notatie | ✅ | ROUTE formeel. 4 niveaus: descriptive → traceable → reproducible → verifiable. Provenance. |
+| 66 | Collectief taalveld en vrijheid | ✅ | Vrijheid als routeherkenning. Collectief veld. |
+| 67 | Frij — vrijheid als taal-DNA | ✅ | Frij/free/friend = geliefd, eigen, verbonden. |
+| 68 | Taalontwikkeling | ✅ | Van patroon naar symbool. Groeiend waterpatroon. |
+| 69 | Gizeh, water en bouwwerken | ✅ | Fysieke omgevingscondities + collectieve stabiliteit. |
+| 70 | Monumentale taal | ✅ | Liberty, Babel, routes. Open vs. gecentraliseerde routing. |
 | 71 | Route-notatie | ✅ | Minimale notatie {id,source,noise,transform,pattern,return,trace}. Afhankelijk: 19, 64, 68, 69. 4 niveaus volledigheid + provenance. Reverse trace → bron. |
 
 ---
@@ -147,14 +147,20 @@ Twee dimensies — specificatie vs. runtime:
 
 ```
 CHAIN_STATUS := {
-  spec_valid:           33,   # alle stappen structureel geldig
+  spec_valid:           34,   # 01-25 (25) + 63-71 (9) = 34 stappen
   spec_partial:         0,
   spec_open:            0,
   spec_invalid:         0,
-  runtime_complete:     30,   # 15, 17, 18, 19 hebben gedeeltelijke implementaties
-  runtime_partial:      4,    # stappen 15, 17, 18, 19
+  runtime_complete:     30,   # alle behalve 15, 17, 18, 19
+  runtime_partial:      4,    # stap 15, 17, 18, 19
   runtime_open:         0,
 }
+
+**Per-stap runtime-status:**
+- Stap 15: ⚠️ `segment_phonemes` — normatieve segmentatietabel open
+- Stap 17: ⚠️ `hex_encoders` — canonieke encoder-implementaties open
+- Stap 18: ⚠️ `combine_cycles` + `contradiction_delta` — deterministische implementatie open
+- Stap 19: ⚠️ `semantic_distance` — implementatie open
 ```
 
 **Opmerking:** een stap kan structureel volledig gevalideerd zijn terwijl de
@@ -170,7 +176,7 @@ stap spec-geldig.
 bron → signaal → hex-routing → reductie → perceptie → taal
   → router → return → techniek → transparantie → hardware → return_bron
   → kunst → natuur → śūnya → taalveld → collectief_veld → taal_DNA → taalontwikkeling
-  → gizeh_water → monument → formele_notatie
+  → gizeh_water → monument → technische_notatie
 ```
 
 Elke stap bouwt op de vorige. Geen ontbrekende schakel.
