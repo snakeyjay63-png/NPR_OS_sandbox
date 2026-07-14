@@ -271,7 +271,7 @@ if (require.main === module) {
   t('कि → [क, इ]', () => eq(segmentPhonemes('कि'), ['क', 'इ']));
   t('क् → [क]', () => eq(segmentPhonemes('क्'), ['क']));
   t('क्त → [क, त, अ]', () => eq(segmentPhonemes('क्त'), ['क', 'त', 'अ']));
-  t('ॐ → [ओ, ँ, म]', () => eq(segmentPhonemes('ॐ'), ['ओ', 'ं', 'म']));
+  t('ॐ → [ओ, ं, म] (omkara: o + anusvāra U+0902 + ma)', () => eq(segmentPhonemes('ॐ'), ['ओ', 'ं', 'म']));
   t('ं → [ं]', () => eq(segmentPhonemes('ं'), ['ं']));
   t('ः → [ः]', () => eq(segmentPhonemes('ः'), ['ः']));
   t('ँ → [ँ]', () => eq(segmentPhonemes('ँ'), ['ँ']));
@@ -282,7 +282,7 @@ if (require.main === module) {
   t('य़ → [य़, अ]', () => eq(segmentPhonemes('य़'), ['य़', 'अ']));
   t('ज़ → [ज़, अ]', () => eq(segmentPhonemes('ज़'), ['ज़', 'अ']));
   t('ड़ि → [ड़, इ] (nukta + matra)', () => eq(segmentPhonemes('ड़ि'), ['ड़', 'इ']));
-  t('ड़क् → [ड़, अ, क] (nukta + virama + conjunct)', () => eq(segmentPhonemes('ड़क्'), ['ड़', 'अ', 'क']));
+  t('ड़क् → [ड़, अ, क] (nukta-consonant + virama-consonant)', () => eq(segmentPhonemes('ड़क्'), ['ड़', 'अ', 'क']));
 
   t('empty → error', () => throwsWith(() => segmentPhonemes(''), 'EMPTY_INPUT'));
   t('latin → error', () => throwsWith(() => segmentPhonemes('hello'), 'UNSUPPORTED'));
