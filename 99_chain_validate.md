@@ -208,7 +208,7 @@ REPRODUCIBILITY:        ✅ (stap 71) — dezelfde invoer → dezelfde uitkomst
 ORIGIN_VERIFICATION:    ✅ (stap 71) — provenance + verifiable
 ```
 
-Stap 70 dekt alle drie:
+Stap 71 dekt alle drie:
 
 ```
 CLOSED_ROUTE :=  visible_pattern + reproducible_output − verifiable_origin
