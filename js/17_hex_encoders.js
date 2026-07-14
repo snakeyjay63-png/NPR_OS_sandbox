@@ -4,6 +4,16 @@
  * input → hex → dr_hex → npr_mod9 → {0..9,A..F} → {1..9}
  */
 
+// --- Strict hex validation ---
+
+function assertValidHex(value) {
+  const stripped = String(value).trim().replace(/^0x/i, '');
+  if (!stripped || !/^[0-9A-Fa-f]+$/.test(stripped)) {
+    throw new Error('INVALID_HEX');
+  }
+  return stripped;
+}
+
 // --- Core ---
 
 function drHex(hexDigits) {
@@ -24,8 +34,8 @@ function nprMod9(dh) {
 }
 
 function hexCanonical(s) {
-  s = (s || '').toString().trim().toUpperCase().replace(/^0X/, '');
-  return s.length % 2 ? '0' + s : s;
+  const clean = assertValidHex(s).toUpperCase();
+  return clean.length % 2 ? '0' + clean : clean;
 }
 
 function result(type, canonical, hex) {
@@ -46,27 +56,48 @@ function encodeUtf8Text(text) {
 
 function encodeInteger(value) {
   const n = Number(value);
-  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) throw new Error('NEGATIVE_INTEGER_UNSUPPORTED');
+  if (!Number.isFinite(n)) throw new Error('INVALID_INTEGER');
+  if (n < 0) throw new Error('NEGATIVE_INTEGER_UNSUPPORTED');
+  if (!Number.isInteger(n)) throw new Error('INVALID_INTEGER');
+  if (n > Number.MAX_SAFE_INTEGER) throw new Error('INTEGER_OUT_OF_RANGE');
   return finish(result('integer', n.toString(), n.toString(16).toUpperCase().padStart(2, '0')));
 }
 
 function encodeTokenId(id) {
   const n = Number(id);
-  if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) throw new Error('INVALID_TOKEN_ID');
-  return encodeInteger(n);
+  if (!Number.isSafeInteger(n) || n < 0) {
+    throw new Error('INVALID_TOKEN_ID');
+  }
+  const hex = n.toString(16).toUpperCase().padStart(2, '0');
+  return finish(result('token_id', n.toString(), hex));
 }
 
 function encodeHexString(hex) {
   if (!hex || hex.toString().trim() === '') throw new Error('EMPTY_INPUT');
-  const s = hex.toString().trim();
-  if (!/^[0-9a-fA-F]+$/.test(s.replace(/^0x/, ''))) throw new Error('INVALID_HEX');
+  const s = assertValidHex(hex);
   const c = hexCanonical(s);
   return finish(result('hex_string', c, c));
+}
+
+function encodeHash(hash, algorithm = 'sha256') {
+  if (!hash || hash.toString().trim() === '') throw new Error('EMPTY_INPUT');
+  const s = assertValidHex(hash);
+  const upper = s.toUpperCase();
+  const algo = (algorithm || 'sha256').toLowerCase();
+  const expectedLengths = { sha1: 40, sha256: 64, sha512: 128 };
+  const expectedLen = expectedLengths[algo];
+  if (!expectedLen) throw new Error('UNSUPPORTED_HASH_ALGORITHM');
+  if (upper.length !== expectedLen) throw new Error(`INVALID_HASH_LENGTH: expected ${expectedLen} for ${algo}, got ${upper.length}`);
+  return finish(result('hash', upper, upper));
 }
 
 function encodeIpv6(addr) {
   if (!addr || addr.toString().trim() === '') throw new Error('EMPTY_INPUT');
   const ip = addr.toString().trim();
+  // Reject zone IDs
+  if (ip.includes('%')) throw new Error('INVALID_IPV6');
+  // Reject multiple ::
+  if ((ip.match(/::/g) || []).length > 1) throw new Error('INVALID_IPV6');
   if (!/^[0-9a-fA-F:]+$/.test(ip)) throw new Error('INVALID_IPV6');
   let exp = ip;
   if (exp.includes('::')) {
@@ -77,16 +108,11 @@ function encodeIpv6(addr) {
   }
   const seg = exp.split(':');
   if (seg.length !== 8) throw new Error('INVALID_IPV6');
+  // Validate each segment: 1-4 hex chars
+  if (!seg.every(s => /^[0-9A-Fa-f]{1,4}$/.test(s))) throw new Error('INVALID_IPV6');
   const h = seg.map(s => s.padStart(4, '0').toUpperCase()).join('');
   if (h.length !== 32) throw new Error('INVALID_IPV6');
   return finish(result('ipv6', ip, h));
-}
-
-function encodeHash(hash) {
-  if (!hash || hash.toString().trim() === '') throw new Error('EMPTY_INPUT');
-  const s = hash.toString().trim();
-  if (!/^[0-9a-fA-F]+$/.test(s.replace(/^0x/, ''))) throw new Error('INVALID_HEX');
-  return finish(result('hash', s.toUpperCase(), s.toUpperCase()));
 }
 
 function reduceHex(hex) {
@@ -97,8 +123,16 @@ function reduceHex(hex) {
 
 // --- Decoders ---
 
-function decodeUtf8Hex(hex) { return Buffer.from(hexCanonical(hex), 'hex').toString('utf-8'); }
-function decodeIntegerHex(hex) { return parseInt(hexCanonical(hex), 16); }
+function decodeUtf8Hex(hex) {
+  const clean = assertValidHex(hex);
+  if (clean.length % 2 !== 0) throw new Error('INVALID_HEX_BYTE_LENGTH');
+  return Buffer.from(clean, 'hex').toString('utf8');
+}
+
+function decodeIntegerHex(hex) {
+  const clean = assertValidHex(hex);
+  return parseInt(clean, 16);
+}
 
 // --- Export ---
 
@@ -114,12 +148,18 @@ if (require.main === module) {
   const P = [], F = [];
   function t(n, fn) { try { fn(); P.push(n); } catch (e) { F.push(n + ': ' + e.message); } }
   function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(m || 'eq'); }
+  function throwsWith(fn, prefix) {
+    let thrown = false;
+    try { fn(); } catch (e) { thrown = true; if (!String(e.message).startsWith(prefix)) throw new Error(`${e.message} does not start with ${prefix}`); }
+    if (!thrown) throw new Error('Expected error');
+  }
 
+  // --- Existing core tests ---
   t('utf8 hello', () => eq(encodeUtf8Text('hello').hex, '68656C6C6F'));
   t('utf8 roundtrip', () => eq(decodeUtf8Hex(encodeUtf8Text('hello world').hex), 'hello world'));
   t('int 12345', () => eq(encodeInteger(12345).hex, '3039'));
   t('int 0', () => eq(encodeInteger(0).hex, '00'));
-  t('int neg', () => { try { encodeInteger(-1); throw 0; } catch (e) { if (!e) throw new Error('no throw'); } });
+  t('int neg', () => throwsWith(() => encodeInteger(-1), 'NEGATIVE_INTEGER'));
   t('token 12345', () => eq(encodeTokenId(12345).hex, '3039'));
   t('hex 0000 dr=0', () => eq(encodeHexString('0000').drHex, '0'));
   t('hex F dr=F mod9=6', () => { const r = encodeHexString('F'); eq(r.drHex, 'F'); eq(r.mod9, 6); });
@@ -131,6 +171,44 @@ if (require.main === module) {
   t('drHex 3039', () => eq(drHex('3039'.split('')), 'F'));
   t('nprMod9', () => { eq(nprMod9('0'), 9); eq(nprMod9('1'), 1); eq(nprMod9('F'), 6); });
 
-  console.log(`Stap 17 tests: ${P}/${P + F.length} ✅`);
+  // --- Issue 1: encodeTokenId preserves type ---
+  t('token_id inputType', () => eq(encodeTokenId(12345).inputType, 'token_id'));
+
+  // --- Issue 3: distinct error names ---
+  t('int float → INVALID_INTEGER', () => throwsWith(() => encodeInteger(1.5), 'INVALID_INTEGER'));
+  t('int NaN → INVALID_INTEGER', () => throwsWith(() => encodeInteger(NaN), 'INVALID_INTEGER'));
+  t('int Infinity → INVALID_INTEGER', () => throwsWith(() => encodeInteger(Infinity), 'INVALID_INTEGER'));
+  t('int MAX_SAFE+1 → INTEGER_OUT_OF_RANGE', () => throwsWith(() => encodeInteger(Number.MAX_SAFE_INTEGER + 10), 'INTEGER_OUT_OF_RANGE'));
+
+  // --- Issue 4: 0X prefix case insensitive ---
+  t('0X prefix accepted', () => eq(encodeHexString('0XAB').hex, encodeHexString('0xab').hex));
+
+  // --- Issue 5: reduceHex validates ---
+  t('reduceHex invalid → INVALID_HEX', () => throwsWith(() => reduceHex('XYZ'), 'INVALID_HEX'));
+
+  // --- Issue 6: decoder validates ---
+  t('decodeUtf8Hex odd length → INVALID_HEX_BYTE_LENGTH', () => throwsWith(() => decodeUtf8Hex('ABC'), 'INVALID_HEX_BYTE_LENGTH'));
+  t('decodeUtf8Hex invalid chars', () => throwsWith(() => decodeUtf8Hex('GGGG'), 'INVALID_HEX'));
+  t('decodeIntegerHex invalid chars', () => throwsWith(() => decodeIntegerHex('ZZZ'), 'INVALID_HEX'));
+
+  // --- Issue 7: hash length validation ---
+  t('hash wrong length → INVALID_HASH_LENGTH', () => throwsWith(() => encodeHash('AB'), 'INVALID_HASH_LENGTH'));
+  t('hash sha1 length', () => { const h = 'a'.repeat(40); const r = encodeHash(h, 'sha1'); eq(r.hex.length, 40); });
+  t('hash sha512 length', () => { const h = 'f'.repeat(128); const r = encodeHash(h, 'sha512'); eq(r.hex.length, 128); });
+  t('hash unsupported algo', () => throwsWith(() => encodeHash('a'.repeat(64), 'md5'), 'UNSUPPORTED_HASH_ALGORITHM'));
+
+  // --- Issue 8: IPv6 edge cases ---
+  t('ipv6 multiple ::', () => throwsWith(() => encodeIpv6('::1::2'), 'INVALID_IPV6'));
+  t('ipv6 segment > 4 chars', () => throwsWith(() => encodeIpv6('2001:0DB8:0000:0000:0000:0000:0000:12345'), 'INVALID_IPV6'));
+  t('ipv6 zone ID', () => throwsWith(() => encodeIpv6('::1%eth0'), 'INVALID_IPV6'));
+
+  // --- NFC equivalence ---
+  t('NFC equivalence', () => {
+    const eacute = '\u00E9'; // precomposed é
+    const e_acute = 'e\u0301'; // e + combining acute
+    eq(encodeUtf8Text(eacute).hex, encodeUtf8Text(e_acute).hex);
+  });
+
+  console.log(`Stap 17 tests: ${P.length}/${P.length + F.length} ✅`);
   if (F.length) F.forEach(f => console.log(`  ❌ ${f}`));
 }
