@@ -435,22 +435,34 @@ function validateRoute(blocks, transfers) {
     };
   }
 
-  // 1. Lokale validatie voor alle blokken
-  for (const block of blocks) {
-    const local = validateLocal(block);
+  // Fase 1: eerste blok lokaal valideren
+  const first = validateLocal(blocks[0]);
+  results.push(first);
+  if (!first.ok) {
+    errors.push(first);
+  }
+
+  // Fase 2: voor elk volgend blok:
+  //   applyIncoming(upstream → block)
+  //   validateLocal(block)
+  // Dit zorgt dat elk blok draait op de actuele upstream-input
+  for (let i = 1; i < blocks.length; i++) {
+    const incoming = applyIncoming(
+      blocks[i - 1],
+      blocks[i],
+      transfers[i - 1]
+    );
+    results.push(incoming);
+
+    if (!incoming.ok) {
+      errors.push(incoming);
+      continue; // geen lokale validatie als upstream geblokkeerd
+    }
+
+    const local = validateLocal(blocks[i]);
     results.push(local);
     if (!local.ok) {
       errors.push(local);
-    }
-  }
-
-  // 2. Kettingvalidatie voor alle overgangen
-  // INVALID_LOCAL heeft voorrang op BLOCKED_BY_UPSTREAM
-  for (let i = 0; i < blocks.length - 1; i++) {
-    const chain = validateChain(blocks[i], blocks[i + 1], transfers[i]);
-    results.push(chain);
-    if (!chain.ok) {
-      errors.push(chain);
     }
   }
 
