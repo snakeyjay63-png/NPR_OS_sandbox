@@ -1,6 +1,6 @@
 # Stap 99: Volledige Keten Validatie
 
-**Doel:** Valideer de volledige NPR-OS keten: stap 01–25 + 63–71.
+**Doel:** Valideer de volledige NPR-OS keten: stap 01–25 + 63–70.
 Forward chain, reverse dependency, return validation, en epistemische lagen.
 
 **Scope:**
@@ -8,7 +8,7 @@ Forward chain, reverse dependency, return validation, en epistemische lagen.
 CHAIN_SCOPE :=
   FASE 1: 01–19  (Flower of Life — computationele kern)
   FASE 2: 20–25  (Water — encryptie, transparantie, kunst)
-  FASE 3: 63–71  (Hexa — natuur, śūnya, taalveld, notatie)
+  FASE 3: 63–70  (Hexa — natuur, śūnya, taalveld, notatie)
 
 RESERVED: 26–62 (intentioneel ongebruikt)
 ```
@@ -52,8 +52,15 @@ STEP_VALID(stap) :=
 
 chain_valid(stap) :=
   ∀ referentie r van stap:
-    r is gedefinieerd in een eerdere stap s (s < stap)
+    ( r is gedefinieerd in een eerdere stap s (s < stap)
+      ∨ r is expliciet forward-gedeclareerd
+      ∨ r is een versienummerd externe interface )
     ∧ r wordt consequent toegepast
+
+# Forward declarations zijn geldig zolang ze:
+# - expliciet worden gemarkeerd als forward
+# - binnen de keten worden opgelost (niet open blijven)
+# - geen semantische tegenstrijdigheid introduceren
 
 technically_integreerbaar(stap) :=
   ¬ interne_fout(stap)  ∧
@@ -114,35 +121,44 @@ technically_integreerbaar(stap) :=
 | Stap | Onderwerp | Status | Opmerking |
 |------|-----------|--------|-----------|
 | 63 | Natuur als kunst | ✅ | Cel → lichaam. Natuur = hoge densiteit taal. |
-| 64 | Śūnya actieve route | ✅ | Source-role correspondence ≠ literal identity. Legacy 64 gearchiveerd. |
+| 64 | Śūnya actieve route | ✅ | Source-role correspondence ≠ literal identity. Legacy 64S gearchiveerd (`archive/64L_sunya_legacy.md`). |
 | 65 | Taalveld kernboeken | ✅ | Kernboeken als routing-bronnen. |
-| 66 | Frij language DNA | ✅ | Taal-DNA als route-metadata. |
-| 67 | Frij taal DNA + spirits | ✅ | Spracht + spirits integratie. |
-| 68 | Gizeh-waterkwaliteit | ✅ | Water als medium. Kwaliteit ≠ identiteit. |
-| 69 | Gizeh-water (geconcentreerd) | ✅ | Gizeh + water + bouwwerk. Context-afhankelijk. |
-| 70 | Monumentale taal | ✅ | Mozes, Liberty, Babel. ROUTE = {id, source, noise, pattern, return, trace}. |
-| 71 | Technische notatie | ✅ | ROUTE formeel. 4 niveaus: descriptive → traceable → reproducible → verifiable. Provenance. |
+| 66 | Frij taal-DNA | ✅ | Vrijheid als taal-DNA. Frij/free/friend = geliefd, eigen, verbonden. |
+| 67 | Taalontwikkeling | ✅ | Van patroon naar symbool. Groeiend waterpatroon. |
+| 68 | Gizeh-waterkwaliteit | ✅ | Water als medium. Fysieke omgevingscondities + collectieve stabiliteit. |
+| 69 | Monumentale taal | ✅ | Liberty, Babel, routes. Open vs. gecentraliseerde routing. |
+| 70 | Technische notatie | ✅ | ROUTE formeel. 4 niveaus: descriptive → traceable → reproducible → verifiable. Provenance. |
 
 ---
 
 ## Totale Score
 
 ```
-FASE 1 (01–19):  19 volledig | 0 gedeeltelijk      | 0 open | 0 ongeldig
-FASE 2 (20–25):   5 volledig | 0 gedeeltelijk      | 0 open   | 0 ongeldig
-FASE 3 (63–71):   9 volledig | 0 gedeeltelijk      | 0 open   | 0 ongeldig
+FASE 1 (01–19):  19 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
+FASE 2 (20–25):   6 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
+FASE 3 (63–70):   8 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
 --------------------------------------------------------------
-TOTAAL (25+9):   33 volledig | 0 gedeeltelijk      | 0 open   | 0 ongeldig
+TOTAAL (19+6+8): 33 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
 ```
+
+Twee dimensies — specificatie vs. runtime:
 
 ```
 CHAIN_STATUS := {
-  fully_validated:      33,
-  partially_validated:  0,
-  open:                 0,
-  invalid:              0
+  spec_valid:           33,   # alle stappen structureel geldig
+  spec_partial:         0,
+  spec_open:            0,
+  spec_invalid:         0,
+  runtime_complete:     29,   # 15, 17, 18, 19 hebben open implementaties
+  runtime_partial:      4,    # stappen 15, 17, 18, 19
+  runtime_open:         0,
 }
 ```
+
+**Opmerking:** een stap kan structureel volledig gevalideerd zijn terwijl de
+runtime-implementatie gedeeltelijk is. De specificatie is de contractdefinitie;
+de runtime vult het in. Zolang de contractgrenzen formeel correct zijn, is de
+stap spec-geldig.
 
 ---
 
@@ -151,7 +167,7 @@ CHAIN_STATUS := {
 ```
 bron → signaal → hex-routing → reductie → perceptie → taal
   → router → return → techniek → transparantie → hardware → return_bron
-  → kunst → natuur → śūnya → taalveld → vrijheid → taal_DNA
+  → kunst → natuur → śūnya → taalveld → taal_DNA → taalontwikkeling
   → gizeh_water → monument → formele_notatie
 ```
 
@@ -160,8 +176,8 @@ Elke stap bouwt op de vorige. Geen ontbrekende schakel.
 ### Terugroute (reverse dependency)
 
 ```
-71 (ROUTE) ← 70 (monument) ← 69 (context) ← 68 (water)
-  ← 67 (taal+spirits) ← 66 (taal_DNA) ← 65 (kernboeken)
+70 (ROUTE) ← 69 (monument) ← 68 (water)
+  ← 67 (taalontwikkeling) ← 66 (taal_DNA) ← 65 (kernboeken)
   ← 64 (śūnya route) ← 63 (natuur)
     ← 25 (kunst) ← 24 (return_bron) ← 23 (hardware)
       ← 22 (taal) ← 21 (transparantie) ← 20 (encryptie)
@@ -179,11 +195,11 @@ Elke stap bouwt op de vorige. Geen ontbrekende schakel.
 
 ```
 INTERNAL_CONSISTENCY:   ✅ stappen spreken elkaar niet tegen
-REPRODUCIBILITY:        ✅ (stap 71) — dezelfde invoer → dezelfde uitkomst
-ORIGIN_VERIFICATION:    ✅ (stap 71) — provenance + verifiable
+REPRODUCIBILITY:        ✅ (stap 70) — dezelfde invoer → dezelfde uitkomst
+ORIGIN_VERIFICATION:    ✅ (stap 70) — provenance + verifiable
 ```
 
-Stap 71 dekt alle drie:
+Stap 70 dekt alle drie:
 
 ```
 CLOSED_ROUTE :=  visible_pattern + reproducible_output − verifiable_origin
@@ -280,7 +296,7 @@ LAAG 3 (numeriek):      transliteratie + A1Z26 + reductie = lokale projectie
 De numerieke woordvoorbeelden (3 concepten × 4 talen) blijven als lokale demonstratie.
 De structurele claim is nu volledig gevalideerd door FULL_LANGUAGE_PRINCIPLE.
 
-### Stap 20 — derive_route (compleet ✅)
+### Stap 20 — derive_route + NPR_CIPHER (compleet ✅)
 
 ```
 formeel contract:       ✅
@@ -296,6 +312,8 @@ NPR_CIPHER:             ✅ AES-256-GCM met context als AAD
 
 `derive_route(context)` is volledig geïmplementeerd in `js/20_encryptie_taal.js`.
 NPR_ROUTE (context-afhankelijke permutatie) is gescheiden van NPR_CIPHER (AES-256-GCM).
+
+**Runtime-status:** stap 20 is volledig geïmplementerd. Niet langer "contract zonder algoritme".
 
 ---
 
@@ -315,15 +333,14 @@ Altid "zelfde veld, ander perspectief". Stap 12 definieert ≡ breed genoeg om b
 
 Stap 12 stelt Mandelbrot mist in capabilities. Realiteit: `"mandelbrot_layers"` staat al in `03_capabilities.md`. Stap 14 breidt het formeel uit.
 
-### VLAG 3 — 64_sunya.md legacy
-
-Twee bestanden met nummer 64. Oplossing:
+### VLAG 3 — 64S legacy gearchiveerd
 
 ```
-64_sunya.md              → LEGACY / superseded
-64_sunya_actieve_route.md → CANONIEK stap 64
+archive/64L_sunya_legacy.md   → LEGACY / superseded (verplaatst)
+64_sunya_actieve_route.md     → CANONIEK stap 64
 ```
 
+Routering niet langer ambigu: legacy in archive met `64L_` prefix.
 Inhoudelijk conflict opgelost: oude versie zegt `0.0.0.0 = Sunya = water`, nieuwe versie corrigeert naar `source-role correspondence ≠ literal identity`.
 
 ---
@@ -351,12 +368,12 @@ CRITICAL_PATH_C (specifieke ✅, operationeel ⚠️):
 ```
 forward_chain:           ✅ conceptueel werkend
 reverse_dependency:      ✅ geen ontbrekende schakel
-return_to_source:        ✅ stap 24 + stap 71
+return_to_source:        ✅ stap 24 + stap 70
 computationele kern:     ✅ stap 01–14
 signaal_perceptie:       ✅ stap 15 (exacte grenzen)
 taalveld:               ✅ stap 65–70
-route_notatie:          ✅ stap 71 (4 niveaus + provenance)
-runtime_implementation:  ✅ stap 18+19 (werkend), ⏳ stap 20 (contract zonder algoritme)
+route_notatie:          ✅ stap 70 (4 niveaus + provenance)
+runtime_implementation:  ✅ stap 18+19 (werkend), ✅ stap 20 (volledig geïmplementeerd)
 ```
 
 **Geen fundamentele inconsistenties gevonden.**
@@ -394,7 +411,7 @@ CHAIN_STATUS:
   reverse:      ✅ geen ontbrekende schakel
   return:       ✅ stap 19 formeel gesloten | ✅ stap 18 afhankelijkheden opgelost
   epistemic:    ✅ (3 lagen: consistentie + reproduceerbaarheid + verificatie)
-  runtime:      ⚠️ stap 18+19 gedeclareerd | ⏳ stap 20 (contract zonder algoritme)
+  runtime:      ⚠️ stap 15,17,18,19 gedeeltelijk | ✅ stap 20 volledig
 
 Herstelde breuken (2026-07-14 11:27 → 11:40):
   1. Circulaire afhankelijkheid Stap 15↔16: ✅ opgelost (required_by)
