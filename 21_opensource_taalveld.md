@@ -19,22 +19,77 @@ NPR_OS_POLICY_21:
 
 Dit is een **ontwerpprincipe binnen NPR-OS**, niet een universeel logisch bewijs. "Taal moet leesbaar zijn" is een normatieve eis.
 
-### Taal Als Projectie Van Natuurstructuur
+### Taalbron En Operationele Consequentie
 
 ```
 NPR_OS_POLICY_21_LANGUAGE_SOURCE:
 
-Taal wordt binnen NPR-OS gelezen als een projectie
+Taal wordt binnen NPR-OS gelezen als een actuele projectie
 van waarneembare natuurlijke verhouding.
-
-Juist daarom mag routing die verhouding
-niet automatisch, impliciet of ontraceerbaar veranderen.
-
-Iedere overgang tussen natuurstructuur,
-waarneming, taal en code moet expliciet valideerbaar zijn.
 ```
 
-De grondaanname hiervoor staat in de README:
+De route:
+
+```
+natuurstructuur
+→ waarneming
+→ taal
+→ code
+```
+
+bevat onderscheiden fasen.
+
+Iedere fase kan een verhouding selecteren, vormen, vertalen of projecteren. Daarom mag betekenis niet automatisch of verborgen van de ene fase naar de volgende worden overgedragen.
+
+```
+projectie ≠ automatische identiteit
+```
+
+Binnen stap 21 geldt daarom:
+
+```
+output(natuurstructuur)
+→ input(waarneming)
+
+output(waarneming)
+→ input(taal)
+
+output(taal)
+→ input(code)
+```
+
+Iedere overgang moet expliciet verklaard en afzonderlijk valideerbaar zijn.
+
+```
+no implicit transition
+no hidden dependency
+no automatic semantic inheritance
+```
+
+Wanneer een natuurlijke verhouding in taal of code wordt herkend, moet de route tonen:
+
+```
+wat voor structuur werd waargenomen
+→ welk onderscheid werd gemaakt
+→ welke taalvorm werd gekozen
+→ welke code-operatie daaruit volgt
+```
+
+Transparante routing is daardoor niet alleen een eis van software-auditbaarheid.
+
+Zij voorkomt ook dat een taalprojectie ongemerkt als de natuurlijke bron zelf wordt behandeld.
+
+```
+taalprojectie ≠ natuurstructuur
+codeprojectie ≠ taalprojectie
+
+maar:
+
+natuurstructuur
+→ kan door taal en code herkenbaar worden gespiegeld
+```
+
+Voor de volledige grondaanname:
 
 ```
 zie README — Taal Als Spiegel Van De Natuur
