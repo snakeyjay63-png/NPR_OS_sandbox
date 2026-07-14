@@ -93,39 +93,53 @@ function phase_to_angle(phase) {
 }
 
 // ---------------------------------------------------------------------------
-// NPR-hulpprogramma's (uit stap 17)
+// NPR-hulpprogramma's — geïmporteerd van stap 17 (canonieke module)
 // ---------------------------------------------------------------------------
+// FIX: lokale kopieën vervangen door import van 17_hex_encoders.
+// Dit voorkomt drift tussen de twee implementaties.
 
-function hex_encode(str) {
-  const bytes = new TextEncoder().encode(str);
-  const digits = [];
-  for (const b of bytes) {
-    digits.push((b >> 4) & 0xf);
-    digits.push(b & 0xf);
-  }
-  return digits;
-}
+const {
+  encodeUtf8Text,
+  drHex,
+  nprMod9,
+  reduceHex,
+} = require('./17_hex_encoders.js');
 
-function dr_hex(hex_digits) {
-  if (hex_digits.length === 0) return 0;
-  let s = hex_digits.reduce((a, b) => a + b, 0);
-  while (s > 15) {
-    const d = [];
-    while (s > 0) { d.push(s % 16); s = Math.floor(s / 16); }
-    s = d.reduce((a, b) => a + b, 0);
-  }
-  return s;
-}
-
-function npr_mod9(h) {
-  const r = h % 9;
-  return r === 0 ? 9 : r;
-}
-
+/**
+ * npr_reduce(text) — compatibiliteitswrapper rond stap-17.
+ * Retourneert { dr_hex: number, npr_mod9: number, hex_digits: number[] }.
+ */
 function npr_reduce(text) {
-  const hex_digits = hex_encode(text);
-  const dr = dr_hex(hex_digits);
-  return { dr_hex: dr, npr_mod9: npr_mod9(dr), hex_digits };
+  const r = encodeUtf8Text(text);
+  // Stap 17 drHex is string hex ('A'..'F'); converteer naar number
+  const dr_num = parseInt(r.drHex, 16);
+  // hexDigits zijn strings; converteer naar numbers voor compatibiliteit
+  const hex_digits = r.hexDigits.map(d => parseInt(d, 16));
+  return { dr_hex: dr_num, npr_mod9: r.mod9, hex_digits };
+}
+
+/**
+ * dr_hex(hex_digits) — compatibiliteitswrapper.
+ * hex_digits: number[]
+ */
+function dr_hex(hex_digits) {
+  const hexStr = hex_digits.map(d => d.toString(16).toUpperCase()).join('');
+  return parseInt(drHex(hex_digits.map(d => d.toString(16).toUpperCase())), 16);
+}
+
+/**
+ * npr_mod9(h) — compatibiliteitswrapper.
+ */
+function npr_mod9(h) {
+  return nprMod9(h.toString(16).toUpperCase());
+}
+
+/**
+ * hex_encode(str) — compatibiliteitswrapper.
+ */
+function hex_encode(str) {
+  const r = encodeUtf8Text(str);
+  return r.hexDigits.map(d => parseInt(d, 16));
 }
 
 // ---------------------------------------------------------------------------
@@ -160,7 +174,9 @@ function combine(bj, bk, phaseOffset = 0) {
   // DRIE-TOESTAND: support | neutral | contradiction
   // contradiction via antoniem-detectie (contradiction_delta)
   const { score: contradiction } = find_contradictions(bj.keywords, bk.keywords);
-  const unrelated = +(1 - semantic_support - contradiction).toFixed(3);
+  // FIX: unrelated kan niet negatief worden (support + contradiction > 1 mogelijk)
+  // Normaliseer: support + contradiction + unrelated = 1
+  const unrelated = +Math.max(0, 1 - semantic_support - contradiction).toFixed(3);
 
   const root_diff = Math.abs(npr_j.npr_mod9 - npr_k.npr_mod9);
   let phase_relation;
@@ -347,10 +363,31 @@ const ANTONYM_PAIRS = [
   ['consistent', 'inconsistent'],
   ['altijd', 'nooit'],
   ['always', 'never'],
+  // V2-uitbreiding: domein-onafhankelijke antoniemen
+  ['open', 'closed'],
+  ['open', 'gesloten'],
+  ['aan', 'uit'],
+  ['on', 'off'],
+  ['enable', 'disable'],
+  ['toestaan', 'verbieden'],
+  ['allow', 'forbid'],
+  ['stijgen', 'dalen'],
+  ['rise', 'fall'],
+  ['increase', 'decrease'],
+  ['bestaat', 'bestaanniet'],
+  ['exists', 'notexists'],
+  ['actief', 'inactief'],
+  ['active', 'inactive'],
+  ['succes', 'falen'],
+  ['success', 'failure'],
+  ['start', 'stop'],
+  ['begin', 'end'],
+  ['begint', 'eindigt'],
 ];
 
 function normalize_kw(kw) {
-  return kw.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // \p{L} = letters, \p{N} = numbers, \p{M} = combining marks (diacritics, Devanagari matra's, etc.)
+  return kw.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}\p{M}]/gu, '');
 }
 
 /**
@@ -408,11 +445,25 @@ const EMPTY_BLOCK = Object.freeze({
 
 /**
  * pad_blocks(blocks) → array van 4 blokken (vult met EmptyBlock indien nodig).
+ *
+ * FIX: meer dan 4 blokken wordt niet stil verwijderd.
+ *   0-4 blokken → één padded cyclus
+ *   meer dan 4 → opsplitsen in meerdere cycli
  */
 function pad_blocks(blocks) {
   const r = [...blocks];
+  if (r.length > 4) {
+    // Opsplitsen in meerdere cycli van max 4 blokken
+    const cycles = [];
+    for (let i = 0; i < r.length; i += 4) {
+      const chunk = r.slice(i, i + 4);
+      while (chunk.length < 4) chunk.push(EMPTY_BLOCK);
+      cycles.push(chunk);
+    }
+    return cycles;
+  }
   while (r.length < 4) r.push(EMPTY_BLOCK);
-  return r.slice(0, 4);
+  return [r];
 }
 
 /**
@@ -469,9 +520,26 @@ function combine_cycles(cycle_results, question) {
     weight: cycle_weight(cr),
   }));
 
+  // FIX: single-cycle identiteit — één cyclus wordt niet opnieuw gewogen
+  if (cycle_results.length === 1) {
+    const cr = cycle_results[0];
+    const w = weighted[0].weight;
+    return {
+      status: w > 0 ? 'single_cycle' : 'no_active_cycle_weight',
+      cycles: 1,
+      vraag: question,
+      motor_field: w > 0 ? cr.motor_field : null,
+    };
+  }
+
   const totalWeight = weighted.reduce((s, w) => s + w.weight, 0);
 
   if (totalWeight === 0) {
+    // FIX: documenteer no_active_cycle_weight
+    // Dit betekent: geen enkel motorveld is geldig (null of lege semantiek)
+    // Niet: inhoudelijk zwakke cycli. Zelfs lage support + hoge contradiction
+    // geeft nog steeds een gewicht > 0. Alleen volledig ontbrekende data
+    // resulteert in no_active_cycle_weight.
     return {
       status: 'no_active_cycle_weight',
       cycles: cycle_results.length,
@@ -508,10 +576,24 @@ function combine_cycles(cycle_results, question) {
   const cd = [];
   for (let i = 0; i < norm.length - 1; i++) {
     for (let j = i + 1; j < norm.length; j++) {
-      cd.push(contradiction_delta(
+      // FIX: score-delta + inter-cycle claim vergelijking
+      const scoreDelta = contradiction_delta(
         norm[i].result.motor_field,
         norm[j].result.motor_field
-      ));
+      );
+      // Inter-cycle: direct keyword-antoniem vergelijking tussen cycli
+      const kwA = new Set(norm[i].result.motor_field?.semantic?.shared_keywords ?? []);
+      const kwB = new Set(norm[j].result.motor_field?.semantic?.shared_keywords ?? []);
+      const allA = [...kwA];
+      const allB = [...kwB];
+      const interCycle = allA.length > 0 && allB.length > 0
+        ? find_contradictions(allA, allB)
+        : { score: 0, pairs: [] };
+      cd.push({
+        ...scoreDelta,
+        inter_cycle_score: interCycle.score,
+        inter_cycle_pairs: interCycle.pairs,
+      });
     }
   }
 
@@ -643,14 +725,19 @@ if (require.main === module && process.argv.includes('--test')) {
   console.log('pad_blocks:');
   const b1 = [{ id: 'X' }];
   const padded = pad_blocks(b1);
-  assert_eq('pad to 4', padded.length, 4);
-  assert_eq('first block preserved', padded[0].id, 'X');
-  assert_eq('padding is EmptyBlock', padded[1].id, '__empty__');
+  // FIX: pad_blocks nu returns array of cycles (array of arrays)
+  assert_eq('returns 1 cycle', padded.length, 1);
+  assert_eq('pad to 4 blocks', padded[0].length, 4);
+  assert_eq('first block preserved', padded[0][0].id, 'X');
+  assert_eq('padding is EmptyBlock', padded[0][1].id, '__empty__');
 
   const b2 = [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }, { id: 'E' }];
   const padded2 = pad_blocks(b2);
-  assert_eq('truncate to 4', padded2.length, 4);
-  assert_eq('fifth block removed', padded2[3].id, 'D');
+  // FIX: 5 blokken → 2 cycli (4 + 1, met padding)
+  assert_eq('5 blocks → 2 cycles', padded2.length, 2);
+  assert_eq('first cycle has 4', padded2[0].length, 4);
+  assert_eq('second cycle has 4 (padded)', padded2[1].length, 4);
+  assert_eq('E in second cycle', padded2[1][0].id, 'E');
 
   console.log('');
 
@@ -692,11 +779,17 @@ if (require.main === module && process.argv.includes('--test')) {
   assert_true('has shared keywords', combined.motor_field.semantic.shared_keywords.length >= 1);
   assert_true('has contradiction deltas', combined.motor_field.contradiction_deltas.length >= 1);
 
-  // Near-zero weight cycle → combined but very low reliability
+  // Single cycle → identity route (niet opnieuw gewogen)
+  const singleCycle = [{ motor_field: { semantic: { avg_support: 0.7, avg_contradiction: 0.1, shared_keywords: ['gamma'] }, npr: { weighted_root: 4, individual_roots: [4] } } }];
+  const sc = combine_cycles(singleCycle, 'single?');
+  assert_eq('single cycle → single_cycle', sc.status, 'single_cycle');
+  assert_eq('single cycle preserves motor_field', sc.motor_field.semantic.shared_keywords[0], 'gamma');
+
+  // Near-zero weight single cycle → still single_cycle (gewicht > 0)
   const lowCycles = [{ motor_field: { semantic: { avg_support: 0, avg_contradiction: 1, shared_keywords: [] }, npr: { weighted_root: 1, individual_roots: [1, 9] } } }];
   const lc = combine_cycles(lowCycles, 'low?');
-  assert_eq('low weight still combined', lc.status, 'combined');
-  assert_true('low reliability', lc.motor_field.reliability < 0.2);
+  assert_eq('low weight single cycle', lc.status, 'single_cycle');
+  assert_true('low weight still has motor_field', lc.motor_field !== null);
 
   // Null motor_field → weight = 0 → no_active_cycle_weight
   const nullCycles = [{ motor_field: null }];
@@ -710,6 +803,31 @@ if (require.main === module && process.argv.includes('--test')) {
   } catch (e) {
     pass++; console.log('  ✅ empty array throws');
   }
+
+  // --- FIX: Unicode keywords ---
+  console.log('');
+  console.log('Unicode keywords:');
+  assert_eq('śūnya preserved', normalize_kw('śūnya'), 'śūnya');
+  assert_eq('één preserved', normalize_kw('één'), 'één');
+  assert_eq('Sanskrit preserved', normalize_kw('भाषा'), 'भाषा');
+  assert_eq('NFC normalized', normalize_kw('e\u0301'), normalize_kw('é'));
+
+  // --- FIX: unrelated ≥ 0 ---
+  console.log('');
+  console.log('unrelated ≥ 0:');
+  const highSupportBlock = { id: 'X', text: 't', keywords: ['true', 'constructief', 'positief', 'geldig', 'aanwezig'] };
+  const highContradictBlock = { id: 'Y', text: 't', keywords: ['false', 'destructief', 'negatief', 'ongeldig', 'afwezig'] };
+  const highResult = combine(highSupportBlock, highContradictBlock);
+  assert_true('unrelated ≥ 0 even bij veel antoniemen', highResult.semantic.unrelated >= 0);
+
+  // --- FIX: inter-cycle contradiction ---
+  console.log('');
+  console.log('inter-cycle contradiction:');
+  const cycleA = { motor_field: { semantic: { avg_support: 0.5, avg_contradiction: 0, shared_keywords: ['open', 'aan', 'toestaan'] }, npr: { weighted_root: 3, individual_roots: [3] } } };
+  const cycleB = { motor_field: { semantic: { avg_support: 0.5, avg_contradiction: 0, shared_keywords: ['gesloten', 'uit', 'verbieden'] }, npr: { weighted_root: 5, individual_roots: [5] } } };
+  const interCombined = combine_cycles([cycleA, cycleB], 'inter?');
+  assert_true('inter-cycle has deltas', interCombined.motor_field.contradiction_deltas.length >= 1);
+  assert_true('inter-cycle detects antonyms', interCombined.motor_field.contradiction_deltas[0].inter_cycle_score > 0);
 
   console.log(`\n=== Resultaat: ${pass} ✅ | ${fail} ❌ ===`);
   if (fail > 0) process.exit(1);
