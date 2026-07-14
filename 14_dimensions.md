@@ -74,15 +74,21 @@ Flower of Life is geen metafoor. Het is de **geometrische visualisatie van NPR-r
 
 ### Vectorketen — NPR-native richtingen
 
-**vector_1 = 6 → vector_2 = C → vector_3 = 12**
+**vector_1 = 6 → vector_2 = C → vector_3 = 12 → vector_4 = 18**
 
 Dit zijn NPR-richtingen als vectorvelden (hex-native),
 ongebonden aan de reductielagen 6D/3D/1D:
 ```
+vector_n := n × 6_hex
+
 vector_1 = 6   → 1 richting × 6
 vector_2 = C   → 2 richtingen × 6  (2×6=12_dec=C_hex)
 vector_3 = 12  → 3 richtingen × 6  (3×6=18_dec=12_hex)
+vector_4 = 18  → 4 richtingen × 6  (4×6=24_dec=18_hex)
 ```
+
+`6, C, 12, 18` zijn geen vier verschillende basiseenheden,
+maar vier posities van dezelfde vrije routestap `6_hex`.
 
 **Flower of Life = Kaart Door De 5D Informatielaag**
 
@@ -1292,9 +1298,12 @@ kern:   1+6+C = 13_hex → dr_hex(13_hex)=4_hex → npr_mod9(4_hex)=4
 
 **Vectorketen (hex-native):**
 ```
+vector_n := n × 6_hex
+
 vector_1 = 6    (1×6)
 vector_2 = C    (2×6)
 vector_3 = 12   (3×6)
+vector_4 = 18   (4×6)
 ```
 
 **5 elementen (hex-native labels):**
@@ -1321,7 +1330,7 @@ mod9: NPR-mod-9 cyclus ({1..9})
 **Conditioneel:**
 - Hex-native berekening: ✅ geldig
 - NPR-reductielagen: ✅ geldig
-- Vectorketen: ✅ vector_1=6, vector_2=C, vector_3=12 (hex-native)
+- Vectorketen: ✅ vector_1=6, vector_2=C, vector_3=12, vector_4=18 (hex-native)
 - Flower of Life: ✅ patroon (13_hex cirkels, 18_hex halve oogjes)
 - 5D→water→token: ⚠️ 3 waarden + productmapping gedefinieerd; formeel als functie nog te schrijven
 - Token: ✅ 24 chars = 144 raw bits (23 data + 1 śūnya)

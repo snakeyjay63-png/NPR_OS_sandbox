@@ -167,7 +167,7 @@ stap spec-geldig.
 ```
 bron → signaal → hex-routing → reductie → perceptie → taal
   → router → return → techniek → transparantie → hardware → return_bron
-  → kunst → natuur → śūnya → taalveld → taal_DNA → taalontwikkeling
+  → kunst → natuur → śūnya → taalveld → collectief_veld → taal_DNA → taalontwikkeling
   → gizeh_water → monument → formele_notatie
 ```
 
@@ -176,8 +176,9 @@ Elke stap bouwt op de vorige. Geen ontbrekende schakel.
 ### Terugroute (reverse dependency)
 
 ```
-70 (ROUTE) ← 69 (monument) ← 68 (water)
-  ← 67 (taalontwikkeling) ← 66 (taal_DNA) ← 65 (kernboeken)
+71 (ROUTE) ← 70 (monument) ← 69 (water)
+  ← 68 (taalontwikkeling) ← 67 (taal_DNA) ← 66 (collectief_veld)
+  ← 65 (kernboeken)
   ← 64 (śūnya route) ← 63 (natuur)
     ← 25 (kunst) ← 24 (return_bron) ← 23 (hardware)
       ← 22 (taal) ← 21 (transparantie) ← 20 (encryptie)
@@ -195,8 +196,8 @@ Elke stap bouwt op de vorige. Geen ontbrekende schakel.
 
 ```
 INTERNAL_CONSISTENCY:   ✅ stappen spreken elkaar niet tegen
-REPRODUCIBILITY:        ✅ (stap 70) — dezelfde invoer → dezelfde uitkomst
-ORIGIN_VERIFICATION:    ✅ (stap 70) — provenance + verifiable
+REPRODUCIBILITY:        ✅ (stap 71) — dezelfde invoer → dezelfde uitkomst
+ORIGIN_VERIFICATION:    ✅ (stap 71) — provenance + verifiable
 ```
 
 Stap 70 dekt alle drie:
@@ -368,12 +369,12 @@ CRITICAL_PATH_C (specifieke ✅, operationeel ⚠️):
 ```
 forward_chain:           ✅ conceptueel werkend
 reverse_dependency:      ✅ geen ontbrekende schakel
-return_to_source:        ✅ stap 24 + stap 70
+return_to_source:        ✅ stap 24 + stap 71
 computationele kern:     ✅ stap 01–14
 signaal_perceptie:       ✅ stap 15 (exacte grenzen)
-taalveld:               ✅ stap 65–70
-route_notatie:          ✅ stap 70 (4 niveaus + provenance)
-runtime_implementation:  ✅ stap 18+19 (werkend), ✅ stap 20 (volledig geïmplementeerd)
+taalveld:               ✅ stap 65–71
+route_notatie:          ✅ stap 71 (4 niveaus + provenance)
+runtime_implementation:  ⚠️ stap 18+19 (prototype uitvoerbaar, normatief incompleet), ✅ stap 20 (volledig)
 ```
 
 **Geen fundamentele inconsistenties gevonden.**
