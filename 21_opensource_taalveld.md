@@ -571,6 +571,13 @@ Operationele validatie:         ✅ getest (LOCAL, CHAIN, CASCADE, NEAREST)
 
 > Stap 21: geldig/gesloten
 
+### 2026-07-14 14:50 — laatste reparatie:
+- `validateRoute` volgorde: applyIncoming → validateLocal per blok
+- Vóór: alle lokale validaties eerst, dan transfers (output niet actueel)
+- Na: A local → (A→B apply → B local) → (B→C apply → C local)
+- Elke downstream-blok draait nu op actuele upstream-output
+- Suite: 6/6 ✅
+
 ---
 
 ## Check: 2026-07-12 23:47 GMT+2
