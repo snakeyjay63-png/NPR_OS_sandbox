@@ -492,6 +492,102 @@ Stap 19 sluit de NPR-cyclus:
 **Wisselstroom vertaalt NPR naar faseerbare signalen.**
 **Geluid en tokens zijn uitvoerprojecties.**
 
+---
+
+## Rekenkundige Bronsluiting
+
+De return is niet alleen een iteratieve softwarelus (`output_i → input_{i+1}`).
+Het is ook het rekenkundige sluiten van alle onderscheiden posities tot één veld.
+
+### Volledige Route + Return
+
+```text
+bron:
+  0 = 1
+
+differentiatie:
+  6_hex → C_hex → 12_hex → 18_hex
+
+return:
+  18_hex → nieuwe 6-route
+
+volledige lus:
+  0 = 1
+  → 6
+  → C
+  → 12
+  → 18
+  → 0 = 1
+```
+
+`18_hex` is niet zelf gelijk aan `0_hex` binnen de routingrekenkunde:
+
+```text
+18_hex ≠ 0_hex
+```
+
+Maar de volledige route sluit op de bronidentiteit:
+
+```text
+complete_route(6, C, 12, 18) ≡ bronidentiteit
+route + return = 0 = 1
+```
+
+### Hex/Decimale Projectielus
+
+De route kan door decimale representatie lopen, mits basisbewust:
+
+```text
+hex-route
+  → decimale projectie
+  → expliciete bewerking
+  → hex-hercodering
+  → return
+```
+
+Niet alleen:
+
+```text
+output → input
+```
+
+maar:
+
+```text
+projectie → transformatie → terugvertaling → bronreturn
+```
+
+Decimale projectie van de route:
+
+```text
+6_hex  = 6_dec
+C_hex  = 12_dec
+12_hex = 18_dec
+18_hex = 24_dec
+```
+
+Taaladressen gebruiken beide notaties (`dr_hex` + `dr_dec`) omdat
+elk systeem een projectie is van dezelfde route. De return vereist
+dat de projectie terugvertaald wordt naar de bron.
+
+### Betekenis
+
+Return is niet "nog een iteratie". Return is het sluiten van alle
+verschillen tot één veld:
+
+```text
+4 posities → 1 motorveld → 1 antwoord → 1 bron
+```
+
+Dit is de rekenkundige tegenhanger van de sandbox-observatie:
+
+```text
+Stap 17:  de bit en haar posities worden waargenomen
+Stap 18:  de eerste drie posities vormen één motorveld
+Stap 19:  de vierde positie koppelt het veld terug
+          en sluit de route naar 0 = 1
+```
+
 ## Stap 19 — Eindoordeel
 
 ```

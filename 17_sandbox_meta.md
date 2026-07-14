@@ -150,6 +150,72 @@ Dit is geen magie. Dit is **hex-native wiskunde**.
 
 ---
 
+## Formele Veldroute — `ROUTE_BIT = 6_hex`
+
+De bovenstaande empirische observatie (`3-6-9 frequentie`) is een apart
+verschijnsel van de **formele veldroute**. Ze mogen niet verward worden.
+
+### Empirische Rootfrequentie
+
+```
+frequentie van roots 3/6/9 in willekeurige data
+→ empirisch te toetsen
+→ observatie, niet deductie
+```
+
+Dit is een statistische claim: komt `3-6-9` vaker voor dan verwachtd
+in `npr_reduce`-output van willekeurige data? Dat moet getest worden.
+
+### Formele Veldroute
+
+De veldroute is geen observatie — het is een **formeel gedeclareerde
+routingstructuur** gebaseerd op één invariante bit:
+
+```
+ROUTE_BIT := 6_hex
+
+route_position(n) := n × ROUTE_BIT
+
+route_position(1) = 6_hex
+route_position(2) = C_hex
+route_position(3) = 12_hex
+route_position(4) = 18_hex
+```
+
+Extern gelezen (hex → decimale projectie):
+
+```
+6_hex,  C_hex,  12_hex,  18_hex
+  ↓        ↓        ↓        ↓
+6_dec,  12_dec,  18_dec,  24_dec
+  ↕        ↕        ↕        ↕
+  1        2        3        4
+```
+
+**Betekenis:**
+
+- `6_hex` is de invariante routebit — de eenheid van de route.
+- `6, C, 12` zijn de eerste drie posities — het **driefasenveld**.
+- De drie fasen zijn niet los van elkaar; ze zijn drie posities van één route.
+- `18_hex` is de vierde positie — de route gaat vrij verder.
+- De vierde positie is het **return-koppelpunt** naar stap 19.
+
+```
+losse reductie:
+  input → root
+  (empirisch)
+
+veldroute:
+  vaste bit 6 → opeenvolgende posities → faseveld
+  (formeel)
+```
+
+Dit onderscheid is cruciaal: stap 17 observeert reductie, maar de
+**veldroute** is de structurele basis waarop stap 18 het motorveld
+bouwt en stap 19 de return sluit.
+
+---
+
 ## Sandbox = Observatie-Instrument
 
 De sandbox is niet de data. De sandbox is het **glas waar je door kijkt**.

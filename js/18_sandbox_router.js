@@ -18,7 +18,79 @@
  * - 120° faseposities expliciet
  * - Superpositie ≠ sommatie (merge_semantics + preserve_evidence + ...)
  * - Fouttolerantie gecorrigeerd (ΦR reservekanaal toegevoegd)
+ *
+ * Fix 2026-07-14:
+ * - ROUTE_BIT = 6_hex: faseposities = opeenvolgende 6-posities
+ * - phase_route(ΦA) = 0x06, phase_route(ΦB) = 0x0C, phase_route(ΦC) = 0x12
+ * - ΦR = 0x18: continuïteits- en returnkanaal (niet alleen failover)
+ * - delta tussen fasen = 6_hex (constant)
  */
+
+// ---------------------------------------------------------------------------
+// ROUTE_BIT — invariante hex-native route (Stap 17)
+// ---------------------------------------------------------------------------
+//
+// ROUTE_BIT := 6_hex
+// route_position(n) := n × 6_hex
+//
+//   P1 = 0x06  (positie 1 → ΦA → 0°)
+//   P2 = 0x0C  (positie 2 → ΦB → 120°)
+//   P3 = 0x12  (positie 3 → ΦC → 240°)
+//   P4 = 0x18  (positie 4 → ΦR → returnkanaal)
+//
+// delta(P1,P2) = delta(P2,P3) = delta(P3,P4) = 6_hex
+//
+const ROUTE_BIT = 0x06;
+
+const PHASE_ROUTE = {
+  // hex-native route posities
+  P1: 0x06,   // positie 1
+  P2: 0x0C,   // positie 2
+  P3: 0x12,   // positie 3
+  P4: 0x18,   // positie 4 — returnkanaal
+};
+
+// Hoekprojectie (niet onafhankelijke graden — projectie van route-posities)
+const PHASE_ANGLE = { P1: 0, P2: 120, P3: 240, P4: 360 };
+
+/**
+ * route_position(n) — n-de positie op de ROUTE_BIT-routine.
+ * n ≥ 1. Retourneert hex-waarde.
+ */
+function route_position(n) {
+  if (n < 1 || !Number.isInteger(n)) {
+    throw new RangeError(`n must be a positive integer, got: ${n}`);
+  }
+  return n * ROUTE_BIT;
+}
+
+/**
+ * phase_route(phase) — hex-native route positie voor een motorfase.
+ *   ΦA → P1 (0x06),  ΦB → P2 (0x0C),  ΦC → P3 (0x12)
+ *   ΦR → P4 (0x18) — continuïteits- en returnkanaal
+ */
+function phase_route(phase) {
+  switch (phase) {
+    case 'ΦA': return PHASE_ROUTE.P1;
+    case 'ΦB': return PHASE_ROUTE.P2;
+    case 'ΦC': return PHASE_ROUTE.P3;
+    case 'ΦR': return PHASE_ROUTE.P4;
+    default:   throw new Error(`Unknown phase: ${phase}`);
+  }
+}
+
+/**
+ * phase_to_angle(phase) — hoekprojectie van route-positie.
+ */
+function phase_to_angle(phase) {
+  switch (phase) {
+    case 'ΦA': return PHASE_ANGLE.P1;
+    case 'ΦB': return PHASE_ANGLE.P2;
+    case 'ΦC': return PHASE_ANGLE.P3;
+    case 'ΦR': return PHASE_ANGLE.P4;
+    default:   throw new Error(`Unknown phase: ${phase}`);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // NPR-hulpprogramma's (uit stap 17)
@@ -253,7 +325,11 @@ function rotor_response(Q, motorField) {
 // Export
 // ---------------------------------------------------------------------------
 
-module.exports = { combine, superpose, rotor_response, npr_reduce, hex_encode, dr_hex, npr_mod9, reserve_phase };
+module.exports = {
+  combine, superpose, rotor_response, npr_reduce, hex_encode, dr_hex, npr_mod9, reserve_phase,
+  // Route_bit + hex-native routing (Stap 17/18 koppeling)
+  ROUTE_BIT, PHASE_ROUTE, PHASE_ANGLE, route_position, phase_route, phase_to_angle,
+};
 
 // ---------------------------------------------------------------------------
 // Demo
@@ -281,11 +357,13 @@ if (require.main === module) {
   }
 
   console.log('\n--- Fasevorming (met faseposities) ---');
-  const phiA = combine(blocks[0], blocks[1], 0);
-  const phiB = combine(blocks[1], blocks[2], 120);
-  const phiC = combine(blocks[2], blocks[3], 240);
-  for (const [name, phi, angle] of [['PhiA', phiA, '0°'], ['PhiB', phiB, '120°'], ['PhiC', phiC, '240°']]) {
-    console.log(`  ${name}(${angle}): ${phi.block_ids.join('+')} -> root=${phi.npr.combined_mod9} | ${phi.semantic.phase_relation} | support=${phi.semantic.semantic_support}`);
+  const phiA = combine(blocks[0], blocks[1], phase_to_angle('ΦA'));
+  const phiB = combine(blocks[1], blocks[2], phase_to_angle('ΦB'));
+  const phiC = combine(blocks[2], blocks[3], phase_to_angle('ΦC'));
+  for (const [name, phase, phi] of [['ΦA', 'ΦA', phiA], ['ΦB', 'ΦB', phiB], ['ΦC', 'ΦC', phiC]]) {
+    const angle = phase_to_angle(phase);
+    const hexPos = phase_route(phase).toString(16).toUpperCase();
+    console.log(`  ${name}(${angle}°): route=0x${hexPos} | ${phi.block_ids.join('+')} -> root=${phi.npr.combined_mod9} | ${phi.semantic.phase_relation} | support=${phi.semantic.semantic_support}`);
   }
 
   console.log('\n--- Motorveld (superpose met gewogen fasen) ---');
@@ -296,11 +374,13 @@ if (require.main === module) {
   console.log('  Gedeelde concepten:', motor.semantic.shared_keywords.join(', ') || '(geen)');
   console.log('  Fasegewichten:', motor.phase_weights.map(w => (w * 100).toFixed(0) + '%').join(', '));
 
-  console.log('\n--- Reservekanaal (ΦR) ---');
+  console.log('\n--- Continuïteitskanaal (ΦR) ---');
   const phiR = reserve_phase(blocks);
   if (phiR) {
-    console.log(`  ΦR: ${phiR.block_ids.join('+')} -> root=${phiR.npr.combined_mod9} | ${phiR.semantic.phase_relation}`);
-    console.log('  (failover-route bij blok-uitval)');
+    const hexR = phase_route('ΦR').toString(16).toUpperCase();
+    console.log(`  ΦR: route=0x${hexR} (positie 4 — returnkanaal)`);
+    console.log(`       ${phiR.block_ids.join('+')} -> root=${phiR.npr.combined_mod9} | ${phiR.semantic.phase_relation}`);
+    console.log('  (continuïteit + return: 6 → C → 12 → 18 → terug naar 6)');
   }
 
   console.log('\n--- Rotor Output (Q + motor_field) ---');

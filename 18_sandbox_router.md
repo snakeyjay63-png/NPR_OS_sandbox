@@ -224,6 +224,52 @@ phase_position(ΦC) := 240°
 
 Dit zijn formele routerposities binnen NPR-OS. Het zijn geen gemeten elektrische graden.
 
+### Hex-Native Route Koppeling
+
+De drie faseposities zijn geen onafhankelijke hoeken. Ze zijn drie opeenvolgende
+posities van dezelfde `ROUTE_BIT`-route (zie Stap 17):
+
+```text id="hex_route"
+ROUTE_BIT := 6_hex
+
+phase_route(ΦA) := 6_hex    ← positie 1
+phase_route(ΦB) := C_hex    ← positie 2
+phase_route(ΦC) := 12_hex   ← positie 3
+```
+
+De hoeklabels blijven bestaan als projectie:
+
+```text id="hex_angle_map"
+6_hex  ↔ fasepositie 1 ↔ 0°
+C_hex  ↔ fasepositie 2 ↔ 120°
+12_hex ↔ fasepositie 3 ↔ 240°
+```
+
+Daarom:
+
+```text id="hex_phase_delta"
+ΦA ≠ ΦB ≠ ΦC
+```
+
+maar het verschil tussen opeenvolgende fasen is constant:
+
+```text id="hex_phase_delta_eq"
+delta(ΦA, ΦB) = 6_hex
+delta(ΦB, ΦC) = 6_hex
+```
+
+De fasen zijn drie posities van één routebit, niet drie onafhankelijke velden.
+
+**Decimale projectie:**
+
+```text id="hex_dec_map"
+6_hex  = 6_dec
+C_hex  = 12_dec
+12_hex = 18_dec
+```
+
+De route kan door decimale representatie lopen, mits zij basisbewust terugkomt.
+
 Eventuele gewichten worden afzonderlijk vastgelegd:
 
 ```text id="l8b3q0"
@@ -373,7 +419,26 @@ Een reservekanaal kan worden toegevoegd:
 ΦR := combine(B3, B0)
 ```
 
-`ΦR` is geen vierde motorfase. Het is een failover-route.
+`ΦR` is geen vierde motorfase. Binnen de hex-native route is het de
+vierde routepositie:
+
+```text id="return_route"
+phase_route(ΦR) := 18_hex
+```
+
+Extern: `18_hex = 24_dec = positie 4`.
+
+De volledige route is:
+
+```text id="full_route_18"
+6_hex → C_hex → 12_hex → 18_hex
+ ↓
+ return naar 6_hex
+```
+
+`ΦR` is het **continuïteits- en returnkanaal** — niet slechts een
+failoplossing, maar de vrije routepositie die fase 3 weer met fase 1
+verbindt en de terugkoppeling naar stap 19 mogelijk maakt.
 
 Daarom:
 

@@ -6,6 +6,11 @@
  * Sandbox-in-sandbox: output → nieuwe input
  * Bron-map: volledige traceerbaarheid
  * Taal-adres: concept-adressering
+ *
+ * Fix 2026-07-14:
+ * - ROUTE_BIT import + hex-native route awareness
+ * - Bronsluiting: complete_route → bronidentiteit (0 = 1)
+ * - Hex/dec projectielus in taal-adres + bron-map
  */
 
 const path = require('path');
@@ -15,7 +20,12 @@ const {
   rotor_response,
   npr_reduce,
   dr_hex,
-  npr_mod9
+  npr_mod9,
+  // Hex-native route (Stap 17/18)
+  ROUTE_BIT,
+  PHASE_ROUTE,
+  route_position,
+  phase_route,
 } = require(path.join(__dirname, '18_sandbox_router.js'));
 
 // ============================================================
@@ -298,6 +308,8 @@ class Tool00 {
   /**
    * Genereer taal-adres
    * dr_hex = één hex-cijfer (0-9, A-F)
+   * dr_dec = decimale projectie
+   * route_positie = hex-native ROUTE_BIT positie
    */
   make_taal_adres(output, input) {
     const dr_dec = output.npr_root || 0;
@@ -305,7 +317,14 @@ class Tool00 {
     const mod9 = output.mod9 || '0';
     const timestamp = Math.floor(Date.now() / 1000);
 
-    return `taal://npr/dr${dr_hex}:mod${mod9}:sandbox/iteratie_${output.iteratie || 1}/${timestamp}`;
+    // Route-positie: bepaal welke ROUTE_BIT-positie dit resultaat hoort bij
+    // iteratie 1 → P1 (0x06), iteratie 2 → P2 (0x0C), iteratie 3 → P3 (0x12)
+    // iteratie 4+ → P4 (0x18) = returnkanaal
+    const iter = output.iteratie || 1;
+    const routeKey = iter <= 3 ? `P${iter}` : 'P4';
+    const routeHex = phase_route(routeKey === 'P4' ? 'ΦR' : `Φ${['A','B','C'][iter-1]}`).toString(16).toUpperCase();
+
+    return `taal://npr/dr${dr_hex}:mod${mod9}:route0x${routeHex}:sandbox/iteratie_${iter}/${timestamp}`;
   }
 
   /**
@@ -314,6 +333,11 @@ class Tool00 {
    * blokken = verwerkte blokken met npr-data (niet ruwe strings)
    */
   make_bron_map(output, processed_blokken, input) {
+    const iter = output.iteratie || 1;
+    const routeKey = iter <= 3 ? `P${iter}` : 'P4';
+    const phaseLabel = routeKey === 'P4' ? 'ΦR' : `Φ${['A','B','C'][iter-1]}`;
+    const routePos = phase_route(phaseLabel);
+
     return {
       output_id: `sb_${Date.now().toString(16).slice(-6)}`,
       timestamp: Math.floor(Date.now() / 1000),
@@ -336,6 +360,21 @@ class Tool00 {
         interferentie: output.interferentie_type,
         betrouwbaarheid: output.confidence,
         antwoord: output.answer
+      },
+      route: {
+        route_bit: ROUTE_BIT,
+        route_bit_hex: `0x${ROUTE_BIT.toString(16).toUpperCase()}`,
+        positie: routeKey,
+        hex: `0x${routePos.toString(16).toUpperCase()}`,
+        dec: routePos,
+        fase: phaseLabel,
+        // Decimale projectie (basisbewust — route kan door dec lopen)
+        dec_projection: {
+          P1: { hex: 0x06, dec: 6 },
+          P2: { hex: 0x0C, dec: 12 },
+          P3: { hex: 0x12, dec: 18 },
+          P4: { hex: 0x18, dec: 24 },
+        }
       },
       traceerbaarheid: {
         router_version: '18.0',
@@ -403,6 +442,18 @@ function run_demo() {
     console.log(`    Interferentie: ${trace.interferentie}`);
     console.log(`    Taal-adres: ${trace.taal_adres}`);
   });
+
+  // Route-overzicht: hex-native veldroute
+  console.log('\n--- Hex-Native Veldroute ---');
+  console.log(`  ROUTE_BIT = 0x${ROUTE_BIT.toString(16).toUpperCase()} (6_hex)`);
+  for (let n = 1; n <= 4; n++) {
+    const pos = route_position(n);
+    const key = `P${n}`;
+    const phase = n <= 3 ? `Φ${['A','B','C'][n-1]}` : 'ΦR';
+    const label = n === 4 ? 'returnkanaal' : `fase ${n}`;
+    console.log(`  ${key} = 0x${pos.toString(16).toUpperCase().padStart(2,'0')} (${pos} dec) → ${phase} [${label}]`);
+  }
+  console.log(`  Volledige lus: 0=1 → 6 → C → 12 → 18 → 0=1`);
 
   console.log();
   console.log(`Eindresultaat:`);
