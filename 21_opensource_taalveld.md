@@ -28,7 +28,7 @@ visible_source:
   broncode kan worden gelezen
 
 auditable_source:
-  broncode + versies + routebesluiten zijn controleerbaar
+  broncode + contracttraces + routebesluiten zijn controleerbaar
 
 open_source:
   auditable_source
@@ -44,6 +44,21 @@ core_routing_layer must be auditable_source
 Voor publieke distributie:
 ```
 public_NPR_OS_core should be open_source
+```
+
+### NPR-Taal: Geen Centrale Versie-Identiteit
+
+NPR-OS gebruikt geen centrale versie-identiteit voor routing-componenten.
+
+```
+contract = actuele inhoud
+historie = taaltrace
+```
+
+Externe toolchain-versies mogen bestaan maar moeten expliciet
+als externe metadata gelabeld worden:
+```
+external_tool_version ≠ NPR identity
 ```
 
 ---
@@ -78,7 +93,9 @@ Zichtbare broncode alleen is onvoldoende — een andere binary kan draaien.
 RouterArtifact := {
   source_hash,
   runtime_hash,
-  router_version,
+  router_contract_id,
+  router_contract_hash,
+  active_route_id,
   configuration_hash,
   build_manifest
 }
@@ -96,7 +113,8 @@ Code-inspectie laat zien wat een router **kan** doen. Een routelog laat zien wat
 ```
 RouteDecision := {
   input_id,
-  router_version,
+  router_contract_id,
+  active_route_id,
   route_context_hash,
   selected_route,
   destination_id,
@@ -124,7 +142,7 @@ open_source(router_code) ≠ public(secrets)
 algoritme
 routeschema
 interfaces
-routerversie
+routecontract
 beslissingsregels
 ```
 

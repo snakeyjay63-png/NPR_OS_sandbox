@@ -8,7 +8,7 @@ Forward chain, reverse dependency, return validation, en epistemische lagen.
 CHAIN_SCOPE :=
   FASE 1: 01–19  (Flower of Life — computationele kern)
   FASE 2: 20–25  (Water — encryptie, transparantie, kunst)
-  FASE 3: 63–70  (Hexa — natuur, śūnya, taalveld, notatie)
+  FASE 3: 63–71  (Hexa — natuur, śūnya, taalveld, notatie, route-notatie)
 
 RESERVED: 26–62 (intentioneel ongebruikt)
 ```
@@ -54,7 +54,8 @@ chain_valid(stap) :=
   ∀ referentie r van stap:
     ( r is gedefinieerd in een eerdere stap s (s < stap)
       ∨ r is expliciet forward-gedeclareerd
-      ∨ r is een versienummerd externe interface )
+      ∨ r is een extern geïdentificeerde interface
+      met expliciet contract en compatibiliteitsmetadata )
     ∧ r wordt consequent toegepast
 
 # Forward declarations zijn geldig zolang ze:
@@ -128,6 +129,7 @@ technically_integreerbaar(stap) :=
 | 68 | Gizeh-waterkwaliteit | ✅ | Water als medium. Fysieke omgevingscondities + collectieve stabiliteit. |
 | 69 | Monumentale taal | ✅ | Liberty, Babel, routes. Open vs. gecentraliseerde routing. |
 | 70 | Technische notatie | ✅ | ROUTE formeel. 4 niveaus: descriptive → traceable → reproducible → verifiable. Provenance. |
+| 71 | Route-notatie | ✅ | Minimale notatie {id,source,noise,transform,pattern,return,trace}. Afhankelijk: 19, 64, 68, 69. 4 niveaus volledigheid + provenance. Reverse trace → bron. |
 
 ---
 
@@ -136,9 +138,9 @@ technically_integreerbaar(stap) :=
 ```
 FASE 1 (01–19):  19 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
 FASE 2 (20–25):   6 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
-FASE 3 (63–70):   8 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
+FASE 3 (63–71):   9 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
 --------------------------------------------------------------
-TOTAAL (19+6+8): 33 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
+TOTAAL (19+6+9): 34 spec-geldig | 0 gedeeltelijk | 0 open | 0 ongeldig
 ```
 
 Twee dimensies — specificatie vs. runtime:
@@ -149,7 +151,7 @@ CHAIN_STATUS := {
   spec_partial:         0,
   spec_open:            0,
   spec_invalid:         0,
-  runtime_complete:     29,   # 15, 17, 18, 19 hebben open implementaties
+  runtime_complete:     30,   # 15, 17, 18, 19 hebben gedeeltelijke implementaties
   runtime_partial:      4,    # stappen 15, 17, 18, 19
   runtime_open:         0,
 }
@@ -248,7 +250,7 @@ Stap 18:
  rotor = Q:               ✅
  reservefase:             ✅
  drie-toestand model:     ✅
- echte contradiction:     ⏳ (TODO)
+ echte contradiction:     ⏳ (semantische resolutie — zie 21_validate_nearest)
 
 Stap 19:
  syntax geldig:           ✅
@@ -256,7 +258,7 @@ Stap 19:
  output → nieuwe input:   ✅
  MAX_ITERATIONS:          ✅
  return trace:            ✅
- convergentieproxy:       ✅ (V1 gelabeld)
+ convergentieproxy:       ✅ (active_contract_id: convergence_proxy)
  correct iteratienummer:  ✅
  alle returnblokken:      ✅ (4 canonieke)
  NPR-data in bron-map:    ✅
@@ -278,7 +280,7 @@ payload_alphabet {01..3F}:         ✅
 token_id_from_hex:                 ✅
 cardinality vs routing gescheiden: ✅
 circuit_stable gelabeld:           ✅
-transliteratie schema versioning:  ✅
+transliteratie schema:           ✅ (active_contract_hash)
 ```
 
 Oorspronkelijke hypothese was ⏳ — nu herformuleerd:

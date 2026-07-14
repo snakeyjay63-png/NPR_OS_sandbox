@@ -1,7 +1,7 @@
-# Stap 64b: Śūnya Als Bronveld, Actieve Tussenroute En Return (Canonical)
+# Stap 64: Śūnya Als Bronveld, Actieve Tussenroute En Return
 
-**Canonieke stap 64.** Vervangt de oorspronkelijke `64_sunya.md` voor operationeel gebruik.
-Oorspronkelijke versie blijft als `64a` (bronveld/conceptuele basis).
+**Actieve stap 64.** Taaltrace van het śūnya-veld.
+Gerelateerde trace: `archive/64L_sunya_legacy.md` (ouder conceptueel veld).
 
 **Doel:** Śūnya (0.0.0.0) is geen passieve leegte. Het is het open bronveld waarin vormen verschijnen, de actieve structurele route tussen zichtbare vormen, en het veld waarnaar iedere voltooide route terugkeert.
 

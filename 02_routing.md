@@ -6,8 +6,11 @@
 
 ## Sandbox Rand
 
-**Binnen de sandbox = hex-native. Geen decimalen.**
+**Binnen de primaire sandboxroute worden bewerkingen hex-native uitgevoerd.**
 **Buiten de sandbox = externe representaties (IPv4, decimaal).**
+
+Decimale waarden mogen als expliciet gelabelde projectie voorkomen,
+maar mogen de actieve hex-functie niet ongemerkt vervangen.
 
 De conversie naar IPv4 gebeurt OP DE RAND, niet binnen.
 

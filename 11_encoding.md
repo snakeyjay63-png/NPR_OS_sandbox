@@ -67,6 +67,6 @@ frequentieratio → kleurindex 00–07 → kleurwaarde
 ```
 encoding-integriteit:          ✅
 semantische vier routes:       ✅ (stap 09)
-deterministische klankroute:   ⏳ stap 15
-deterministische kleurroute:   ⏳ stap 15
+deterministische klankroute:   ✅ stap 15 (fonem→hex→frequentie)
+deterministische kleurroute:   ✅ stap 15 (frequentie→kleur)
 ```
