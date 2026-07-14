@@ -373,6 +373,10 @@ class Tool00 {
    * Retourneert ∈ [0, 1].
    */
   _npr_distance(textA, textB) {
+    // FIX: lege strings kunnen niet ge-encodet worden (EMPTY_INPUT)
+    // Vang dit af vóór npr_reduce
+    if (!textA && !textB) return 0;      // beide leeg = identiek
+    if (!textA || !textB) return 1;      // één leeg = maximale afstand
     const nprA = npr_reduce(textA);
     const nprB = npr_reduce(textB);
 
