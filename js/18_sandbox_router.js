@@ -158,10 +158,9 @@ function combine(bj, bk, phaseOffset = 0) {
   const semantic_support = overlap.length / Math.max(kw_j.size, kw_k.size, 1);
 
   // DRIE-TOESTAND: support | neutral | contradiction
-  // TODO: detectContradiction() met antoniemen / logische tegenstrijdigheid
-  // Tot nu: contradiction = 0 (geen echte detectie), unrelated = rest
-  const contradiction = 0; // placeholder — zie TODO
-  const unrelated = +(1 - Math.max(semantic_support, contradiction)).toFixed(3);
+  // contradiction via antoniem-detectie (contradiction_delta)
+  const { score: contradiction } = find_contradictions(bj.keywords, bk.keywords);
+  const unrelated = +(1 - semantic_support - contradiction).toFixed(3);
 
   const root_diff = Math.abs(npr_j.npr_mod9 - npr_k.npr_mod9);
   let phase_relation;
@@ -322,6 +321,243 @@ function rotor_response(Q, motorField) {
 }
 
 // ---------------------------------------------------------------------------
+// contradiction_delta — tegenspraak-detectie (Stap 18)
+// ---------------------------------------------------------------------------
+
+/**
+ * ANTONYM_PAIRS: canonieke antoniem-lijst voor contradiction-detectie.
+ * Key-normalisatie: lowercase, alleen a-z0-9.
+ */
+const ANTONYM_PAIRS = [
+  ['support', 'contradict'],
+  ['true', 'false'],
+  ['yes', 'no'],
+  ['meer', 'minder'],
+  ['more', 'less'],
+  ['groter', 'kleiner'],
+  ['greater', 'smaller'],
+  ['constructief', 'destructief'],
+  ['constructive', 'destructive'],
+  ['positief', 'negatief'],
+  ['positive', 'negative'],
+  ['aanwezig', 'afwezig'],
+  ['present', 'absent'],
+  ['geldig', 'ongeldig'],
+  ['valid', 'invalid'],
+  ['consistent', 'inconsistent'],
+  ['altijd', 'nooit'],
+  ['always', 'never'],
+];
+
+function normalize_kw(kw) {
+  return kw.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * find_contradictions(kw_j, kw_k) → { score, pairs }
+ * score ∈ [0, 1].
+ */
+function find_contradictions(kw_j, kw_k) {
+  const contradictions = [];
+  const nj = new Set(kw_j.map(normalize_kw));
+  const nk = new Set(kw_k.map(normalize_kw));
+
+  for (const [a, b] of ANTONYM_PAIRS) {
+    if ((nj.has(a) && nk.has(b)) || (nj.has(b) && nk.has(a))) {
+      contradictions.push([a, b]);
+    }
+  }
+
+  const total = Math.max(nj.size, nk.size, 1);
+  const score = Math.min(contradictions.length / total, 1.0);
+  return { score, pairs: contradictions };
+}
+
+/**
+ * contradiction_delta — berekent tegenspraak-delta.
+ *
+ * Twee modi:
+ *   1. Twee combine-resultaten → delta van hun contradiction-scores
+ *   2. Twee blokken (met keywords) → antoniem-based detectie
+ */
+function contradiction_delta(a, b) {
+  if (a?.semantic && b?.semantic) {
+    const delta = Math.abs((a.semantic.contradiction ?? 0) - (b.semantic.contradiction ?? 0));
+    return {
+      delta: +delta.toFixed(4),
+      scoreA: a.semantic.contradiction ?? 0,
+      scoreB: b.semantic.contradiction ?? 0,
+    };
+  }
+  if (a?.keywords && b?.keywords) {
+    const { score, pairs } = find_contradictions(a.keywords, b.keywords);
+    return { delta: score, scoreA: 0, scoreB: 0, pairs };
+  }
+  return { delta: 0, scoreA: 0, scoreB: 0 };
+}
+
+// ---------------------------------------------------------------------------
+// combine_cycles — multi-cycle combinatie (Stap 18)
+// ---------------------------------------------------------------------------
+
+const EMPTY_BLOCK = Object.freeze({
+  id: '__empty__',
+  text: '',
+  keywords: [],
+});
+
+/**
+ * pad_blocks(blocks) → array van 4 blokken (vult met EmptyBlock indien nodig).
+ */
+function pad_blocks(blocks) {
+  const r = [...blocks];
+  while (r.length < 4) r.push(EMPTY_BLOCK);
+  return r.slice(0, 4);
+}
+
+/**
+ * cycle_weight(CycleResult) → ℝ≥0
+ *
+ * Drie factoren (combinatieformule implementatie-afhankelijk):
+ *   1. semantic_overlap    (0–1) — avg_support
+ *   2. npr_root_consistency (0–1) — hoe dicht NPR-roots bij elkaar
+ *   3. contradiction_penalty (0–1) — 1 - avg_contradiction
+ *
+ * Combinatie: 40% overlap + 30% root-consistency + 30% contradiction-penalty
+ */
+function cycle_weight(cr) {
+  if (!cr || !cr.motor_field) return 0;
+  const { semantic, npr } = cr.motor_field;
+
+  const semantic_overlap = semantic?.avg_support ?? 0;
+
+  const roots = npr?.individual_roots ?? [];
+  let root_consistency = 1.0;
+  if (roots.length >= 2) {
+    const spread = Math.max(...roots) - Math.min(...roots);
+    root_consistency = Math.max(0, 1 - spread / 9);
+  }
+
+  const contradiction_penalty = 1 - (semantic?.avg_contradiction ?? 0);
+
+  return +(
+    semantic_overlap * 0.4 +
+    root_consistency * 0.3 +
+    contradiction_penalty * 0.3
+  ).toFixed(4);
+}
+
+/**
+ * combine_cycles(List<CycleResult> × Question → CombinedResult)
+ *
+ * combine_cycles(cycle_results, Q) :=
+ *   let W = Σ_i cycle_weight(cycle_results[i]) in
+ *   if W > 0:
+ *     gewogen combinatie van motorvelden
+ *   else:
+ *     status := no_active_cycle_weight
+ *
+ * Spec: signature is normatief, combinatieformule is implementatie-afhankelijk.
+ */
+function combine_cycles(cycle_results, question) {
+  if (!Array.isArray(cycle_results) || cycle_results.length === 0) {
+    throw new Error('combine_cycles: requires non-empty array of CycleResult');
+  }
+
+  const weighted = cycle_results.map(cr => ({
+    result: cr,
+    weight: cycle_weight(cr),
+  }));
+
+  const totalWeight = weighted.reduce((s, w) => s + w.weight, 0);
+
+  if (totalWeight === 0) {
+    return {
+      status: 'no_active_cycle_weight',
+      cycles: cycle_results.length,
+      vraag: question,
+      motor_field: null,
+    };
+  }
+
+  // Genormaliseerde gewichten
+  const norm = weighted.map(w => ({
+    result: w.result,
+    weight: w.weight / totalWeight,
+  }));
+
+  // Gedeelde keywords over alle cycli
+  const all_kw = new Set();
+  for (const { result } of norm) {
+    const mf = result.motor_field;
+    if (mf?.semantic?.shared_keywords) {
+      for (const k of mf.semantic.shared_keywords) all_kw.add(k);
+    }
+  }
+
+  // Gewogen NPR-root
+  const weighted_root = Math.round(
+    norm.reduce(
+      (s, { result, weight }) =>
+        s + (result.motor_field?.npr?.weighted_root ?? 0) * weight,
+      0
+    )
+  ) || 9;
+
+  // Contradiction-delta tussen cycli
+  const cd = [];
+  for (let i = 0; i < norm.length - 1; i++) {
+    for (let j = i + 1; j < norm.length; j++) {
+      cd.push(contradiction_delta(
+        norm[i].result.motor_field,
+        norm[j].result.motor_field
+      ));
+    }
+  }
+
+  // Gewogen gemiddelden
+  const avg_support = norm.reduce(
+    (s, { result, weight }) =>
+      s + (result.motor_field?.semantic?.avg_support ?? 0) * weight,
+    0
+  );
+  const avg_contradiction = norm.reduce(
+    (s, { result, weight }) =>
+      s + (result.motor_field?.semantic?.avg_contradiction ?? 0) * weight,
+    0
+  );
+
+  let interference_type;
+  if (avg_support >= 0.5 && avg_contradiction < 0.5) interference_type = 'constructief';
+  else if (avg_contradiction >= 0.5) interference_type = 'destructief';
+  else interference_type = 'neutraal';
+
+  const reliability = +((avg_support * 0.6 + (1 - avg_contradiction) * 0.4)).toFixed(3);
+
+  return {
+    status: 'combined',
+    cycles: cycle_results.length,
+    vraag: question,
+    motor_field: {
+      phases: [], // individuele cycli behouden eigen fasen
+      npr: {
+        individual_roots: norm.map(n => n.result.motor_field?.npr?.weighted_root ?? 0),
+        weighted_root,
+        cycle_weights: norm.map(n => +n.weight.toFixed(4)),
+      },
+      semantic: {
+        shared_keywords: [...all_kw],
+        avg_support: +avg_support.toFixed(3),
+        avg_contradiction: +avg_contradiction.toFixed(3),
+        interference_type,
+      },
+      reliability,
+      contradiction_deltas: cd,
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // BLOCK_CONTRACT — stap 18 contract (Stap 21 compatible)
 // ---------------------------------------------------------------------------
 
@@ -342,13 +578,149 @@ module.exports = {
   combine, superpose, rotor_response, npr_reduce, hex_encode, dr_hex, npr_mod9, reserve_phase,
   // Route_bit + hex-native routing (Stap 17/18 koppeling)
   ROUTE_BIT, PHASE_ROUTE, PHASE_ANGLE, route_position, phase_route, phase_to_angle,
+  // Contradiction + multi-cycle (Stap 18 v2)
+  find_contradictions, contradiction_delta,
+  EMPTY_BLOCK, pad_blocks, cycle_weight, combine_cycles,
 };
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+if (require.main === module && process.argv.includes('--test')) {
+  let pass = 0, fail = 0;
+  const assert_eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (ok) { pass++; console.log(`  ✅ ${name}`); }
+    else { fail++; console.log(`  ❌ ${name}`); console.log(`     expected: ${JSON.stringify(expected)}`); console.log(`     actual:   ${JSON.stringify(actual)}`); }
+  };
+  const assert_true = (name, cond) => { if (cond) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.log(`  ❌ ${name}`); } };
+  const assert_lt = (name, a, b) => { if (a < b) { pass++; console.log(`  ✅ ${name} (${a} < ${b})`); } else { fail++; console.log(`  ❌ ${name} (${a} >= ${b})`); } };
+  const assert_gte = (name, a, b) => { if (a >= b) { pass++; console.log(`  ✅ ${name} (${a} >= ${b})`); } else { fail++; console.log(`  ❌ ${name} (${a} < ${b})`); } };
+  const assert_near = (name, a, b, eps = 0.001) => assert_true(`  ${name} (${a.toFixed(4)} ≈ ${b.toFixed(4)})`, Math.abs(a - b) < eps);
+
+  console.log('=== Stap 18 Tests ===\n');
+
+  // --- find_contradictions ---
+  console.log('find_contradictions:');
+  const c1 = find_contradictions(['support', 'constructief'], ['contradict', 'destructief']);
+  assert_gte('antoniem-paren detected', c1.pairs.length, 2);
+  assert_true('score > 0 for antonyms', c1.score > 0);
+
+  const c2 = find_contradictions(['transformatie', 'hex'], ['invariantie', 'reductie']);
+  assert_eq('no antonyms found', c2.pairs.length, 0);
+  assert_eq('score 0 for unrelated', c2.score, 0);
+
+  const c3 = find_contradictions(['true', 'meer', 'positief'], ['false', 'minder', 'negatief']);
+  assert_gte('meerdere antoniem-paren', c3.pairs.length, 3);
+  assert_true('score > 0.5 for many antonyms', c3.score > 0.5);
+
+  const c4 = find_contradictions([], []);
+  assert_eq('empty arrays', c4.score, 0);
+
+  console.log('');
+
+  // --- contradiction_delta ---
+  console.log('contradiction_delta:');
+  const d1 = contradiction_delta(
+    { keywords: ['support', 'constructief'] },
+    { keywords: ['contradict', 'destructief'] }
+  );
+  assert_true('delta > 0 for contradicting keywords', d1.delta > 0);
+
+  const d2 = contradiction_delta(
+    { semantic: { contradiction: 0.3 } },
+    { semantic: { contradiction: 0.7 } }
+  );
+  assert_near('delta from semantic scores', d2.delta, 0.4);
+
+  const d3 = contradiction_delta({}, {});
+  assert_eq('empty objects', d3.delta, 0);
+
+  console.log('');
+
+  // --- pad_blocks ---
+  console.log('pad_blocks:');
+  const b1 = [{ id: 'X' }];
+  const padded = pad_blocks(b1);
+  assert_eq('pad to 4', padded.length, 4);
+  assert_eq('first block preserved', padded[0].id, 'X');
+  assert_eq('padding is EmptyBlock', padded[1].id, '__empty__');
+
+  const b2 = [{ id: 'A' }, { id: 'B' }, { id: 'C' }, { id: 'D' }, { id: 'E' }];
+  const padded2 = pad_blocks(b2);
+  assert_eq('truncate to 4', padded2.length, 4);
+  assert_eq('fifth block removed', padded2[3].id, 'D');
+
+  console.log('');
+
+  // --- cycle_weight ---
+  console.log('cycle_weight:');
+  const cr1 = {
+    motor_field: {
+      semantic: { avg_support: 0.8, avg_contradiction: 0.1 },
+      npr: { individual_roots: [3, 3, 4] }
+    }
+  };
+  const w1 = cycle_weight(cr1);
+  assert_true('high weight for good cycle', w1 > 0.5);
+
+  const cr2 = {
+    motor_field: {
+      semantic: { avg_support: 0.0, avg_contradiction: 0.9 },
+      npr: { individual_roots: [1, 9] }
+    }
+  };
+  const w2 = cycle_weight(cr2);
+  assert_true('low weight for bad cycle', w2 < 0.3);
+
+  assert_eq('null cycle', cycle_weight(null), 0);
+  assert_eq('empty cycle', cycle_weight({}), 0);
+
+  console.log('');
+
+  // --- combine_cycles ---
+  console.log('combine_cycles:');
+  const cycles = [
+    { motor_field: { semantic: { avg_support: 0.7, avg_contradiction: 0.1, shared_keywords: ['alpha'] }, npr: { weighted_root: 3, individual_roots: [3] } } },
+    { motor_field: { semantic: { avg_support: 0.6, avg_contradiction: 0.2, shared_keywords: ['beta'] }, npr: { weighted_root: 5, individual_roots: [5] } } },
+  ];
+  const combined = combine_cycles(cycles, 'test vraag?');
+  assert_eq('combined status', combined.status, 'combined');
+  assert_eq('cycle count', combined.cycles, 2);
+  assert_gte('reliability > 0', combined.motor_field.reliability, 0);
+  assert_true('has shared keywords', combined.motor_field.semantic.shared_keywords.length >= 1);
+  assert_true('has contradiction deltas', combined.motor_field.contradiction_deltas.length >= 1);
+
+  // Near-zero weight cycle → combined but very low reliability
+  const lowCycles = [{ motor_field: { semantic: { avg_support: 0, avg_contradiction: 1, shared_keywords: [] }, npr: { weighted_root: 1, individual_roots: [1, 9] } } }];
+  const lc = combine_cycles(lowCycles, 'low?');
+  assert_eq('low weight still combined', lc.status, 'combined');
+  assert_true('low reliability', lc.motor_field.reliability < 0.2);
+
+  // Null motor_field → weight = 0 → no_active_cycle_weight
+  const nullCycles = [{ motor_field: null }];
+  const nc = combine_cycles(nullCycles, 'null?');
+  assert_eq('null motor_field → no_active_cycle_weight', nc.status, 'no_active_cycle_weight');
+
+  // Empty array
+  try {
+    combine_cycles([], 'fail?');
+    fail++; console.log('  ❌ empty array should throw');
+  } catch (e) {
+    pass++; console.log('  ✅ empty array throws');
+  }
+
+  console.log(`\n=== Resultaat: ${pass} ✅ | ${fail} ❌ ===`);
+  if (fail > 0) process.exit(1);
+  process.exit(0);
+}
 
 // ---------------------------------------------------------------------------
 // Demo
 // ---------------------------------------------------------------------------
 
-if (require.main === module) {
+if (require.main === module && !process.argv.includes('--test')) {
   const blocks = [
     { id: 'B0', text: 'NPR-OS transformatie-invariantie: hex-native reductie produceert hetzelfde uitvoerdomein voor elke input.', keywords: ['npr', 'transformatie', 'hex', 'invariantie', 'reductie'] },
     { id: 'B1', text: 'Sandbox als observatie-instrument: data door transformatiepijplijn routen en patroon zichtbaar maken.', keywords: ['sandbox', 'observatie', 'transformatie', 'patroon', 'data'] },
