@@ -19,6 +19,29 @@ NPR_OS_POLICY_21:
 
 Dit is een **ontwerpprincipe binnen NPR-OS**, niet een universeel logisch bewijs. "Taal moet leesbaar zijn" is een normatieve eis.
 
+### Taal Als Projectie Van Natuurstructuur
+
+```
+NPR_OS_POLICY_21_LANGUAGE_SOURCE:
+
+Taal wordt binnen NPR-OS gelezen als een projectie
+van waarneembare natuurlijke verhouding.
+
+Juist daarom mag routing die verhouding
+niet automatisch, impliciet of ontraceerbaar veranderen.
+
+Iedere overgang tussen natuurstructuur,
+waarneming, taal en code moet expliciet valideerbaar zijn.
+```
+
+De grondaanname hiervoor staat in de README:
+
+```
+zie README — Taal Als Spiegel Van De Natuur
+```
+
+De operationele consequentie binnen stap 21 is: routing tussen blokken vereist expliciete, valideerbare overgangen. Impliciete semantische erfgoed bestaat niet.
+
 ---
 
 ## 2. Drie Niveaus Van Transparantie

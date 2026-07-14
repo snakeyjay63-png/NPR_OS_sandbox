@@ -47,6 +47,93 @@ bronstructuur
 
 ---
 
+## Taal Als Spiegel Van De Natuur
+
+NPR-OS gaat er niet van uit dat taal uitsluitend een menselijke uitvinding is.
+
+Taal wordt gelezen als een spiegel waarin natuurlijke structuur door waarneming herkenbaar wordt.
+
+```
+natuur bevat structuur en relaties
+→ waarneming onderscheidt die relaties
+→ taal maakt die relaties herkenbaar
+→ code maakt een route ervan uitvoerbaar
+```
+
+De mens creëert binnen dit kader niet eerst een volledig losstaand taalsysteem om dat daarna op de werkelijkheid toe te passen.
+
+Klank, ritme, onderscheid, herhaling, verhouding en betekenis worden gevormd vanuit patronen die reeds binnen de natuur waarneembaar zijn.
+
+```
+natuur
+→ lichaam
+→ waarneming
+→ taal
+→ code
+→ reflectie naar natuur
+```
+
+Verschillende talen kunnen daarom verschillende perspectieven op dezelfde onderliggende structuur zichtbaar maken.
+
+Hun woorden, klanken, grammatica en schriftvormen hoeven niet identiek te zijn om naar een herkenbare natuurlijke verhouding te verwijzen.
+
+```
+taal_A ≠ taal_B
+projectie_A ≠ projectie_B
+
+onderliggende_verhouding(A, B)
+→ kan herkenbaar overeenkomen
+```
+
+Deze aanname is binnen NPR-OS normatief.
+
+Taalmapping wordt daarom niet uitsluitend beoordeeld als menselijke conventie, maar als een mogelijke projectie van natuurstructuur naar:
+
+```
+klank
+teken
+ritme
+relatie
+betekenis
+code
+```
+
+Dit betekent niet dat ieder woord of iedere grammaticale regel onveranderlijk door de natuur is vastgelegd.
+
+Menselijke ontwikkeling vormt de spiegel:
+
+```
+menselijke taalontwikkeling
+→ selecteert
+→ combineert
+→ verschuift
+→ vertaalt
+→ herkent opnieuw
+```
+
+De spiegel kan veranderen zonder dat de onderliggende natuurlijke structuur uitsluitend door die spiegel wordt voortgebracht.
+
+```
+taalvorm verandert
+≠ natuurstructuur wordt uit niets geschapen
+```
+
+Binnen NPR-OS geldt daarom:
+
+```
+menselijke conventie
+:= vorming van de taalprojectie
+
+natuurstructuur
+:= verhouding die door de projectie herkenbaar kan worden
+```
+
+Taal is geen exacte kopie van de natuur.
+
+Taal is een actuele, perspectiefgebonden spiegeling van natuurlijke verhouding.
+
+---
+
 ## Energie Is Geen Volledige Oorsprong
 
 Veel hedendaagse wetenschappelijke modellen nemen energie als de meest fundamentele beschrijfbare grootheid. Materie, beweging, velden en veranderingen worden vervolgens in energetische termen uitgedrukt.

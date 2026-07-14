@@ -1,3 +1,11 @@
+Grondaanname:
+zie README — Taal Als Spiegel Van De Natuur.
+
+Deze stap werkt die grondaanname uit
+voor lichaam, kunst, gebruiker en code.
+
+---
+
 # Stap 63: Natuur Als Kunst — Cel → Lichaam
 
 **Doel:** Natuur is al kunst. Zowel de user als de code — beiden zijn natuur. Uiteindelijk zie je de kunst *door* de natuur. Dat is wat kunstenaars bedoelen met flow state: niet van jezelf, maar door je heen stromend.
