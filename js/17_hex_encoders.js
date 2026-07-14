@@ -2,6 +2,11 @@
 /**
  * NPR-OS Stap 17: Canonieke Hex-Encoders
  * input → hex → dr_hex → npr_mod9 → {0..9,A..F} → {1..9}
+ *
+ * SCOPE V1:
+ *   integer: 0 .. Number.MAX_SAFE_INTEGER (BigInt = future)
+ *   ipv6: pure hex notation only (IPv4-mapped ::ffff:x.x.x.x = unsupported)
+ *   utf8: strict decoding (INVALID_UTF8 on invalid sequences)
  */
 
 // --- Strict hex validation ---
@@ -16,8 +21,18 @@ function assertValidHex(value) {
 
 // --- Core ---
 
+/**
+ * drHex(hexDigits) → digital root as hex string.
+ * hexDigits: string[] van hex karakters ('0'..'9','A'..'F').
+ * FIX: publiceert nu validatie (was intern, nu geëxporteerd).
+ */
 function drHex(hexDigits) {
   if (!hexDigits || hexDigits.length === 0) return '0';
+  for (const ch of hexDigits) {
+    if (typeof ch !== 'string' || !/^[0-9A-Fa-f]$/.test(ch)) {
+      throw new Error('INVALID_HEX_DIGIT');
+    }
+  }
   let sum = 0;
   for (const ch of hexDigits) sum += parseInt(ch, 16);
   while (sum > 15) {
@@ -96,6 +111,8 @@ function encodeIpv6(addr) {
   const ip = addr.toString().trim();
   // Reject zone IDs
   if (ip.includes('%')) throw new Error('INVALID_IPV6');
+  // FIX: Reject IPv4-mapped/IPv4-embedded (::ffff:192.0.2.1 = unsupported V1)
+  if (ip.includes('.')) throw new Error('INVALID_IPV6');
   // Reject multiple ::
   if ((ip.match(/::/g) || []).length > 1) throw new Error('INVALID_IPV6');
   if (!/^[0-9a-fA-F:]+$/.test(ip)) throw new Error('INVALID_IPV6');
@@ -112,7 +129,9 @@ function encodeIpv6(addr) {
   if (!seg.every(s => /^[0-9A-Fa-f]{1,4}$/.test(s))) throw new Error('INVALID_IPV6');
   const h = seg.map(s => s.padStart(4, '0').toUpperCase()).join('');
   if (h.length !== 32) throw new Error('INVALID_IPV6');
-  return finish(result('ipv6', ip, h));
+  // FIX: canonicalValue = fully expanded upper-case form
+  const canonicalValue = seg.map(s => s.padStart(4, '0').toUpperCase()).join(':');
+  return finish(result('ipv6', canonicalValue, h));
 }
 
 function reduceHex(hex) {
@@ -126,12 +145,23 @@ function reduceHex(hex) {
 function decodeUtf8Hex(hex) {
   const clean = assertValidHex(hex);
   if (clean.length % 2 !== 0) throw new Error('INVALID_HEX_BYTE_LENGTH');
-  return Buffer.from(clean, 'hex').toString('utf8');
+  // FIX: strict UTF-8 decoding (fatal on invalid sequences)
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  try {
+    return decoder.decode(Buffer.from(clean, 'hex'));
+  } catch {
+    throw new Error('INVALID_UTF8');
+  }
 }
 
 function decodeIntegerHex(hex) {
   const clean = assertValidHex(hex);
-  return parseInt(clean, 16);
+  // FIX: use BigInt for safe range check before converting to Number
+  const n = BigInt('0x' + clean);
+  if (n > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('INTEGER_OUT_OF_RANGE');
+  }
+  return Number(n);
 }
 
 // --- Export ---
@@ -208,6 +238,36 @@ if (require.main === module) {
     const e_acute = 'e\u0301'; // e + combining acute
     eq(encodeUtf8Text(eacute).hex, encodeUtf8Text(e_acute).hex);
   });
+
+  // --- FIX: drHex validates ---
+  t('drHex invalid digit → INVALID_HEX_DIGIT', () => throwsWith(() => drHex(['X']), 'INVALID_HEX_DIGIT'));
+  t('drHex non-string → INVALID_HEX_DIGIT', () => throwsWith(() => drHex([42]), 'INVALID_HEX_DIGIT'));
+
+  // --- FIX: decodeIntegerHex BigInt safety ---
+  t('decodeIntegerHex safe range', () => eq(decodeIntegerHex('3039'), 12345));
+  t('decodeIntegerHex out of range → INTEGER_OUT_OF_RANGE', () => throwsWith(() => decodeIntegerHex('8000000000000000'), 'INTEGER_OUT_OF_RANGE'));
+
+  // --- FIX: decodeUtf8Hex strict ---
+  t('decodeUtf8Hex strict valid', () => eq(decodeUtf8Hex('C3A9'), '\u00E9'));
+  t('decodeUtf8Hex invalid utf8 → INVALID_UTF8', () => throwsWith(() => decodeUtf8Hex('C3'), 'INVALID_UTF8'));
+
+  // --- FIX: IPv6 canonicalValue fully expanded ---
+  t('ipv6 canonicalValue expanded', () => {
+    const r = encodeIpv6('2001:db8::1');
+    eq(r.canonicalValue, '2001:0DB8:0000:0000:0000:0000:0000:0001');
+  });
+  t('ipv6 canonicalValue ::1', () => {
+    const r = encodeIpv6('::1');
+    eq(r.canonicalValue, '0000:0000:0000:0000:0000:0000:0000:0001');
+  });
+  t('ipv6 equivalent forms same canonicalValue', () => {
+    const r1 = encodeIpv6('2001:db8::1');
+    const r2 = encodeIpv6('2001:0db8:0:0:0:0:0:1');
+    eq(r1.canonicalValue, r2.canonicalValue);
+  });
+
+  // --- FIX: IPv4-mapped IPv6 unsupported ---
+  t('ipv6 mapped → INVALID_IPV6', () => throwsWith(() => encodeIpv6('::ffff:192.0.2.128'), 'INVALID_IPV6'));
 
   console.log(`Stap 17 tests: ${P.length}/${P.length + F.length} ✅`);
   if (F.length) F.forEach(f => console.log(`  ❌ ${f}`));
