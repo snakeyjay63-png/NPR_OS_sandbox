@@ -328,7 +328,7 @@ function rotor_response(Q, motorField) {
 const BLOCK_CONTRACT = Object.freeze({
   id: '18_sandbox_router',
   phases: ['combine', 'superpose', 'rotor_response'],
-  inputSchema: 'NPR_BLOCK_SET',
+  inputSchema: 'NPR_SOURCE_BLOCKS',
   outputSchema: 'NPR_ROTOR_RESPONSE',
   dependencies: ['17_sandbox_meta'],
 });

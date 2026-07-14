@@ -33,6 +33,29 @@ const BLOCK_STATUS = Object.freeze({
 });
 
 // ============================================================
+// contractHash — content-based contract identifier
+// ============================================================
+
+/**
+ * Genereer een kort hash-achtige ID uit contractinhoud.
+ * Geen versienummer — alleen inhoudelijke identificatie.
+ *
+ * @param {Object} fields — velden die het contract definiëren
+ * @returns {string} contract hash bijv "18B:7A3F91"
+ */
+function contractHash(fields) {
+  // Deterministische string-serialize → simple hash
+  const raw = JSON.stringify(fields, Object.keys(fields).sort());
+  // DJB2-style hash, 6-char hex
+  let h = 5381;
+  for (let i = 0; i < raw.length; i++) {
+    h = ((h << 5) + h + raw.charCodeAt(i)) | 0;
+  }
+  const hex = Math.abs(h).toString(16).toUpperCase().slice(0, 6).padStart(6, '0');
+  return hex;
+}
+
+// ============================================================
 // defineBlock — blokcontract aanmaken
 // ============================================================
 
@@ -48,12 +71,16 @@ const BLOCK_STATUS = Object.freeze({
  * @param {string}   [spec.contractId]  — contract-ID (verandert bij schema-aanpassing)
  * @param {string[]} [spec.dependsOn]   — lijst van upstream blok-IDs
  * @param {Object}   [spec.contract]    — extra contractdata (schema, versie, etc.)
+ * @param {Object}   [spec.inputSchema] — invoerschema-definitie
+ * @param {Object}   [spec.outputSchema] — uitvoerschema-definitie
+ * @param {string[]} [spec.operators]   — gebruikte operatoren
  *
  * @returns {Object} blok met status, error, output, dependsOn, etc.
  */
 function defineBlock(spec) {
   const block = Object.assign({
-    status: BLOCK_STATUS.PENDING_REVALIDATE,
+    localStatus: BLOCK_STATUS.PENDING_REVALIDATE,
+    chainStatus: null,
     output: undefined,
     error: null,
   }, spec);
@@ -68,8 +95,17 @@ function defineBlock(spec) {
   if (!block.dependsOn) {
     block.dependsOn = [];
   }
+
+  // Contract-ID: content-hash ipv versienummer
+  // Geen @1/@2 — hash verandert alleen bij inhoudelijke wijziging
   if (!block.contractId) {
-    block.contractId = `${block.id}@1`;
+    const hash = contractHash({
+      inputSchema: block.inputSchema,
+      outputSchema: block.outputSchema,
+      operators: block.operators,
+      dependencies: block.dependsOn,
+    });
+    block.contractId = `${block.id}:${hash}`;
   }
 
   return block;
@@ -95,7 +131,8 @@ function validateLocal(block) {
     block.validateOutput(output);
 
     block.output = output;
-    block.status = BLOCK_STATUS.VALID;
+    block.localStatus = BLOCK_STATUS.VALID;
+    block.chainStatus = null;
     block.error = null;
 
     return {
@@ -105,7 +142,7 @@ function validateLocal(block) {
       output,
     };
   } catch (error) {
-    block.status = BLOCK_STATUS.INVALID_LOCAL;
+    block.localStatus = BLOCK_STATUS.INVALID_LOCAL;
     block.error = {
       type: 'LOCAL_ERROR',
       blockId: block.id,
@@ -120,11 +157,74 @@ function validateLocal(block) {
 }
 
 // ============================================================
+// applyIncoming — pas inkomende overdracht toe vóór lokale validatie
+// ============================================================
+
+/**
+ * Valideer en pas de overdracht van source → target toe.
+ * Hierbij wordt target.input daadwerkelijk bijgewerkt.
+ *
+ * INVALID_LOCAL heeft voorrang op BLOCKED_BY_UPSTREAM.
+ *
+ * @param {Object}   sourceBlock — upstream blok
+ * @param {Object}   targetBlock — downstream blok
+ * @param {Function} transfer    — transformatie: source.output → target.input
+ *
+ * @returns {Object} resultaat met ok, type, edge, ...
+ */
+function applyIncoming(sourceBlock, targetBlock, transfer) {
+  // Upstream check
+  if (sourceBlock.localStatus !== BLOCK_STATUS.VALID) {
+    // INVALID_LOCAL heeft voorrang — overschrijf niet
+    if (targetBlock.localStatus !== BLOCK_STATUS.INVALID_LOCAL) {
+      targetBlock.chainStatus = BLOCK_STATUS.BLOCKED_BY_UPSTREAM;
+    }
+
+    return {
+      ok: false,
+      type: 'BLOCKED_BY_UPSTREAM',
+      sourceId: sourceBlock.id,
+      targetId: targetBlock.id,
+      message: `Bron ${sourceBlock.id} is ${sourceBlock.localStatus}`,
+      targetLocalStatus: targetBlock.localStatus,
+    };
+  }
+
+  // Transfer berekenen en valideren
+  try {
+    const nextInput = transfer(sourceBlock.output);
+    targetBlock.validateInput(nextInput);
+    
+    // Daadwerkelijk toewijzen — target draait op nieuwe input
+    targetBlock.input = nextInput;
+
+    return {
+      ok: true,
+      type: 'CHAIN_INPUT_READY',
+      edge: `${sourceBlock.id}→${targetBlock.id}`,
+    };
+  } catch (error) {
+    // INVALID_LOCAL heeft voorrang
+    if (targetBlock.localStatus !== BLOCK_STATUS.INVALID_LOCAL) {
+      targetBlock.chainStatus = BLOCK_STATUS.INVALID_CHAIN;
+    }
+
+    return {
+      ok: false,
+      type: 'CHAIN_ERROR',
+      edge: `${sourceBlock.id}→${targetBlock.id}`,
+      message: error.message,
+    };
+  }
+}
+
+// ============================================================
 // validateChain — kettingvalidatie tussen twee blokken
 // ============================================================
 
 /**
  * Valideer de overdracht van sourceBlock → targetBlock.
+ * Pas de overdracht toe en wijzig target.input.
  *
  * @param {Object}   sourceBlock — upstream blok
  * @param {Object}   targetBlock — downstream blok
@@ -133,15 +233,19 @@ function validateLocal(block) {
  * @returns {Object} resultaat met ok, type, edge, ...
  */
 function validateChain(sourceBlock, targetBlock, transfer) {
-  if (sourceBlock.status !== BLOCK_STATUS.VALID) {
-    targetBlock.status = BLOCK_STATUS.BLOCKED_BY_UPSTREAM;
+  if (sourceBlock.localStatus !== BLOCK_STATUS.VALID) {
+    // INVALID_LOCAL heeft voorrang op BLOCKED_BY_UPSTREAM
+    if (targetBlock.localStatus !== BLOCK_STATUS.INVALID_LOCAL) {
+      targetBlock.chainStatus = BLOCK_STATUS.BLOCKED_BY_UPSTREAM;
+    }
 
     return {
       ok: false,
       type: 'BLOCKED_BY_UPSTREAM',
       sourceId: sourceBlock.id,
       targetId: targetBlock.id,
-      message: `Bron ${sourceBlock.id} is ${sourceBlock.status}`,
+      message: `Bron ${sourceBlock.id} is ${sourceBlock.localStatus}`,
+      targetLocalStatus: targetBlock.localStatus,
     };
   }
 
@@ -149,15 +253,19 @@ function validateChain(sourceBlock, targetBlock, transfer) {
     const transferredInput = transfer(sourceBlock.output);
 
     targetBlock.validateInput(transferredInput);
+    
+    // Input daadwerkelijk toewijzen
+    targetBlock.input = transferredInput;
 
     return {
       ok: true,
       type: 'CHAIN_VALID',
       edge: `${sourceBlock.id}→${targetBlock.id}`,
-      input: transferredInput,
     };
   } catch (error) {
-    targetBlock.status = BLOCK_STATUS.INVALID_CHAIN;
+    if (targetBlock.localStatus !== BLOCK_STATUS.INVALID_LOCAL) {
+      targetBlock.chainStatus = BLOCK_STATUS.INVALID_CHAIN;
+    }
 
     return {
       ok: false,
@@ -184,7 +292,7 @@ function validateChain(sourceBlock, targetBlock, transfer) {
  * @returns {string[]} lijst van beïnvloede blok-IDs
  */
 function markContractChanged(block, allBlocks) {
-  block.status = BLOCK_STATUS.PENDING_REVALIDATE;
+  block.localStatus = BLOCK_STATUS.PENDING_REVALIDATE;
 
   const affected = [block.id];
   const queue = [block.id];
@@ -198,7 +306,7 @@ function markContractChanged(block, allBlocks) {
         candidate.dependsOn.includes(sourceId) &&
         !visited.has(candidate.id)
       ) {
-        candidate.status = BLOCK_STATUS.PENDING_REVALIDATE;
+        candidate.localStatus = BLOCK_STATUS.PENDING_REVALIDATE;
         visited.add(candidate.id);
         affected.push(candidate.id);
         queue.push(candidate.id);
@@ -216,12 +324,12 @@ function markContractChanged(block, allBlocks) {
 /**
  * Valideer het aangewezen blok en zijn directe overgangen.
  *
- * Volgorde:
- *   1. lokale validatie
- *   2. inkomende overgang  (indien aanwezig)
- *   3. uitgaande overgang  (indien aanwezig)
+ * Volgorde (correct):
+ *   1. inkomende transfer  →  target.input bijwerken
+ *   2. lokale validatie    (op nieuwe input)
+ *   3. uitgaande transfer  (indien aanwezig)
  *
- * Stopt bij lokale fout — upstream/downstream wordt niet
+ * Stopt bij eerste fout — upstream/downstream wordt niet
  * automatisch herstart.
  *
  * @param {Object} opts
@@ -236,7 +344,25 @@ function validateNearest(opts) {
 
   const results = [];
 
-  // 1. Lokale validatie
+  // 1. Inkomende transfer vóór lokale validatie
+  if (incoming) {
+    const incomingResult = applyIncoming(
+      incoming.source,
+      block,
+      incoming.transfer
+    );
+    results.push(incomingResult);
+
+    if (!incomingResult.ok) {
+      return {
+        ok: false,
+        nearestTarget: incomingResult.edge ?? block.id,
+        results,
+      };
+    }
+  }
+
+  // 2. Lokale validatie (op de actuele input)
   const localResult = validateLocal(block);
   results.push(localResult);
 
@@ -248,13 +374,7 @@ function validateNearest(opts) {
     };
   }
 
-  // 2. Inkomende overgang
-  if (incoming) {
-    const chainIn = validateChain(incoming.source, block, incoming.transfer);
-    results.push(chainIn);
-  }
-
-  // 3. Uitgaande overgang
+  // 3. Uitgaande transfer
   if (outgoing) {
     const chainOut = validateChain(block, outgoing.target, outgoing.transfer);
     results.push(chainOut);
@@ -277,6 +397,7 @@ function validateNearest(opts) {
  *
  * Elke fase zelfstandig valideerbaar.
  * Elke overgang expliciet gecontroleerd.
+ * Volledige transfers vereist: blocks.length - 1.
  *
  * @param {Object[]} blocks — geordende lijst van blokken
  * @param {Function[]} transfers — transformatiefuncties tussen opeenvolgende blokken
@@ -296,7 +417,25 @@ function validateRoute(blocks, transfers) {
   const results = [];
   const errors = [];
 
-  // Lokale validatie voor alle blokken
+  // Verplichte transfers: exact blocks.length - 1
+  const requiredTransferCount = blocks.length - 1;
+  if (
+    !Array.isArray(transfers) ||
+    transfers.length !== requiredTransferCount
+  ) {
+    return {
+      ok: false,
+      routeValid: false,
+      results: [],
+      errors: [{
+        type: 'INCOMPLETE_ROUTE',
+        expectedTransfers: requiredTransferCount,
+        receivedTransfers: Array.isArray(transfers) ? transfers.length : 0,
+      }],
+    };
+  }
+
+  // 1. Lokale validatie voor alle blokken
   for (const block of blocks) {
     const local = validateLocal(block);
     results.push(local);
@@ -305,14 +444,13 @@ function validateRoute(blocks, transfers) {
     }
   }
 
-  // Kettingvalidatie voor alle overgangen
-  if (transfers && transfers.length > 0) {
-    for (let i = 0; i < blocks.length - 1 && i < transfers.length; i++) {
-      const chain = validateChain(blocks[i], blocks[i + 1], transfers[i]);
-      results.push(chain);
-      if (!chain.ok) {
-        errors.push(chain);
-      }
+  // 2. Kettingvalidatie voor alle overgangen
+  // INVALID_LOCAL heeft voorrang op BLOCKED_BY_UPSTREAM
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const chain = validateChain(blocks[i], blocks[i + 1], transfers[i]);
+    results.push(chain);
+    if (!chain.ok) {
+      errors.push(chain);
     }
   }
 
@@ -330,11 +468,10 @@ function validateRoute(blocks, transfers) {
 
 const BLOCK_CONTRACT = Object.freeze({
   id: '21_opensource_taalveld',
-  phases: ['defineBlock', 'validateLocal', 'validateChain', 'validateNearest', 'validateRoute'],
+  phases: ['defineBlock', 'applyIncoming', 'validateLocal', 'validateChain', 'validateNearest', 'validateRoute'],
   inputSchema: 'NPR_BLOCK_SPEC',
   outputSchema: 'NPR_VALIDATION_RESULT',
-  dependencies: [], // zelfstandig — afhankelijk van andere blokken
-  status: BLOCK_STATUS.VALID,
+  dependencies: [], // zelfstandig — validatie-infrastructuur
 });
 
 // ============================================================
@@ -344,8 +481,10 @@ const BLOCK_CONTRACT = Object.freeze({
 module.exports = {
   BLOCK_STATUS,
   BLOCK_CONTRACT,
+  contractHash,
   defineBlock,
   validateLocal,
+  applyIncoming,
   validateChain,
   markContractChanged,
   validateNearest,

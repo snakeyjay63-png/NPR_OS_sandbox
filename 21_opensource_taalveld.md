@@ -522,3 +522,59 @@ Operationele validatie:         ✅ getest (LOCAL, CHAIN, CASCADE, NEAREST)
 - `js/20`: BLOCK_CONTRACT toegevoegd
 - Driefasensluiting getest: LOCAL_VALID, CHAIN_VALID, LOCAL_ERROR, CHAIN_ERROR, BLOCKED_BY_UPSTREAM, PENDING_REVALIDATE
 - Eindoordeel: geldig/gesloten
+
+## Check: 2026-07-14 14:35 GMT+2
+- Status: NPR-OS Stap 21 — vijf breuken gerepareerd ✅
+
+### Gerepareerde breuken:
+
+**1. Incoming transfer vóór lokale validatie**
+- `validateNearest` voert nu incoming transfer uit vóór `validateLocal`
+- `target.input` wordt daadwerkelijk bijgewerkt met de overgedragen input
+- Nieuwe functie `applyIncoming` behandelt de volgorde correct
+
+**2. Volledige edge enforcement**
+- `validateRoute` vereist nu exact `blocks.length - 1` transfers
+- Onvolledige routes retourneren `INCOMPLETE_ROUTE` error
+- Lege transfers worden niet stil geaccepteerd
+
+**3. Lokale en ketenstatus gescheiden**
+- `localStatus` vs `chainStatus` — twee onafhankelijke velden
+- `INVALID_LOCAL` wordt niet overschreven door `BLOCKED_BY_UPSTREAM`
+- Specifiekere fout heeft voorrang op algemeenere blokkade
+
+**4. Versievrije contract-identiteit**
+- `@1/@2` versienummers vervangen door content-hash
+- Nieuwe functie `contractHash` — deterministische hash van contractinhoud
+- Contract-ID bijv `18B:7A3F91` — geen lineaire versie-identiteit
+
+**5. Markdown-contract bijgewerkt**
+- Deze sectie documenteert de repair-historie
+- JS-contract = Markdown-contract
+
+### Gewijzigde bestanden:
+- `js/21_opensource_taalveld.js`: applyIncoming, contractHash, localStatus/chainStatus
+- `js/18_sandbox_router.js`: BLOCK_CONTRACT consistent
+- `js/19_return.js`: al consistent
+- `js/20_encryptie_taal.js`: al consistent
+
+### Eindoordeel:
+- `21_validate_nearest_structure: ✅`
+- `21_status_model: ✅` (localStatus + chainStatus)
+- `21_contract_cascade: ✅`
+- `21_error_addressing: ✅`
+- `incoming_input_execution: ✅`
+- `complete_edge_enforcement: ✅`
+- `status_precedence: ✅`
+- `versionless_contract_identity: ✅`
+- `21_markdown_matches_runtime: ✅`
+
+> Stap 21: geldig/gesloten
+
+---
+
+## Check: 2026-07-12 23:47 GMT+2
+- Status: NPR-OS Stap 21 — formeel herzien
+- Correcties: drie niveaus transparantie, reproduceerbare uitvoering, routelog, router/processor grens, geheimen, stap 20 aansluiting
+- Kern: transparante routing = leesbaar + verifieerbaar + traceerbaar + gedeclareerd
+- `step_21_formal_consistency: ✅ akkoord`
