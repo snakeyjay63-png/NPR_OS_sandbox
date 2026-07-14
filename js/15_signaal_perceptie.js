@@ -103,9 +103,10 @@ const MATRA_MAP = {
   '\u093E': 'आ', // ā
   '\u093F': 'इ', // i
   '\u0940': 'ई', // ī
-  '\u0942': 'उ', // u
-  '\u0943': 'उ', // ū (same as u for simplicity)
-  '\u0944': 'ऋ', // ṛ
+  '\u0941': 'उ', // u (U+0941)
+  '\u0942': 'ऊ', // ū (U+0942)
+  '\u0943': 'ऋ', // ṛ (U+0943)
+  // U+0944 ॠ = lange ṝ-vorm → niet in canonieke 48-set; wordt afgevangen als INVALID_CLUSTER
   '\u0947': 'ए', // e
   '\u0948': 'ऐ', // ai
   '\u094B': 'ओ', // o
@@ -182,7 +183,7 @@ function segmentPhonemes(nfcText) {
     const cp = ch.codePointAt(0);
     if (cp < 0x0900 || cp > 0x097F) throw new Error(`UNSUPPORTED_CHARACTER: ${ch} (U+${cp.toString(16).toUpperCase()})`);
 
-    // Om → ओ ँ म
+    // Om → ओ ं म  (independent vowels ओ + anusvāra ं + consonant म)
     if (ch === OM) { result.push('ओ', 'ं', 'म'); i++; continue; }
 
     // Independent vowel
@@ -193,6 +194,27 @@ function segmentPhonemes(nfcText) {
 
     // Virāma standing alone → error
     if (ch === VIRAMA) throw new Error('DANGLING_VIRAMA');
+
+    // Nukta check: base + U+093C → composite key (ड़, ढ़, फ़, य़, ज़)
+    const NUKTA = '\u093C';
+    if (i + 1 < nfcText.length && nfcText[i + 1] === NUKTA) {
+      const candidate = ch + NUKTA;
+      if (BY_CHAR.has(candidate)) {
+        i += 2;
+        // Check for matra or virama after nukta consonant
+        if (i < nfcText.length) {
+          const next = nfcText[i];
+          if (next in MATRA_MAP) {
+            result.push(candidate, MATRA_MAP[next]); i++; continue;
+          }
+          if (next === VIRAMA) {
+            result.push(candidate); i++; continue;
+          }
+        }
+        result.push(candidate, 'अ'); // nukta consonant + inherent अ
+        continue;
+      }
+    }
 
     // Consonant cluster
     const con = BY_CHAR.get(ch);
@@ -237,6 +259,11 @@ if (require.main === module) {
   function t(n, fn) { try { fn(); P.push(n); } catch (e) { F.push(`${n}: ${e.message}`); } }
   function eq(a, b) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${a} !== ${b}`); }
   function startsWith(s, p) { if (!s.startsWith(p)) throw new Error(`${s} does not start with ${p}`); }
+  function throwsWith(fn, prefix) {
+    let thrown = false;
+    try { fn(); } catch (e) { thrown = true; startsWith(e.message, prefix); }
+    if (!thrown) throw new Error(`Expected error starting with ${prefix}`);
+  }
 
   t('अ → [अ]', () => eq(segmentPhonemes('अ'), ['अ']));
   t('क → [क, अ]', () => eq(segmentPhonemes('क'), ['क', 'अ']));
@@ -248,8 +275,17 @@ if (require.main === module) {
   t('ं → [ं]', () => eq(segmentPhonemes('ं'), ['ं']));
   t('ः → [ः]', () => eq(segmentPhonemes('ः'), ['ः']));
   t('ँ → [ँ]', () => eq(segmentPhonemes('ँ'), ['ँ']));
-  t('empty → error', () => { try { segmentPhonemes(''); } catch (e) { startsWith(e.message, 'EMPTY'); } });
-  t('latin → error', () => { try { segmentPhonemes('hello'); } catch (e) { startsWith(e.message, 'UNSUPPORTED'); } });
+  // Nukta fonemen
+  t('ड़ → [ड़, अ]', () => eq(segmentPhonemes('ड़'), ['ड़', 'अ']));
+  t('ढ़ → [ढ़, अ]', () => eq(segmentPhonemes('ढ़'), ['ढ़', 'अ']));
+  t('फ़ → [फ़, अ]', () => eq(segmentPhonemes('फ़'), ['फ़', 'अ']));
+  t('य़ → [य़, अ]', () => eq(segmentPhonemes('य़'), ['य़', 'अ']));
+  t('ज़ → [ज़, अ]', () => eq(segmentPhonemes('ज़'), ['ज़', 'अ']));
+  t('ड़ि → [ड़, इ] (nukta + matra)', () => eq(segmentPhonemes('ड़ि'), ['ड़', 'इ']));
+  t('ड़क् → [ड़, अ, क] (nukta + virama + conjunct)', () => eq(segmentPhonemes('ड़क्'), ['ड़', 'अ', 'क']));
+
+  t('empty → error', () => throwsWith(() => segmentPhonemes(''), 'EMPTY_INPUT'));
+  t('latin → error', () => throwsWith(() => segmentPhonemes('hello'), 'UNSUPPORTED'));
   t('48 unique IDs', () => eq(new Set(ALL_PHONEMES.map(p => JSON.stringify(p.id))).size, 48));
   t('48 unique hex', () => eq(new Set(ALL_PHONEMES.map(p => p.hex)).size, 48));
   t('hex range', () => {
