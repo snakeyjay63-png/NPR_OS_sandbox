@@ -195,7 +195,7 @@ class Tool00 {
       trajectory: trajectory,
       return_trace: return_trace,
       depth: iterations,
-      converged: this.has_converged(trajectory),
+      converged: this.has_converged(trajectory).converged,
       tool: 'Tool-00',
       taal_adres: final.taal_adres,
       bron_map: final.bron_map
@@ -263,46 +263,138 @@ class Tool00 {
   /**
    * Convergentie-check (Stap 19 criteria)
    *
-   * CONVERGENCE_PROXY_V1 — benadering, niet volledige semantische convergentie
-   *
    *   root_stable(i) := root(output_i) = root(output_{i-1})
-   *   semantic_stable(i) := Jaccard-afstand(keywords) ≤ 0.3
-   *   contradiction_delta := |confidence_i - confidence_{i-1}| < 0.05
-   *   converged(i) := root_stable ∧ semantic_stable ∧ contradiction_delta
+   *   semantic_stable(i) := semantic_distance(answer_i, answer_{i-1}) ≤ threshold
+   *   contradiction_stable(i) := |confidence_i - confidence_{i-1}| < 0.05
+   *   converged(i) := root_stable ∧ semantic_stable ∧ contradiction_stable
    *
-   * TODO: echte embedding-gebaseerde semantische afstand
-   * TODO: echte contradiction-detectie (niet betrouwbaarheidsverschil)
+   * semantic_distance: hybride (40% Jaccard + 30% bigram + 30% NPR-hex)
    */
-  has_converged(trajectory) {
+  has_converged(trajectory, options = {}) {
     if (trajectory.length < 2) return false;
     const last = trajectory[trajectory.length - 1];
     const prev = trajectory[trajectory.length - 2];
+    const threshold = options.semantic_threshold || 0.3;
 
     // root_stable
     const rootStable = last.npr_root === prev.npr_root;
 
-    // semantic_stable — CONVERGENCE_PROXY_V1 (Jaccard-afstand tussen keywords)
-    const semanticStable = this._semantic_distance_simple(last, prev) <= 0.3;
+    // semantic_stable — hybride afstand (Jaccard + bigram + NPR-hex)
+    const semDist = this._semantic_distance(last, prev);
+    const semanticStable = semDist <= threshold;
 
-    // contradiction_delta — CONVERGENCE_PROXY_V1 (betrouwbaarheidsverschil als proxy)
-    const contradictionDelta = Math.abs(last.confidence - prev.confidence) < 0.05;
+    // contradiction_stable — betrouwbaarheidsverschil als proxy
+    const contradictionStable = Math.abs(last.confidence - prev.confidence) < 0.05;
 
-    return rootStable && semanticStable && contradictionDelta;
+    return {
+      converged: rootStable && semanticStable && contradictionStable,
+      root_stable: rootStable,
+      semantic_stable: semanticStable,
+      contradiction_stable: contradictionStable,
+      semantic_distance: semDist,
+      confidence_delta: Math.abs(last.confidence - prev.confidence),
+    };
   }
 
   /**
-   * Simpele semantische afstand (keyword-overlap proxy)
-   * TODO: vervangen door echte embedding-gebaseerde afstand
+   * Semantische afstand — hybride meting (Stap 19 v2)
+   *
+   * Combinatie van drie signalen:
+   *   1. Jaccard-afstand (keyword-overlap) — 40%
+   *   2. Bigram-overlap (woord-rij nabijheid) — 30%
+   *   3. NPR-hex-afstand (signaal-niveau) — 30%
+   *
+   * Retourneert ∈ [0, 1].
+   *   0 = identiek, 1 = volledig verschillend.
    */
-  _semantic_distance_simple(a, b) {
-    const keywordsA = this.extract_keywords(a.answer);
-    const keywordsB = this.extract_keywords(b.answer);
-    if (keywordsA.length === 0 || keywordsB.length === 0) return 1;
-    const setA = new Set(keywordsA);
-    const setB = new Set(keywordsB);
+  _semantic_distance(a, b) {
+    const textA = typeof a === 'string' ? a : (a.answer || '');
+    const textB = typeof b === 'string' ? b : (b.answer || '');
+
+    // 1. Jaccard-afstand (keyword-niveau)
+    const kwA = this.extract_keywords(textA);
+    const kwB = this.extract_keywords(textB);
+    const jaccard = this._jaccard_distance(kwA, kwB);
+
+    // 2. Bigram-afstand (woord-rij nabijheid)
+    const bigram = this._bigram_distance(kwA, kwB);
+
+    // 3. NPR-hex-afstand (signaal-niveau)
+    const npr = this._npr_distance(textA, textB);
+
+    // Combinatie: 40% Jaccard + 30% bigram + 30% NPR
+    return +(jaccard * 0.4 + bigram * 0.3 + npr * 0.3).toFixed(4);
+  }
+
+  /**
+   * Jaccard-afstand tussen twee keyword-lijsten.
+   * Retourneert ∈ [0, 1].
+   */
+  _jaccard_distance(listA, listB) {
+    const setA = new Set(listA);
+    const setB = new Set(listB);
+    if (setA.size === 0 && setB.size === 0) return 0;
     const overlap = [...setA].filter(w => setB.has(w)).length;
     const union = new Set([...setA, ...setB]).size;
-    return 1 - (overlap / union); // Jaccard distance
+    return 1 - (overlap / union);
+  }
+
+  /**
+   * Bigram-afstand (woord-rij nabijheid).
+   * Vergelijkt opeenvolgende woordparen.
+   * Retourneert ∈ [0, 1].
+   */
+  _bigram_distance(listA, listB) {
+    const gramsA = this._ngrams(listA, 2);
+    const gramsB = this._ngrams(listB, 2);
+    if (gramsA.length === 0 && gramsB.length === 0) return 0;
+    const setA = new Set(gramsA);
+    const setB = new Set(gramsB);
+    const overlap = [...setA].filter(g => setB.has(g)).length;
+    const union = new Set([...setA, ...setB]).size;
+    return 1 - (overlap / union);
+  }
+
+  /**
+   * Genereer n-grams van een lijst.
+   */
+  _ngrams(list, n) {
+    const result = [];
+    for (let i = 0; i <= list.length - n; i++) {
+      result.push(list.slice(i, i + n).join(' '));
+    }
+    return result;
+  }
+
+  /**
+   * NPR-hex-afstand (signaal-niveau).
+   * Vervangt _semantic_distance_simple.
+   * Vergelijkt NPR-reductie van twee teksten via hex-digit overlap.
+   * Retourneert ∈ [0, 1].
+   */
+  _npr_distance(textA, textB) {
+    const nprA = npr_reduce(textA);
+    const nprB = npr_reduce(textB);
+
+    const hexA = nprA.hex_digits;
+    const hexB = nprB.hex_digits;
+
+    if (hexA.length === 0 && hexB.length === 0) return 0;
+
+    // Jaccard-achtige overlap van hex-cijfers (met frequentie)
+    const freqA = {};
+    for (const h of hexA) freqA[h] = (freqA[h] || 0) + 1;
+    const freqB = {};
+    for (const h of hexB) freqB[h] = (freqB[h] || 0) + 1;
+
+    const keys = new Set([...Object.keys(freqA), ...Object.keys(freqB)]);
+    let intersection = 0, union = 0;
+    for (const k of keys) {
+      intersection += Math.min(freqA[k] || 0, freqB[k] || 0);
+      union += Math.max(freqA[k] || 0, freqB[k] || 0);
+    }
+
+    return union === 0 ? 0 : +(1 - intersection / union).toFixed(4);
   }
 
   /**
@@ -483,6 +575,124 @@ function run_demo() {
 
   console.log('\n=== Stap 19 voltooid ===');
   return { single, return_result, bron_demo };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+if (require.main === module && process.argv.includes('--test')) {
+  let pass = 0, fail = 0;
+  const assert_eq = (name, actual, expected) => {
+    const ok = JSON.stringify(actual) === JSON.stringify(expected);
+    if (ok) { pass++; console.log(`  ✅ ${name}`); }
+    else { fail++; console.log(`  ❌ ${name}`); console.log(`     expected: ${JSON.stringify(expected)}`); console.log(`     actual:   ${JSON.stringify(actual)}`); }
+  };
+  const assert_true = (name, cond) => { if (cond) { pass++; console.log(`  ✅ ${name}`); } else { fail++; console.log(`  ❌ ${name}`); } };
+  const assert_lt = (name, a, b) => { if (a < b) { pass++; console.log(`  ✅ ${name} (${a.toFixed(4)} < ${b.toFixed(4)})`); } else { fail++; console.log(`  ❌ ${name} (${a.toFixed(4)} >= ${b.toFixed(4)})`); } };
+  const assert_gte = (name, a, b) => { if (a >= b) { pass++; console.log(`  ✅ ${name} (${a.toFixed(4)} >= ${b.toFixed(4)})`); } else { fail++; console.log(`  ❌ ${name} (${a.toFixed(4)} < ${b.toFixed(4)})`); } };
+  const assert_near = (name, a, b, eps = 0.01) => assert_true(`  ${name} (${a.toFixed(4)} ≈ ${b.toFixed(4)})`, Math.abs(a - b) < eps);
+
+  const tool = new Tool00();
+
+  console.log('=== Stap 19 Tests ===\n');
+
+  // --- semantic_distance ---
+  console.log('_semantic_distance:');
+
+  // Identieke teksten → afstand = 0
+  const d1 = tool._semantic_distance(
+    { answer: 'transformatie hex-native reductie' },
+    { answer: 'transformatie hex-native reductie' }
+  );
+  assert_true('identieke teksten → afstand ≈ 0', d1 < 0.1);
+
+  // Volledig verschillende teksten → afstand > 0.5
+  const d2 = tool._semantic_distance(
+    { answer: 'transformatie hex-native reductie invariantie' },
+    { answer: 'zonneschijn katten belastingformules' }
+  );
+  assert_gte('verschillende teksten → afstand > 0.5', d2, 0.5);
+
+  // Deels overlap → afstand tussen 0 en 0.5
+  const d3 = tool._semantic_distance(
+    { answer: 'NPR-OS sandbox router transformatie' },
+    { answer: 'NPR-OS sandbox signal perceptie' }
+  );
+  assert_true('gedeeltelijke overlap → 0 < afstand < 0.7', d3 > 0 && d3 < 0.7);
+
+  // Lege teksten → afstand = 0
+  const d4 = tool._semantic_distance({ answer: '' }, { answer: '' });
+  assert_eq('lege teksten → afstand = 0', d4, 0);
+
+  // Eén leeg → afstand > 0.5 (geen perfecte 1 door hybride gewichten)
+  const d5 = tool._semantic_distance({ answer: 'transformatie hex-native reductie invariantie sandbox' }, { answer: '' });
+  assert_gte('één leeg → afstand > 0.5', d5, 0.5);
+
+  console.log('');
+
+  // --- _jaccard_distance ---
+  console.log('_jaccard_distance:');
+  const j1 = tool._jaccard_distance(['a', 'b', 'c'], ['a', 'b', 'c']);
+  assert_eq('identieke sets → 0', j1, 0);
+
+  const j2 = tool._jaccard_distance(['a', 'b'], ['c', 'd']);
+  assert_eq('geen overlap → 1', j2, 1);
+
+  const j3 = tool._jaccard_distance(['a', 'b', 'c'], ['a', 'c', 'd']);
+  assert_true('gedeeltelijke overlap → 0 < afstand < 1', j3 > 0 && j3 < 1);
+
+  console.log('');
+
+  // --- _bigram_distance ---
+  console.log('_bigram_distance:');
+  const b1 = tool._bigram_distance(['a', 'b', 'c'], ['a', 'b', 'c']);
+  assert_eq('identieke bigrams → 0', b1, 0);
+
+  const b2 = tool._bigram_distance(['a', 'b'], ['x', 'y']);
+  assert_eq('geen overlap bigrams → 1', b2, 1);
+
+  const b3 = tool._bigram_distance(['a', 'b', 'c'], ['b', 'c', 'd']);
+  assert_true('gedeeltelijke bigram overlap → 0 < afstand < 1', b3 > 0 && b3 < 1);
+
+  console.log('');
+
+  // --- _npr_distance ---
+  console.log('_npr_distance:');
+  const n1 = tool._npr_distance('abcdef', 'abcdef');
+  assert_eq('identieke NPR → 0', n1, 0);
+
+  const n2 = tool._npr_distance('aaaa', 'zzzz');
+  assert_true('verschillende NPR → afstand > 0', n2 > 0);
+
+  const n3 = tool._npr_distance('', '');
+  assert_eq('lege NPR → 0', n3, 0);
+
+  console.log('');
+
+  // --- has_converged ---
+  console.log('has_converged:');
+  const traj1 = [
+    { npr_root: 3, answer: 'transformatie hex-native reductie', confidence: 0.7 },
+    { npr_root: 3, answer: 'transformatie hex-native reductie', confidence: 0.71 },
+  ];
+  const conv1 = tool.has_converged(traj1);
+  assert_true('stabiele trajectory → converged', conv1.converged);
+  assert_true('root_stable', conv1.root_stable);
+  assert_true('semantic_stable', conv1.semantic_stable);
+  assert_true('contradiction_stable', conv1.contradiction_stable);
+
+  const traj2 = [
+    { npr_root: 3, answer: 'transformatie hex-native', confidence: 0.7 },
+    { npr_root: 5, answer: 'zonneschijn katten', confidence: 0.3 },
+  ];
+  const conv2 = tool.has_converged(traj2);
+  assert_true('verschillende roots → not converged', !conv2.converged);
+  assert_true('root NOT stable', !conv2.root_stable);
+
+  console.log(`\n=== Resultaat: ${pass} ✅ | ${fail} ❌ ===`);
+  if (fail > 0) process.exit(1);
+  process.exit(0);
 }
 
 // ---------------------------------------------------------------------------
