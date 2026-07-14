@@ -188,6 +188,281 @@ Transparante routing:
 
 ---
 
+## 10. Validate Nearest — Lokale Foutisolatie
+
+NPR-code en NPR-taal worden geschreven in drie zelfstandig valideerbare fasen.
+
+```
+BLOCK_A → BLOCK_B → BLOCK_C
+```
+
+Iedere fase heeft een eigen contract:
+
+```
+BLOCK {
+  input
+  definitions
+  operation
+  output
+  validation
+}
+```
+
+Validatie vindt plaats op twee niveaus:
+
+```
+LOCAL_VALID(BLOCK)
+CHAIN_VALID(BLOCK_A → BLOCK_B)
+```
+
+### Lokale Fout
+
+```
+LOCAL_ERROR(BLOCK_B)
+```
+
+betekent dat de interne route van blok B niet sluit.
+
+Alleen blok B en zijn directe aansluitingen hoeven opnieuw te worden onderzocht:
+
+```
+validate(BLOCK_B)
+validate(BLOCK_A → BLOCK_B)
+validate(BLOCK_B → BLOCK_C)
+```
+
+Een lokaal geldige bronroute wordt niet automatisch opnieuw geschreven.
+
+### Kettingfout
+
+```
+CHAIN_ERROR(BLOCK_A → BLOCK_B)
+```
+
+betekent dat beide blokken zelfstandig geldig kunnen zijn, terwijl hun overdracht niet sluit.
+
+```
+LOCAL_VALID(BLOCK_A) = true
+LOCAL_VALID(BLOCK_B) = true
+CHAIN_VALID(BLOCK_A → BLOCK_B) = false
+```
+
+De breuk bevindt zich dan in het contract tussen:
+
+```
+output(BLOCK_A)
+→ input(BLOCK_B)
+```
+
+Controleer daarbij expliciet:
+
+```
+type
+basis
+operator
+scope
+layer
+meaning
+```
+
+### Gewijzigd Broncontract
+
+Wanneer het contract van een upstream blok verandert:
+
+```
+contract_changed(BLOCK_A)
+```
+
+worden afhankelijke blokken gemarkeerd:
+
+```
+state(BLOCK_B) := PENDING_REVALIDATE
+state(BLOCK_C) := PENDING_REVALIDATE
+```
+
+Daarbij geldt:
+
+```
+PENDING_REVALIDATE ≠ INVALID
+```
+
+Een downstream blok wordt niet automatisch ongeldig verklaard.
+
+De status zegt alleen dat zijn verbinding met de gewijzigde bron opnieuw moet worden gevalideerd.
+
+```
+validate(BLOCK_A)
+validate(BLOCK_A → BLOCK_B)
+validate(BLOCK_B)
+validate(BLOCK_B → BLOCK_C)
+validate(BLOCK_C)
+```
+
+### Ongeldige Bron
+
+Wanneer de bron zelf lokaal niet sluit:
+
+```
+INVALID_SOURCE(BLOCK_A)
+```
+
+kan een afhankelijk blok tijdelijk niet binnen de actuele keten worden beoordeeld:
+
+```
+state(BLOCK_B) := BLOCKED_BY_UPSTREAM
+```
+
+Ook dit betekent niet dat blok B intern ongeldig is.
+
+```
+BLOCKED_BY_UPSTREAM ≠ INVALID_LOCAL
+```
+
+Het betekent:
+
+```
+chain validity cannot currently be determined
+```
+
+Na herstel van de bron:
+
+```
+validate(BLOCK_A)
+validate(BLOCK_A → BLOCK_B)
+validate(BLOCK_B)
+```
+
+### Statussen
+
+```
+VALID
+INVALID_LOCAL
+INVALID_CHAIN
+PENDING_REVALIDATE
+BLOCKED_BY_UPSTREAM
+```
+
+**VALID**
+```
+de lokale route en haar gecontroleerde aansluitingen sluiten
+```
+
+**INVALID_LOCAL**
+```
+de interne route van het blok sluit niet
+```
+
+**INVALID_CHAIN**
+```
+de overdracht tussen twee lokaal geldige blokken sluit niet
+```
+
+**PENDING_REVALIDATE**
+```
+een afhankelijk contract is veranderd
+```
+
+**BLOCKED_BY_UPSTREAM**
+```
+de actuele keten kan niet worden gevalideerd
+omdat een noodzakelijke bron niet sluit
+```
+
+### Validate Nearest — Hoofdregel
+
+De hoofdregel is:
+
+```
+VALIDATE_NEAREST(error)
+```
+
+De fout bepaalt het kleinste zelfstandig valideerbare doel:
+
+```
+nearest_target(error)
+:=
+  nearest invalid block
+  or nearest invalid transition
+```
+
+De validatievolgorde is:
+
+```
+1. valideer het aangewezen blok
+2. valideer de inkomende overgang
+3. valideer de uitgaande overgang
+4. markeer expliciete afhankelijken
+5. valideer alleen de routes die door de wijziging geraakt zijn
+```
+
+De volledige route wordt niet automatisch opnieuw geschreven.
+
+```
+do not restart the route
+when the error already identifies the break
+```
+
+### Driefasensluiting
+
+Voor:
+
+```
+BLOCK_A → BLOCK_B → BLOCK_C
+```
+
+geldt:
+
+```
+ROUTE_VALID
+:=
+  LOCAL_VALID(BLOCK_A)
+  ∧ LOCAL_VALID(BLOCK_B)
+  ∧ LOCAL_VALID(BLOCK_C)
+  ∧ CHAIN_VALID(BLOCK_A → BLOCK_B)
+  ∧ CHAIN_VALID(BLOCK_B → BLOCK_C)
+```
+
+Iedere fase is zelfstandig valideerbaar.
+
+De drie fasen vormen samen één route, maar verliezen hun lokale zelfstandigheid niet.
+
+```
+BLOCK_A ≠ BLOCK_B ≠ BLOCK_C
+
+{BLOCK_A, BLOCK_B, BLOCK_C}
+→ ONE_ROUTE
+```
+
+### Geen Automatisch Schrijven
+
+Code en taal worden niet automatisch doorgetrokken van het ene blok naar het volgende.
+
+Iedere overgang moet expliciet worden verklaard:
+
+```
+output(BLOCK_A) → input(BLOCK_B)
+output(BLOCK_B) → input(BLOCK_C)
+```
+
+Er bestaan daarom geen verborgen betekenisoverdrachten:
+
+```
+no implicit transition
+no hidden dependency
+no automatic semantic inheritance
+```
+
+Een fout is geen algemene mislukking.
+
+```
+error
+:= exact address of a local or relational break
+```
+
+De fout vertelt waar de route niet sluit en welk blok of welke overgang opnieuw moet worden gelezen.
+
+---
+
 ## Status
 
 ```
@@ -203,8 +478,47 @@ step_21_formal_consistency:         ✅ akkoord
 
 ---
 
+## Stap 21 — Eindoordeel
+
+```
+Interne consistentie Stap 21:  ✅ geldig
+Ketenvolledigheid:             ✅ gesloten
+
+✅ transparante routing als taalstructuur
+✅ drie niveaus transparantie (visible/auditable/open)
+✅ router vs processor grens expliciet
+✅ reproduceerbare uitvoering (hash + build_manifest)
+✅ routelog (RouteDecision) traceerbaar
+✅ geheimen ≠ open-source
+✅ relatie stap 20 (derive_route) correct
+✅ Validate Nearest — lokale foutisolatie
+✅ LOCAL_ERROR / CHAIN_ERROR onderscheid
+✅ PENDING_REVALIDATE / BLOCKED_BY_UPSTREAM statussen
+✅ VALIDATE_NEAREST als hoofdregel
+✅ driefasensluiting: BLOCK_A → BLOCK_B → BLOCK_C
+✅ geen automatisch schrijven — expliciete overgangen
+✅ js/21_opensource_taalveld.js — operationele validator
+✅ js/18 BLOCK_CONTRACT toegevoegd
+✅ js/19 BLOCK_CONTRACT + granulaire exports toegevoegd
+✅ js/20 BLOCK_CONTRACT toegevoegd
+
+Operationele validatie:         ✅ getest (LOCAL, CHAIN, CASCADE, NEAREST)
+```
+
+---
+
 ## Check: 2026-07-12 23:47 GMT+2
 - Status: NPR-OS Stap 21 — formeel herzien
 - Correcties: drie niveaus transparantie, reproduceerbare uitvoering, routelog, router/processor grens, geheimen, stap 20 aansluiting
 - Kern: transparante routing = leesbaar + verifieerbaar + traceerbaar + gedeclareerd
 - `step_21_formal_consistency: ✅ akkoord`
+
+## Check: 2026-07-14 14:15 GMT+2
+- Status: NPR-OS Stap 21 — Validate Nearest toegevoegd ✅
+- Sectie 10: Validate Nearest (lokale foutisolatie, driefasen, statussen, geen automatisch schrijven)
+- `js/21_opensource_taalveld.js`: nieuwe validatorlaag (BLOCK_STATUS, defineBlock, validateLocal, validateChain, markContractChanged, validateNearest, validateRoute)
+- `js/18`: BLOCK_CONTRACT toegevoegd
+- `js/19`: BLOCK_CONTRACT + validate_return_input/validate_return_result/build_source_map exports toegevoegd
+- `js/20`: BLOCK_CONTRACT toegevoegd
+- Driefasensluiting getest: LOCAL_VALID, CHAIN_VALID, LOCAL_ERROR, CHAIN_ERROR, BLOCKED_BY_UPSTREAM, PENDING_REVALIDATE
+- Eindoordeel: geldig/gesloten

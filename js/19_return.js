@@ -485,8 +485,71 @@ function run_demo() {
   return { single, return_result, bron_demo };
 }
 
+// ---------------------------------------------------------------------------
+// BLOCK_CONTRACT — stap 19 contract (Stap 21 compatible)
+// ---------------------------------------------------------------------------
+
+const BLOCK_CONTRACT = Object.freeze({
+  id: '19_return',
+  phases: ['accept_return_input', 'execute_return', 'validate_source_closure'],
+  inputSchema: 'NPR_RETURN_INPUT',
+  outputSchema: 'NPR_RETURN_RESULT',
+  dependencies: ['18_sandbox_router'],
+});
+
+// ---------------------------------------------------------------------------
+// Standalone validators (voor Stap 21 VALIDATE_NEAREST)
+// ---------------------------------------------------------------------------
+
+/**
+ * Valideer input voor Tool-00.
+ * Gooit fout bij ongeldige invoer.
+ */
+function validate_return_input(input) {
+  if (!input || typeof input !== 'object') {
+    throw new Error('Tool-00: input moet een object zijn');
+  }
+  if (!input.vraag && typeof input !== 'string') {
+    throw new Error('Tool-00: input moet een vraag bevatten');
+  }
+}
+
+/**
+ * Valideer output van Tool-00.
+ * Gooit fout bij ontbrekende verplichte velden.
+ */
+function validate_return_result(result) {
+  if (!result || typeof result !== 'object') {
+    throw new Error('Tool-00: output is geen object');
+  }
+  if (!result.vraag) {
+    throw new Error('Tool-00: output mist vraag');
+  }
+  if (!result.answer && !result.final) {
+    throw new Error('Tool-00: output mist antwoord of final');
+  }
+}
+
+/**
+ * Build source map (standalone wrapper voor bron-map generatie).
+ */
+function build_source_map(output, processed_blokken, input) {
+  // Gebruik interne Tool00 logica via een tijdelijke instantie
+  const tool = new Tool00();
+  return tool.make_bron_map(output, processed_blokken, input);
+}
+
+// ---------------------------------------------------------------------------
 // Export
-module.exports = { Tool00 };
+// ---------------------------------------------------------------------------
+
+module.exports = {
+  Tool00,
+  BLOCK_CONTRACT,
+  validate_return_input,
+  validate_return_result,
+  build_source_map,
+};
 
 // Run if called directly
 if (require.main === module) {

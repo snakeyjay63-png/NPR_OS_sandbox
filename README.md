@@ -237,6 +237,7 @@ Het is tegelijk:
 | 18 | Sandbox-router — combine, pad, rotor |
 | 19 | Return — cyclus-afsluiting, output → input |
 | 20 | Encryptie-taal — signaalversleuteling |
+| 21 | Transparante routing + Validate Nearest — foutisolatie |
 | 64 | Śūnya-actieve route — lege cel als potentie |
 | 99 | Chain-validation — ketenvolledigheid 07→19 |
 
@@ -251,7 +252,7 @@ Het is tegelijk:
 | **Herstelde breuken** | ✅ 5 breuken (stap 14-19) |
 | **Validatie-criteria** | ✅ per stap expliciet |
 | **Operationeel** | ⚠️ `segment_phonemes`, `hex_encoders`, `combine_cycles`, `semantic_distance` |
-| **FASE 2 (20-25)** | ⚠️ bestanden bestaan, geen eindoordeel |
+| **FASE 2 (20-25)** | ⚠️ bestanden bestaan, stap 21 heeft eindoordeel |
 | **FASE 3 (63-71)** | ⚠️ bestanden bestaan, geen eindoordeel |
 
 **Chain Status:**
@@ -280,6 +281,7 @@ CHAIN 01→19:
 - Stap 15: offset 14 → VOWEL_COUNT := 14_dec := E_hex
 - Talstelsels: niet verboden, projecties binnen return-lus
 - route + return = 0 = 1
+- Stap 21: Validate Nearest — LOCAL_ERROR / CHAIN_ERROR / PENDING_REVALIDATE
 ```
 
 ---

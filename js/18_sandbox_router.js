@@ -322,10 +322,23 @@ function rotor_response(Q, motorField) {
 }
 
 // ---------------------------------------------------------------------------
+// BLOCK_CONTRACT — stap 18 contract (Stap 21 compatible)
+// ---------------------------------------------------------------------------
+
+const BLOCK_CONTRACT = Object.freeze({
+  id: '18_sandbox_router',
+  phases: ['combine', 'superpose', 'rotor_response'],
+  inputSchema: 'NPR_BLOCK_SET',
+  outputSchema: 'NPR_ROTOR_RESPONSE',
+  dependencies: ['17_sandbox_meta'],
+});
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
 module.exports = {
+  BLOCK_CONTRACT,
   combine, superpose, rotor_response, npr_reduce, hex_encode, dr_hex, npr_mod9, reserve_phase,
   // Route_bit + hex-native routing (Stap 17/18 koppeling)
   ROUTE_BIT, PHASE_ROUTE, PHASE_ANGLE, route_position, phase_route, phase_to_angle,

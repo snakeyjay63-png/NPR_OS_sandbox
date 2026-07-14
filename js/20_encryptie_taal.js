@@ -533,10 +533,23 @@ function full_cycle_analysis(perm) {
 }
 
 // ─────────────────────────────────────────────
+// BLOCK_CONTRACT — stap 20 contract (Stap 21 compatible)
+// ─────────────────────────────────────────────
+
+const BLOCK_CONTRACT = Object.freeze({
+  id: '20_encryptie_taal',
+  phases: ['validate_context', 'derive_route', 'verify_bijective'],
+  inputSchema: 'NPR_ROUTE_CONTEXT',
+  outputSchema: 'NPR_ROUTE_PERMUTATION',
+  dependencies: ['19_return'],
+});
+
+// ─────────────────────────────────────────────
 // 11. Export summary
 // ─────────────────────────────────────────────
 
 module.exports = {
+  BLOCK_CONTRACT,
   // Spectral
   spectral_block,
   sub_position,

@@ -663,6 +663,19 @@ multi-route-router.
 
 ---
 
+### Validatiewijze
+
+Voor lokale foutisolatie en hervalidatie van driefasenblokken:
+zie stap 21 — Validate Nearest.
+
+Dit omvat:
+- LOCAL_ERROR vs CHAIN_ERROR onderscheid
+- PENDING_REVALIDATE en BLOCKED_BY_UPSTREAM statussen
+- VALIDATE_NEAREST als hoofdregel
+- Geen automatisch schrijven — expliciete overgangen
+
+---
+
 ## Resultaat
 
 ```
