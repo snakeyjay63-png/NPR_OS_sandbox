@@ -377,7 +377,7 @@ class Tool00 {
         }
       },
       traceerbaarheid: {
-        router_version: '18.0',
+        router_id: '18_sandbox_router',
         iteration_id: `iter_${(output.iteratie || 1).toString().padStart(3, '0')}`,
         parent_output_id: input.parent_output_id || 'root',
         taal_adres: output.taal_adres || ''
