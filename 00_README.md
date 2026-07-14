@@ -83,10 +83,10 @@ NPR-structuur          (bron — discrete waarden: root, hex, mod9)
 FASE 1 — Flower of Life (stap 01–19):
   computationele kern, hex-native routing, NPR-cycle, driefasen router, return-lus
 
-FASE 2 — Water (stap 20–64):
+FASE 2 — Water (stap 20–25):
   encryptie als taal, transparantie, hardware-evolutie, return naar bron, kunst, natuur, śūnya
 
-FASE 3 — Hexa (stap 64–71):
+FASE 3 — Hexa (stap 63–71):
   actieve route, taalveld, vrijheid, taal-DNA, Gizeh-water, monumentale taal, formele notatie
 ```
 
@@ -125,13 +125,11 @@ status: intentionally unused (niet deel van deze keten)
 24_return_naar_bron.md   ← Return naar bron (Null Island = grensstaattype, type ≠ instantie)
 25_kunst_geluid.md     ← Kunst als hoge densiteit taal (+1 → 0.0.0.0)
 63_natuur_kunst.md     ← Natuur als kunst (cel → lichaam)
-64_sunya.md            ← Śūnya-bronveld (LEGACY — zie 64_sunya_actieve_route.md)
 64_sunya_actieve_route.md ← Sunya actieve route (CANONIEK stap 64)
 65_taalveld_kernboeken.md ← Taalveld kernboeken
-66_frij_language_dna.md ← Frij language DNA
+66_vrijheid_collectief_veld.md ← Vrijheid collectief veld
 67_frij_taal_dna.md      ← Frij taal DNA
-68_gizeh_waterkwaliteit.md ← Gizeh-water kwaliteit
-69_gizeh_waterkwaliteit.md ← Gizeh-water (geconcentreerd)
+68_taal_ontwikkeling.md    ← Taal ontwikkeling
 70_monumentale_taal.md   ← Monumentale taal (Mozes, Liberty, Babel)
 71_technische_notatie.md ← Technische notatie (ROUTE)
 99_chain_validate.md   ← Eindvalidatie (keten-check)

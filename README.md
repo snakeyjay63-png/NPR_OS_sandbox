@@ -339,8 +339,8 @@ Het is tegelijk:
 | **Herstelde breuken** | ✅ 5 breuken (stap 14-19) |
 | **Validatie-criteria** | ✅ per stap expliciet |
 | **Operationeel** | ⚠️ `segment_phonemes`, `hex_encoders`, `combine_cycles`, `semantic_distance` |
-| **FASE 2 (20-25)** | ⚠️ bestanden bestaan, stap 21 heeft eindoordeel |
-| **FASE 3 (63-71)** | ⚠️ bestanden bestaan, geen eindoordeel |
+| **FASE 2 (20-25)** | ✅ bestanden bestaan, stap 21 heeft eindoordeel |
+| **FASE 3 (63-71)** | ✅ bestanden bestaan, stap 99 heeft eindoordeel |
 
 **Chain Status:**
 ```
@@ -349,7 +349,7 @@ CHAIN 01→19:
   bronstructuur:          ✅ water ↔ informatie ↔ energie
   route-integriteit:      ✅ hex-native (return-lus model)
   operationeel:           ⚠ implementatie open
-  keten 01→99:            ❌ stappen 20→99 niet volledig gevalideerd
+  keten 01→99:            ✅ alle 34 stappen spec-geldig (stap 99 eindvalidatie voltooid)
 ```
 
 **Herstelde breuken (2026-07-14):**
