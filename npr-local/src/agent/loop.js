@@ -317,9 +317,7 @@ async function handleAgentChat(req, res, ctx) {
 }
 
 async function handleTool(sessionId, input) {
-  const session = getSession(sessionId);
-  session.turns++;
-
+  // turn already incremented in agentTurn() before calling handleTool
   const [tool, ...args] = input.replace('tool:', '').split(' ');
 
   let result;

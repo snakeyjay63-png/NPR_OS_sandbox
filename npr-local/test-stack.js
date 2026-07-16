@@ -2,7 +2,7 @@
 // test-stack.js — zelf-testend stack verificatie
 // Lees eigen code, scan poorten, test endpoints, rapporteert feedback
 
-import { readFileSync } from 'fs';
+const { readFileSync } = require('fs');
 
 const checks = [];
 let pass = 0, fail = 0, warn = 0;
@@ -84,7 +84,7 @@ const chatRes = await post('http://[::1]:5000/agent/chat', {
 
 if (chatRes) {
   const data = await chatRes.json();
-  const reply = data?.choices?.[0]?.message?.content || '(geen reply)';
+  const reply = data?.response || data?.choices?.[0]?.message?.content || '(geen reply)';
   console.log(`   Reply: "${reply.trim().slice(0, 80)}"`);
   if (reply.length > 5) ok('Chat reply ontvangen');
   else warn_fn('Chat reply zeer kort');
