@@ -59,40 +59,43 @@ Deze audit koppelt eerdere observatiepunten aan concrete regels en passages in d
 
 ## Blijvende Punten (7)
 
-### 1. `cycle_weight` — Geen Exacte Formule
-**Bestand:** `18_sandbox_router.md`
-**Status:** Implementatieafhankelijk
-**Impact:** Reproduceerbaarheid beperkt tot "equal weight" default
+**4 bewust open** (design-keuzes) + **3 nog te bouwen** (werkzaamheden)
 
-### 2. `combine_cycles` — Operationeel Open
-**Bestand:** `18_sandbox_router.md`
-**Status:** Formeel gedeclareerd, nog geen implementatie
-**Impact:** Router kan niet volledig deterministisch zijn
+---
 
-### 3. Reproduceerbaarheidsvoorwaarden
+### Bewust Open (4)
+
+#### 1. `cycle_weight` — Geen Exacte Formule
+**Bestand:** `18_sandbox_router.md` | **Status:** Design-keus
+gelijk gewicht is een bewuste default. Dynamische gewichten zijn een toekomstige extensie, geen bug.
+
+#### 2. `combine_cycles` — Operationeel Open
+**Bestand:** `18_sandbox_router.md` | **Status:** Design-keus
+Formeel declareren zonder implementatie is bewust — router moet extenseerbaar blijven.
+
+#### 6. Formele vs Operationele Geslotenheid
+**Bestand:** `18_sandbox_router.md` | **Status:** Design-keus
+"Gesloten" is een theoretische claim, geen operationele garantie. Bewust onderscheid.
+
+#### 7. Return-fase Buiten Scope
+**Bestanden:** `00_README.md`, `18_sandbox_router.md` | **Status:** Design-keus
+Return is stap 19. Audit dekt 00–18. Bewuste scope-beperking.
+
+---
+
+### Nog te Bouwen (3)
+
+#### 3. Reproduceerbaarheidsvoorwaarden
 **Bestanden:** `17_sandbox_meta.md`, `18_sandbox_router.md`
-**Status:** Voorwaarden benoemd (tokenizer, grenzen, versies, gewichten, model, instellingen)
-**Impact:** Volledige reproduceerbaarheid hangt van alle voorwaarden
+**Status:** Praktisch werk — voorwaarden zijn benoemd maar niet vastgelegd. Moet nog worden opgelost.
 
-### 4. `segment_phonemes` — Algoritme Niet Volledig Zichtbaar
+#### 4. `segment_phonemes` — Algoritme Ontbreekt
 **Bestand:** `15_signaal_perceptie.md`
-**Status:** Functie gedeclareerd met signature, volledige segmentatieregels niet zichtbaar
-**Impact:** Taalverwerking niet volledig reproduceerbaar
+**Status:** Werkzaamheid — signature er, segmentatieregels nog niet geschreven. Moet nog worden opgelost.
 
-### 5. Transliteratiekeuze Beïnvloedt Projectie
+#### 5. Transliteratie Niet Canoniek
 **Bestand:** `16_taalmapping.md`
-**Status:** "Gekozen" transliteratie (niet canoniek vastgelegd)
-**Impact:** Numerieke uitkomst verschilt per transliteratiekeuze
-
-### 6. Formele vs Operationele Geslotenheid
-**Bestand:** `18_sandbox_router.md`
-**Status:** Formeel gesloten (ketenvolledigheid) vs operationeel open (uitvoering)
-**Impact:** "Gesloten" label kan misleidend zijn zonder context
-
-### 7. Return-fase Buiten Scope
-**Bestanden:** `00_README.md`, `18_sandbox_router.md` → stap 19
-**Status:** Return conceptueel beschreven, uitvoering in stap 19 (buiten 00–18)
-**Impact:** Volledige NPR-cyclus niet binnen audit-scope
+**Status:** Werkzaamheid — transliteratie is gekozen maar niet canoniek vastgelegd. Moet nog worden opgelost.
 
 ---
 
@@ -100,6 +103,8 @@ Deze audit koppelt eerdere observatiepunten aan concrete regels en passages in d
 
 **33 van 40 punten zijn opgelost of ingetrokken.** De huidige bestanden bevatten veel meer expliciete correcties, typeringen en randvoorwaarden dan bij de eerste audit zichtbaar was.
 
-De 7 resterende punten zijn allemaal **bewust open** — niet vergeten, maar expliciet als implementatieafhankelijk of buiten scope gemarkeerd.
+**7 resterende punten:**
+- **4 bewust open** (design-keuzes, geen bugs)
+- **3 nog te bouwen** (werkzaamheden, niet vergeten)
 
 Dit is een gezond auditbeeld: de theorie is formeel gesloten, de implementatie is operationeel open waar nodig.
