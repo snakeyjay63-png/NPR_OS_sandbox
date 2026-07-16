@@ -92,14 +92,42 @@ function createServer(routes) {
       return;
     }
 
-    // Parse body synchronously
+    // Body size limit (1MB)
+    const MAX_BODY = 1 * 1024 * 1024;
     let body = '';
+    let bodyTooLarge = false;
+
     req.setEncoding('utf8');
-    req.on('data', chunk => { body += chunk; });
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > MAX_BODY && !bodyTooLarge) {
+        bodyTooLarge = true;
+        req.destroy();
+        res.writeHead(413, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'request too large', limit: '1MB' }));
+      }
+    });
     req.on('end', () => {
-      try {
-        req.body = body ? JSON.parse(body) : {};
-      } catch {
+      if (bodyTooLarge) return;
+
+      // Only parse JSON for POST/PUT/PATCH
+      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        const contentType = req.headers['content-type'] || '';
+        if (body && !contentType.includes('application/json')) {
+          res.writeHead(415, { 'Content-Type': 'application/json' });
+          req.body = {};
+          res.end(JSON.stringify({ error: 'unsupported media type', expected: 'application/json' }));
+          return;
+        }
+        try {
+          req.body = body ? JSON.parse(body) : {};
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          req.body = {};
+          res.end(JSON.stringify({ error: 'invalid JSON', message: e.message }));
+          return;
+        }
+      } else {
         req.body = {};
       }
 
@@ -111,7 +139,6 @@ function createServer(routes) {
         res.end(JSON.stringify({
           error: 'internal',
           message: err.message,
-          stack: err.stack,
         }));
       }
     });
