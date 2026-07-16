@@ -442,8 +442,26 @@ async function handleTool(sessionId, input) {
       tool: 'capabilities',
       capabilities: listCapabilities(),
     };
+  } else if (tool === 'workspace') {
+    // Workspace info + scan
+    const wsPath = currentWorkspace || process.cwd();
+    const full = args.includes('--full');
+    const scan = args.includes('--scan');
+    result = {
+      tool: 'workspace',
+      path: wsPath,
+      currentWorkspace: wsPath,
+    };
+    if (scan) {
+      try {
+        const wsScan = full ? await fullScan(false) : quickScan(false);
+        result.scan = wsScan;
+      } catch (e) {
+        result.scanError = e.message;
+      }
+    }
   } else {
-    result = { error: `unknown tool: ${tool}`, available: ['scan', '00', 'select', 'capabilities'] };
+    result = { error: `unknown tool: ${tool}`, available: ['scan', '00', 'select', 'capabilities', 'workspace'] };
   }
 
   return {

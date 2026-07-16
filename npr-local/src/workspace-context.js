@@ -120,40 +120,70 @@ function timeAgo(date) {
 }
 
 /**
- * Build context string for system prompt injection
+ * Content-aware context builder
+ * Filtert op extensie + relevantie ipv blind alle bestanden tonen
  */
-function buildContextString(context, maxFiles = 20) {
+function buildContextString(context, options = {}) {
+  const { maxFiles = 20, maxTokens = 4000, priorityExts } = options;
+
   if (!context || context.error) {
     return `(workspace scan failed: ${context?.error || 'unknown'})`;
   }
 
+  const extPriority = priorityExts || ['.md', '.json', '.js', '.py', '.txt', '.html', '.css'];
   const lines = [];
+  let tokenEstimate = 0;
+
   lines.push(`## Workspace: ${context.path}`);
   lines.push(`Bestanden: ${context.fileCount} | Grootte: ${formatBytes(context.totalSize)} | Submappen: ${context.dirs.length}`);
+  tokenEstimate += 30;
 
   if (context.recentChanges?.length) {
     lines.push(`\n### Recente wijzigingen (24h):`);
-    context.recentChanges.slice(0, 8).forEach(r => lines.push(`- ${r}`));
+    context.recentChanges.slice(0, 8).forEach(r => {
+      lines.push(`- ${r}`);
+      tokenEstimate += r.length / 4;
+    });
   }
 
   if (context.gitRoot) {
     lines.push(`\nGit root: ${context.gitRoot}`);
     if (context.gitStatus?.length) {
       lines.push('Git status:');
-      context.gitStatus.slice(0, 5).forEach(s => lines.push(`  ${s}`));
+      context.gitStatus.slice(0, 5).forEach(s => {
+        lines.push(`  ${s}`);
+        tokenEstimate += s.length / 4;
+      });
     }
   }
 
-  // Recent files
-  lines.push(`\n### Bestanden (recente ${Math.min(maxFiles, context.files.length)}):`);
+  // Priority-sorted files (content-aware)
   const sorted = context.files
-    .sort((a, b) => new Date(b.mtime) - new Date(a.mtime))
+    .map(f => ({
+      ...f,
+      priority: extPriority.indexOf(f.ext) >= 0 ? extPriority.indexOf(f.ext) : 99,
+    }))
+    .sort((a, b) => {
+      // Priority exts first, then by recency
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return new Date(b.mtime) - new Date(a.mtime);
+    })
     .slice(0, maxFiles);
 
+  lines.push(`\n### Bestanden (prioriteit + recentie):`);
   sorted.forEach(f => {
     const sizeStr = formatBytes(f.size);
-    lines.push(`- \`${f.name}\` (${sizeStr}, ${f.mtimeAgo})`);
+    const tag = f.priority < 99 ? ' ★' : '';
+    lines.push(`- \`${f.name}\` (${sizeStr}, ${f.mtimeAgo})${tag}`);
+    tokenEstimate += f.name.length / 4 + 5;
   });
+
+  // Truncate if approaching token budget
+  if (tokenEstimate > maxTokens) {
+    const cutoff = Math.floor(lines.length * (maxTokens / tokenEstimate));
+    lines.length = cutoff;
+    lines.push('\n*(context afgekapt voor token-budget)*');
+  }
 
   return lines.join('\n');
 }
