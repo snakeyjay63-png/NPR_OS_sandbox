@@ -15,13 +15,18 @@ const { scanWorkspace, buildContextString } = require('../workspace-context');
 function buildSystemPrompt(route, workspaceContext = null) {
   const parts = [];
 
+  // Extract correct fields from route object
+  const slot = route.pattern?.slot ?? 'unknown';
+  const digitalRoot = route.pattern?.digitalRoot ?? 0;
+  const phase = route.phase ?? (digitalRoot ? `dr-${digitalRoot}` : 'unknown');
+
   parts.push(`Je bent NPR Local v0.0.1 — single-agent, local-only runtime.
 Oorsprong: 0.0.0.0. Route via digitale root. Geen decimale routes.
 
 ## Hoe Je Werkt
 - Lokaal model: ${MODEL_NAME} op :8765
-- NPR routing: hash → slot (${route.slot}) → fase (${route.phase})
-- Memory: geowon op :4004 (event-driven, disk-backed)
+- NPR routing: hash → slot (${slot}) → fase (${phase})
+- Memory: geowon op :${GEOWON_PORT} (event-driven, disk-backed)
 - Alles lokaal — geen externe API calls
 
 ## Tools
@@ -29,7 +34,6 @@ Oorsprong: 0.0.0.0. Route via digitale root. Geen decimale routes.
 - tool:scan --save — bewaar scan naar ~/.openclaw/npr-local/scans/
 - tool:capabilities — alle 9 capabilities tonen
 - tool:select <doel> — wiskundige selectie via digitale root
-- tool:workspace <pad> — scan workspace directory
 
 ## Capabilities (digitale root 1-9)
 1=Identiteit | 2=Communicatie | 3=Analyse | 4=Structuur
@@ -48,9 +52,8 @@ Oorsprong: 0.0.0.0. Route via digitale root. Geen decimale routes.
 - Werkruimte: /home/claw/.openclaw/workspace
 - NPR sandbox: /home/claw/.openclaw/workspace/NPR_OS_sandbox
 - Geen "geef het pad op" — je weet waar de bestanden zitten
-- Gebruik tool:scan of tool:workspace automatisch als de vraag daar om vraagt
 
-Huidige route: slot ${route.slot}, fase ${route.phase}.`);
+Huidige route: slot ${slot}, fase ${phase}.`);
 
   // Inject workspace context if available
   if (workspaceContext) {
@@ -143,7 +146,8 @@ const MAX_HISTORY = 20;
 
 // ─── Geowon Memory (event-driven, disk-backed) ───
 
-const GEOWON_API = process.env.GEOWON_API || 'http://127.0.0.1:4004';
+const GEOWON_PORT = parseInt(process.env.GEOWON_PORT) || 5004;
+const GEOWON_API = process.env.GEOWON_API || `http://127.0.0.1:${GEOWON_PORT}`;
 
 async function syncToGeowon(sessionId, data) {
   try {
@@ -266,8 +270,8 @@ async function agentTurn(sessionId, input) {
     role: 'assistant',
     content: modelResponse,
     route: route.pattern,
-    slot: route.slot,
-    phase: route.phase,
+    slot: route.pattern?.slot ?? 'unknown',
+    phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
   });
 
   return {
@@ -407,8 +411,8 @@ async function handleAgentChatStream(req, res, ctx) {
   // Send routing info first
   res.write(`data: ${JSON.stringify({
     type: 'route',
-    slot: route.slot,
-    phase: route.phase,
+    slot: route.pattern?.slot ?? 'unknown',
+    phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
     model: MODEL_NAME,
     sessionId,
   })}\n\n`);
@@ -488,8 +492,8 @@ async function handleAgentChatStream(req, res, ctx) {
     role: 'assistant',
     content: fullResponse,
     route: route.pattern,
-    slot: route.slot,
-    phase: route.phase,
+    slot: route.pattern?.slot ?? 'unknown',
+    phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
   });
 
   res.end();
