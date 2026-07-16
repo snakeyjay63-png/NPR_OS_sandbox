@@ -5,6 +5,7 @@
 // Receive → route → respond → log → 0.0.0.0
 // ═══════════════════════════════════════════════════
 
+const crypto = require('crypto');
 const { nprRoute } = require('../field/npr');
 const { fullScan, quickScan, scheduleScan } = require('../sources/system-scan');
 const { selectByGoal, listCapabilities } = require('../routes/capabilities');
@@ -73,7 +74,28 @@ Als de vraag niet relevant is voor deze workspace, negeer deze sectie.`);
 const sessions = new Map();
 let currentWorkspace = process.env.NPR_WORKSPACE || null;
 
+// Session ID: prefix + 16 hex chars (8 bytes)
+const SESSION_PREFIX = 'sess';
+const SESSION_HEX_LEN = 16;
+
+function generateSessionId() {
+  return `${SESSION_PREFIX}_${crypto.randomBytes(SESSION_HEX_LEN / 2).toString('hex')}`;
+}
+
+function validateSessionId(id) {
+  if (typeof id !== 'string') return false;
+  if (id.length < 4 || id.length > 128) return false;
+  // Allow alphanumeric, underscore, hyphen
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) return false;
+  return true;
+}
+
 function getSession(id) {
+  if (!validateSessionId(id)) {
+    // Generate a new valid ID if the provided one is invalid
+    id = generateSessionId();
+    console.warn(`[agent] Ongeldige session ID, gegenereerd: ${id}`);
+  }
   if (!sessions.has(id)) {
     sessions.set(id, { id, turns: 0, createdAt: Date.now() });
   }
@@ -358,7 +380,7 @@ async function handleAgentChat(req, res, ctx) {
   }
 
   const data = req.body || {};
-  const sessionId = data.sessionId || `sess-${Date.now()}`;
+  const sessionId = validateSessionId(data.sessionId) ? data.sessionId : generateSessionId();
   const input = data.message || data.prompt || data.text || '';
 
   if (!input) {
@@ -443,7 +465,7 @@ async function handleAgentChatStream(req, res, ctx) {
   }
 
   const data = req.body || {};
-  const sessionId = data.sessionId || `sess-${Date.now()}`;
+  const sessionId = validateSessionId(data.sessionId) ? data.sessionId : generateSessionId();
   const input = data.message || data.prompt || data.text || '';
 
   if (!input) {
@@ -584,6 +606,8 @@ module.exports = {
   listSessions,
   forkSession,
   mergeSessions,
+  generateSessionId,
+  validateSessionId,
   getCurrentWorkspace: () => currentWorkspace,
   setCurrentWorkspace: (path) => { currentWorkspace = path; },
 };
