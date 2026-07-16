@@ -2,3 +2,6 @@ v2026.6.10-beta.2
 # commit: 87b40c71
 # Fork date: 2026-07-16
 # Purpose: NPR Local — single-agent, local-only runtime
+# Upstream docs: https://docs.openclaw.ai
+# Upstream source: https://github.com/openclaw/openclaw
+# Divergence: NPR routing (64-slot), local inference, geowon memory

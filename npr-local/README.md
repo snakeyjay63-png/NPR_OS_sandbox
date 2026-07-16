@@ -122,6 +122,22 @@ curl -X POST http://[::1]:3002/agent/chat \
   -d '{"message":"tool:scan --save"}'
 ```
 
-## Fork
+## Upstream Reference
 
-Full OpenClaw 6.10 fork in `../npr-local-fork/` for reference and fallback.
+Stripped from **OpenClaw 6.10** (`v2026.6.10-beta.2`, commit `87b40c71`).
+
+See `UPSTREAM_BASE` for version/commit info.
+
+| Resource | Location |
+|---|---|
+| Upstream docs | https://docs.openclaw.ai |
+| Upstream source | https://github.com/openclaw/openclaw |
+| Upstream fork (local) | `../npr-local-fork/` (private, not in repo) |
+| This build | `npr-local/` (single-agent, local-only) |
+
+**What's different:**
+- No external API — inference via llama-server (`:8765`)
+- 64-slot NPR routing (vs OpenClaw multi-agent)
+- Single agent loop with local workspace context
+- Geowon memory gateway (`:5004`) instead of OpenClaw memory
+- Self-contained boot via `boot.js`
