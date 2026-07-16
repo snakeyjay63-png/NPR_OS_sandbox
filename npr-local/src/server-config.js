@@ -118,7 +118,6 @@ const server = http.createServer((req, res) => {
       const psOutput = psResult.stdout || '';
       const llamaLine = psOutput.split('\n').find(l => l.includes('llama-server') && !l.includes('grep'));
       const args = parseLlamaArgs(llamaLine);
-      const args = parseLlamaArgs(psOutput.trim());
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(args, null, 2));
       return;
