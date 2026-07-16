@@ -1,8 +1,8 @@
 # OpenClaw CLI vs NPR-Local — Gap Analyse
 
-**Datum:** 2026-07-16  
+**Datum:** 2026-07-17  
 **OpenClaw:** v2026.6.10 (aa69b12)  
-**NPR-Local:** v0.0.1
+**NPR-Local:** v0.0.2
 
 ---
 
@@ -55,6 +55,7 @@
 - **Capabilities:** `/capabilities` (digital root 1-9)
 - **Memory:** `/warehouse`, `src/memory/` (context, list, read-file)
 - **Context breath:** 4-rollen routing (Vogel/Haas/Aap/Olifant), 6-bit levels
+- **Fase 1 endpoints:** `/agent/logs`, `/config`, `/memory/search`, `/doctor` ✅
 
 ### ⚠️ Gedeeltelijk
 - **Terminal UI:** `/enter` (basic portal) vs OpenClaw `tui` (full interactive)
@@ -64,16 +65,12 @@
 - **Gateway:** `boot.js` vs OpenClaw `gateway` (full lifecycle + RPC)
 
 ### ❌ Ontbreekt (Implementeerbaar)
-1. **`/agent/logs`** — tail agent event log
-2. **`/config` POST** — config set/unset
-3. **`/memory/search`** — memory search (OpenClaw SDK pattern)
-4. **`/doctor`** — self-diagnose + repair
-5. **`/sessions/:id/transcript`** — transcript view
-6. **`/skills`** — skill registry (list/inspect)
-7. **`/system/events`** — heartbeat + system events
-8. **`/cron`** — simple scheduler (isolated agentTurn)
-9. **`/tasks`** — background task inspector
-10. **`/backup`** — workspace snapshot
+1. **`/skills`** — skill registry (list/inspect)
+2. **`/system/events`** — heartbeat + system events
+3. **`/sessions/:id/transcript`** — transcript view
+4. **`/cron`** — simple scheduler (isolated agentTurn)
+5. **`/tasks`** — background task inspector
+6. **`/backup`** — workspace snapshot
 
 ### 🚫 By Design Niet
 - Channels/messaging (local only)
@@ -87,24 +84,24 @@
 
 Om OpenClaw CLI functionaliteit lokaal te krijgen, moeten we de **ontbrekende endpoints** toevoegen. Prioriteit:
 
-### Fase 1: Direct Nodig
-| # | Endpoint | Functie | OpenClaw Equivalent |
-|---|----------|---------|---------------------|
-| 1 | `GET /agent/logs` | Agent event log tail | `openclaw logs` |
-| 2 | `GET /config` + `POST /config` | Config read/write | `openclaw config get/set` |
-| 3 | `GET /memory/search?q=` | Memory search | `openclaw memory search` |
-| 4 | `GET /doctor` | Self-diagnose | `openclaw doctor` |
+### Fase 1: Direct Nodig ✅ COMPLEET
+| # | Endpoint | Functie | OpenClaw Equivalent | Status |
+|---|----------|---------|---------------------|--------|
+| 1 | `GET /agent/logs` | Agent event log tail | `openclaw logs` | ✅ |
+| 2 | `GET /config` + `POST /config` | Config read/write | `openclaw config get/set` | ✅ |
+| 3 | `GET /memory/search?q=` | Memory search | `openclaw memory search` | ✅ |
+| 4 | `GET /doctor` | Self-diagnose | `openclaw doctor` | ✅ |
 
 ### Fase 2: Nuttig
 | # | Endpoint | Functie | OpenClaw Equivalent |
-|---|---|---------|---------------------|
+|---|----------|---------|---------------------|
 | 5 | `GET /skills` | Skill list/inspect | `openclaw skills` |
 | 6 | `GET /system/events` | Heartbeat + events | `openclaw system` |
 | 7 | `GET /sessions/:id/transcript` | Transcript view | `openclaw transcripts` |
 
 ### Fase 3: Advanced
 | # | Endpoint | Functie | OpenClaw Equivalent |
-|---|---|---------|---------------------|
+|---|----------|---------|---------------------|
 | 8 | `POST /cron` | Simple scheduler | `openclaw cron` |
 | 9 | `GET /tasks` | Task inspector | `openclaw tasks` |
 | 10 | `POST /backup` | Workspace snapshot | `openclaw backup` |

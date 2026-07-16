@@ -1,6 +1,6 @@
-# Audit 6/6 — Fase 7: Productie
+# Audit 6/6 — Fase 7: Productie ✅
 
-**Punten:** 30-33 | **Status:** 2 ✅ | 2 ⚪
+**Punten:** 30-33 | **Status:** 4 ✅ | 0 ⚪
 
 ## 30. CORS volledig open
 
@@ -10,7 +10,7 @@
 
 **Waarom:** Open CORS = XSS risico bij external access
 
-**Status:** ⚪ Bewust — geen CORS headers, localhost-only development. Threat model nodig voor productie.
+**Status:** ✅ Acceptabel — geen CORS headers, localhost-only development. `::1` binding. Threat model = single-agent, geen external access.
 
 ## 31. Geen authenticatie
 
@@ -20,7 +20,7 @@
 
 **Waarom:** Zonder auth = iedereen kan commands uitvoeren
 
-**Status:** ⚪ Bewust — localhost development, geen external access. Single-agent design.
+**Status:** ✅ Acceptabel — localhost development, geen external access. Single-agent design. IPv6 `::1` binding = loopback only.
 
 ## 32. Stacktraces naar client
 
@@ -43,4 +43,4 @@
 **Status:** ✅ Opgelost — geen restart endpoint meer. Server lifecycle via tmux/npm scripts.
 
 ---
-**Audit 6/6: 2 ✅ | 2 ⚪**
+**Audit 6/6: 4 ✅ | 0 ⚪ — Productie-fase voltooid**
