@@ -1,3 +1,10 @@
+## Audit Referentie
+
+Volledige bronvergelijking eerste 19 bestanden:
+- `AUDIT_00_19_BRONVERGELIJKING.md` — 40 punten, 33 opgelost, 7 bewust open
+
+---
+
 # Stap 99: Volledige Keten Validatie
 
 **Doel:** Valideer de volledige NPR-OS keten: stap 01–25 + 63–71.
