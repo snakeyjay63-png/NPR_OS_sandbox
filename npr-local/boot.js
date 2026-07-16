@@ -28,7 +28,11 @@ const MIME = {
 // ─── Config Server (:5010) ───
 
 const configServer = http.createServer((req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // P0-3 CORS (localhost only)
+  const origin = req.headers.origin || '';
+  if (/^(http:\/\/(localhost|127\.0\.0\.1|\[::1\]))(:\d+)?$/.test(origin) || origin === 'null') {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
@@ -62,7 +66,11 @@ function saveSession(id, data) {
 }
 
 const geowonServer = http.createServer((req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // P0-3 CORS (localhost only)
+  const origin2 = req.headers.origin || '';
+  if (/^(http:\/\/(localhost|127\.0\.0\.1|\[::1\]))(:\d+)?$/.test(origin2) || origin2 === 'null') {
+    res.setHeader('Access-Control-Allow-Origin', origin2);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }

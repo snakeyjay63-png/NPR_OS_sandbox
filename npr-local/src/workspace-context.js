@@ -104,8 +104,23 @@ function retrieveContent(query, dir = DEFAULT_WORKSPACE, maxResults = 5) {
  * Lees specifieke bestand met context
  */
 // @addr 10.10.0.3 | fd00:npr:0010:000::3 — file reader
+// P0-2 fix: path traversal protection — reject paths escaping workspace
+function resolveInsideWorkspace(requested, dir) {
+  const root = path.resolve(dir || DEFAULT_WORKSPACE);
+  const resolved = path.resolve(root, requested);
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    throw new Error(`Path escapes workspace: ${requested}`);
+  }
+  return resolved;
+}
+
 function readFileWithContext(filePath, dir = DEFAULT_WORKSPACE, contextLines = 3) {
-  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(dir, filePath);
+  let fullPath;
+  try {
+    fullPath = resolveInsideWorkspace(filePath, dir);
+  } catch(e) {
+    return { error: e.message, path: filePath };
+  }
 
   try {
     const content = fs.readFileSync(fullPath, 'utf8');

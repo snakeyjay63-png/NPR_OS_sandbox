@@ -1,10 +1,11 @@
 // @net 10.13.0.0/24
 // routes/tool-exec.js — System tool integration
 //
+// Security: allowlist tools only, spawnSync(shell:false), no shell interpolation.
 // Detecteert geïnstalleerde tools en maakt ze bruikbaar als NPR capabilities.
 // Elke tool = een executable + command syntax + NPR route mapping.
 
-const { execSync, spawn } = require('child_process');
+const { spawnSync } = require('child_process');
 const path = require('path');
 
 // ─── Tool Registry ───
@@ -162,16 +163,17 @@ const TOOLS = {
 
 // ─── Tool Detection ───
 
+// P0-1 fix: spawnSync(shell:false) instead of execSync with shell interpolation
 function isInstalled(toolName) {
   try {
-    const result = execSync(`which ${toolName} 2>/dev/null || command -v ${toolName} 2>/dev/null`, {
-      encoding: 'utf8',
-      timeout: 2000,
-    });
-    return result.trim();
-  } catch {
-    return null;
-  }
+    const r1 = spawnSync('which', [toolName], { encoding: 'utf8', timeout: 2000, shell: false, maxBuffer: 8192 });
+    if (r1.status === 0) return r1.stdout.trim();
+  } catch {}
+  try {
+    const r2 = spawnSync('command', ['-v', toolName], { encoding: 'utf8', timeout: 2000, shell: false, maxBuffer: 8192 });
+    if (r2.status === 0) return r2.stdout.trim();
+  } catch {}
+  return null;
 }
 
 function scanTools() {
@@ -214,15 +216,22 @@ function execute(toolName, commandName, args = {}) {
     cmdArgs = cmdDef.cmd.slice(1);
   }
   
-  // Execute
+  // Execute — spawnSync with shell:false (P0-1 fix: prevent command injection)
   try {
-    const output = execSync(`${cmd} ${cmdArgs.join(' ')}`, {
+    const { spawnSync } = require('child_process');
+    const output = spawnSync(cmd, cmdArgs, {
       encoding: 'utf8',
       timeout: cmdDef.timeout || 5000,
       cwd: process.cwd(),
+      shell: false,
+      maxBuffer: 1 * 1024 * 1024, // 1MB cap
     });
+    if (output.error) {
+      return { error: `Execution failed: ${output.error.message || output.error.code || 'spawn error'}` };
+    }
+    const resultStr = output.stdout?.toString().trim() || '';
     
-    let result = output.trim();
+    let result = resultStr;
     if (cmdDef.postProcess) {
       result = cmdDef.postProcess(result);
     }
@@ -241,6 +250,11 @@ function handler(req, res, ctx = {}) {
   const toolName = url.pathname.split('/').filter(Boolean).pop() || params.get('tool');
   const commandName = params.get('cmd') || params.get('command');
   
+  // P0-1 fix: validate toolName against allowlist BEFORE any exec
+  if (toolName && !TOOLS[toolName]) {
+    return res.status(404).json({ error: `Unknown tool: ${toolName}` });
+  }
+
   // GET /tool/exec — list available tools
   if (!toolName || url.pathname === '/tool/exec') {
     const tools = scanTools();

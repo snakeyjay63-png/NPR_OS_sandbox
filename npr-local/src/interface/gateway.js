@@ -123,8 +123,11 @@ function createServer(routes) {
       }
     });
 
-    // CORS (local only)
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // P0-3 CORS (localhost only — replace * with allowlist)
+    const origin = req.headers.origin || '';
+    if (/^(http:\/\/(localhost|127\.0\.0\.1|\[::1\]))(:\d+)?$/.test(origin) || origin === 'null') {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (req.method === 'OPTIONS') {

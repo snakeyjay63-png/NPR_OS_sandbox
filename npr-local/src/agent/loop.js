@@ -970,12 +970,19 @@ async function handleAgentChatStream(req, res, ctx) {
   // NPR route
   const route = nprRoute(input);
 
+  // P0-3 CORS (localhost only)
+  const origin = req.headers.origin || '';
+  const corsHeaders = {};
+  if (/^(http:\/\/(localhost|127\.0\.0\.1|\[::1\]))(:\d+)?$/.test(origin) || origin === 'null') {
+    corsHeaders['Access-Control-Allow-Origin'] = origin;
+  }
+
   // Set SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
+    ...corsHeaders,
   });
 
   // Context breath: determine role for this input

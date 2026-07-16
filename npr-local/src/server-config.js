@@ -9,7 +9,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
 const PORT = process.env.CONFIG_PORT || 18000;
 const PUBLIC = path.join(__dirname, '..', 'public');
@@ -88,8 +88,11 @@ function parseLlamaArgs(psOutput) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost`);
 
-  // CORS headers for all responses
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // P0-3 CORS (localhost only)
+  const origin = req.headers.origin || '';
+  if (/^(http:\/\/(localhost|127\.0\.0\.1|\[::1\]))(:\d+)?$/.test(origin) || origin === 'null') {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') {
@@ -106,53 +109,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Restart service — localhost only
-  if (url.pathname === '/restart' && req.method === 'POST') {
-    const clientIp = req.socket.remoteAddress;
-    if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'forbidden: restart requires localhost' }));
-      return;
-    }
-
-    let body = '';
-    req.on('data', (chunk) => { body += chunk; });
-    req.on('end', () => {
-      try {
-        const { service } = JSON.parse(body || '{}');
-        const nprLocalDir = path.resolve(__dirname, '..');
-        const geowonDir = path.resolve(__dirname, '../../..', 'geowon');
-
-        if (service === 'npr-local' || !service) {
-          execSync(`pkill -f "node src/index.js"`, { timeout: 5000 });
-          setTimeout(() => {
-            const proc = execSync(`cd ${nprLocalDir} && nohup node src/index.js > /tmp/npr-local.log 2>&1 &`, { timeout: 3000 });
-            console.log('[config] Restarted npr-local');
-          }, 1500);
-        }
-
-        if (service === 'geowon') {
-          execSync(`pkill -f "node index.js.*geowon" || lsof -ti :4004 | xargs kill`, { timeout: 5000 });
-          setTimeout(() => {
-            execSync(`cd ${geowonDir} && nohup node index.js > /tmp/geowon.log 2>&1 &`, { timeout: 3000 });
-            console.log('[config] Restarted geowon');
-          }, 1500);
-        }
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ restarted: service || 'npr-local' }));
-      } catch(e) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: e.message }));
-      }
-    });
-    return;
-  }
+  // P0-4: restart endpoint removed — use npm run restart / tmux instead
 
   // Config endpoint (live process detection)
   if (url.pathname === '/config' && req.method === 'GET') {
     try {
-      const psOutput = execSync('ps aux | grep llama-server | grep -v grep', { encoding: 'utf-8' });
+      const psResult = spawnSync('ps', ['aux'], { encoding: 'utf-8', shell: false, timeout: 5000, maxBuffer: 1024 * 1024 });
+      const psOutput = psResult.stdout || '';
+      const llamaLine = psOutput.split('\n').find(l => l.includes('llama-server') && !l.includes('grep'));
+      const args = parseLlamaArgs(llamaLine);
       const args = parseLlamaArgs(psOutput.trim());
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(args, null, 2));
