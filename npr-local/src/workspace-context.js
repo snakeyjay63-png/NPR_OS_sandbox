@@ -67,7 +67,8 @@ function retrieveContent(query, dir = DEFAULT_WORKSPACE, maxResults = 5) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
 
     for (const entry of entries) {
-      if (entry.isDirectory() || results.length >= maxResults) break;
+      if (results.length >= maxResults) break;
+      if (entry.isDirectory()) continue;
 
       const fullPath = path.join(dir, entry.name);
       const ext = path.extname(entry.name).toLowerCase();
