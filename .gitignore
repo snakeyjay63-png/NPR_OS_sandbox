@@ -1,6 +1,5 @@
-# Externe forks — niet onderhouden hier
-npr-local-fork/
-openclaw-base/
+# _reference/ — lokale referentiebronnen (niet publiek)
+_reference/
 
 # Grote artefacten
 sutra_audio/frames*/
