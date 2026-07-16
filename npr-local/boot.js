@@ -135,10 +135,10 @@ console.log('║     NPR Local v0.0.1 — Boot          ║');
 console.log('║  :5000  npr-local (main)              ║');
 console.log('║  :5004  geowon (memory)               ║');
 console.log('║  :5010  config-llama (UI)             ║');
-console.log('║  :8765  llama-server (model)          ║');
+console.log('║  :8765  llama-server (extern, required)║');
 console.log('╚═══════════════════════════════════════╝\n');
 
-// ─── Main NPR Local (:4000) ───
+// ─── Main NPR Local (:5000) ───
 
 // Temporarily suppress SIGINT from index.js (we handle shutdown)
 const origHandlers = process.listeners('SIGINT').slice();
