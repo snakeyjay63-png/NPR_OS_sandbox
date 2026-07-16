@@ -2,7 +2,7 @@
 // boot.js — NPR Local Unified Boot
 // ═══════════════════════════════════════════════════
 // All services in one process. Single kill to stop all.
-// :4000 = npr-local, :4004 = geowon, :18000 = config
+// :5000 = npr-local, :5004 = geowon, :5010 = config
 // ═══════════════════════════════════════════════════
 
 const http = require('http');
@@ -24,7 +24,7 @@ const MIME = {
   '.md':   'text/markdown; charset=utf-8',
 };
 
-// ─── Config Server (:18000) ───
+// ─── Config Server (:5010) ───
 
 const configServer = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -47,7 +47,7 @@ const configServer = http.createServer((req, res) => {
 configServer.listen(5010, () => console.log('[5010] Config server'));
 servers.push(configServer);
 
-// ─── Geowon Memory Gateway (:4004) ───
+// ─── Geowon Memory Gateway (:5004) ───
 
 const geowonDir = path.join(__dirname, '..', '..', 'geowon', 'memory');
 if (!fs.existsSync(geowonDir)) fs.mkdirSync(geowonDir, { recursive: true });

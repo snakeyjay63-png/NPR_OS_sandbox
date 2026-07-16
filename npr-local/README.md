@@ -34,9 +34,16 @@ src/
 ## Run
 
 ```bash
-npm start          # production
+npm start          # production (default :5000)
 npm run dev        # development (watch mode)
-PORT=3003 npm start  # custom port
+PORT=5001 npm start  # custom port
+```
+
+### Boot Options
+```bash
+node boot.js       # unified boot (all services: :5000, :5004, :5010)
+node src/index.js  # npr-local only (:5000)
+node src/server-config.js  # config-llama only (:5010)
 ```
 
 ## NPR Routing
@@ -90,13 +97,13 @@ Geen decimale routes. Alles gaat terug naar het eiland.
 
 ```bash
 # Alle capabilities
-curl http://[::1]:3002/capabilities
+curl http://[::1]:5000/capabilities
 
 # Dynamische selectie via doel
-curl "http://[::1]:3002/select?goal=systeem+analyseren"
+curl "http://[::1]:5000/select?goal=systeem+analyseren"
 
 # Via agent chat
-curl -X POST http://[::1]:3002/agent/chat \
+curl -X POST http://[::1]:5000/agent/chat \
   -d '{"message":"tool:capabilities"}'
 ```
 
@@ -118,7 +125,7 @@ curl -X POST http://[::1]:3002/agent/chat \
 Scan results are saved to `~/.openclaw/npr-local/scans/` (mode 700, files mode 600).
 
 ```bash
-curl -X POST http://[::1]:3002/agent/chat \
+curl -X POST http://[::1]:5000/agent/chat \
   -d '{"message":"tool:scan --save"}'
 ```
 
