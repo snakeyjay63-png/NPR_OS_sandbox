@@ -1,3 +1,4 @@
+// @net 10.14.0.0/24
 // ═══════════════════════════════════════════════════
 // boot.js — NPR Local Unified Boot
 // ═══════════════════════════════════════════════════
@@ -54,6 +55,7 @@ if (!fs.existsSync(geowonDir)) fs.mkdirSync(geowonDir, { recursive: true });
 
 const sessions = new Map();
 
+// @addr 10.14.3.1 | fd00:npr:0014:003::1 — session saver
 function saveSession(id, data) {
   const f = path.join(geowonDir, `${id}.json`);
   fs.writeFileSync(f, JSON.stringify(data, null, 2));
@@ -145,7 +147,9 @@ const origHandlers = process.listeners('SIGINT').slice();
 process.removeAllListeners('SIGINT');
 process.removeAllListeners('SIGTERM');
 
-require('./src/index');
+const { boot } = require('./src/index');
+const mainServer = boot();
+servers.push(mainServer);
 
 // ─── Graceful Shutdown ───
 

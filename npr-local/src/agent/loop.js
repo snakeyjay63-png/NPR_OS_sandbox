@@ -1,3 +1,4 @@
+// @net 10.03.0.0/24
 // ═══════════════════════════════════════════════════
 // agent/loop.js — Single Agent Loop
 // ═══════════════════════════════════════════════════
@@ -5,21 +6,98 @@
 // Receive → route → respond → log → 0.0.0.0
 // ═══════════════════════════════════════════════════
 
+const path = require('path');
 const crypto = require('crypto');
-const { nprRoute } = require('../field/npr');
+const EventEmitter = require('events');
+const { nprRoute, getPhaseContext } = require('../field/npr');
 const { fullScan, quickScan, scheduleScan } = require('../sources/system-scan');
 const { selectByGoal, listCapabilities } = require('../routes/capabilities');
 const { scanWorkspace, buildContextString } = require('../workspace-context');
+const { ContextBreath } = require('./context-breathe');
+
+// ─── Agent Event Sink (OpenClaw pattern: agent-loop.ts) ───
+// Lifecycle events: agent_start → turn_start → message_start/end → tool_* → turn_end → agent_end
+// Emissie is sync-friendly: handlers zijn async maar blocken de loop niet
+
+class AgentEventSink extends EventEmitter {
+  constructor() {
+    super();
+    this.setMaxListeners(20);
+    this.events = []; // buffered history for debugging
+  }
+
+  // @addr 10.03.2.1 | fd00:npr:0002:001::1 — event emit
+  async emit(type, data = {}) {
+    const event = { type, timestamp: Date.now(), ...data };
+    this.events.push(event);
+    // Keep last 100 events in buffer
+    if (this.events.length > 100) {
+      this.events = this.events.slice(-100);
+    }
+    // Sync emit — loop waits for handlers (matches OpenClaw pattern)
+    this.emitRaw(event);
+    return event;
+  }
+
+  emitRaw(event) {
+    this.emit(event.type, event);
+  }
+
+  // Get buffered events (for /agent/debug, SSE streaming)
+  getEvents() {
+    return [...this.events];
+  }
+
+  // Clear buffer
+  clear() {
+    this.events = [];
+  }
+}
+
+// ─── Agent Loop Config (OpenClaw pattern: AgentLoopConfig) ───
+// Hoofden die per-turn gedrag sturen zonder de loop te breken
+
+const defaultLoopConfig = {
+  // Stop na één turn? (default: nee, loop tot geen tool-calls meer)
+  shouldStopAfterTurn: null,
+  // Voorbereid volgende turn (context/model/thinking aanpassen)
+  prepareNextTurn: null,
+  // Voer tool-call uit (before hook)
+  beforeToolCall: null,
+  // Tool-call resultaat verwerken (after hook)
+  afterToolCall: null,
+  // Max tool-calls per turn (veiligheid)
+  maxToolCallsPerTurn: 10,
+  // Max turns per agent-loop (veiligheid)
+  maxTurnsPerLoop: 20,
+};
+
+// ─── Runtime Config (hoisted for buildSystemPrompt) ───
+
+const MODEL_NAME = process.env.MODEL_NAME || 'Qwen3.6-27B-Q4_K_M.gguf';
+const MAX_TOKENS = parseInt(process.env.MAX_TOKENS) || 2048;
+const GEOWON_PORT = parseInt(process.env.GEOWON_PORT) || 5004;
+const MODEL_API = process.env.MODEL_API || 'http://127.0.0.1:8765/v1/chat/completions';
+const GEOWON_API = process.env.GEOWON_API || `http://127.0.0.1:${GEOWON_PORT}`;
+const MAX_HISTORY = 20;
 
 // ─── System Prompt Builder ───
 
-function buildSystemPrompt(route, workspaceContext = null) {
+// @addr 10.03.3.1 | fd00:npr:0003:003::1 — system prompt builder
+function buildSystemPrompt(route, workspaceContext = null, breathRoute = null) {
   const parts = [];
 
   // Extract correct fields from route object
   const slot = route.pattern?.slot ?? 'unknown';
   const digitalRoot = route.pattern?.digitalRoot ?? 0;
   const phase = route.phase ?? (digitalRoot ? `dr-${digitalRoot}` : 'unknown');
+
+  // Phase-specific context
+  const phaseInfo = getPhaseContext(phase);
+
+  // Context breath role
+  const breathRole = breathRoute?.role ?? null;
+  const breathAddr = breathRoute?.route?.addr ?? '0x000000';
 
   parts.push(`Je bent NPR Local v0.0.1 — single-agent, local-only runtime.
 Oorsprong: 0.0.0.0. Route via digitale root. Geen decimale routes.
@@ -28,13 +106,20 @@ Oorsprong: 0.0.0.0. Route via digitale root. Geen decimale routes.
 - Lokaal model: ${MODEL_NAME} op :8765
 - NPR routing: hash → slot (${slot}) → fase (${phase})
 - Memory: geowon op :${GEOWON_PORT} (event-driven, disk-backed)
+- Token budget: ${MAX_TOKENS} per turn
 - Alles lokaal — geen externe API calls
+${breathRole ? `\n## Actuele Rol: ${breathRole.name} ${breathRole.emoji}\n- Routing: ${breathAddr}\n${breathRoute.systemPrompt ?? ''}` : ''}
+## Huidige Fase: ${phaseInfo?.name || phase}
+${phaseInfo?.description || 'NPR routing actief.'}
+${phaseInfo?.tools ? 'Beschikbare fase-tools: ' + phaseInfo.tools.join(', ') : ''}
 
 ## Tools
 - tool:scan — systeem scannen (quick of --full)
 - tool:scan --save — bewaar scan naar ~/.openclaw/npr-local/scans/
-- tool:capabilities — alle 9 capabilities tonen
+- tool:capabilities — alle capabilities tonen
 - tool:select <doel> — wiskundige selectie via digitale root
+- tool:workspace — workspace info (optioneel: --scan, --full)
+- tool:read <pad> — bestand inhoud ophalen (injecteert in context)
 
 ## Capabilities (digitale root 1-9)
 1=Identiteit | 2=Communicatie | 3=Analyse | 4=Structuur
@@ -74,14 +159,32 @@ Als de vraag niet relevant is voor deze workspace, negeer deze sectie.`);
 const sessions = new Map();
 let currentWorkspace = process.env.NPR_WORKSPACE || null;
 
+// ─── Context Breath (Patanjali 1.5 — viveka/discriminatie) ───
+// Dynamisch context ademen: omhoog (comprimeer) / omlaag (expandeer)
+let contextBreath = null;
+
+function getContextBreath() {
+  if (!contextBreath) {
+    contextBreath = new ContextBreath({
+      memoryDir: path.join(currentWorkspace || process.cwd(), 'memory'),
+      compressAt: 8000,
+      expandAt: 2000,
+      maxActiveBlocks: 6,
+    });
+  }
+  return contextBreath;
+}
+
 // Session ID: prefix + 16 hex chars (8 bytes)
 const SESSION_PREFIX = 'sess';
 const SESSION_HEX_LEN = 16;
 
+// @addr 10.03.0.1 | fd00:npr:0003:000::1 — session ID generator
 function generateSessionId() {
   return `${SESSION_PREFIX}_${crypto.randomBytes(SESSION_HEX_LEN / 2).toString('hex')}`;
 }
 
+// @addr 10.03.0.2 | fd00:npr:0003:000::2 — session ID validator
 function validateSessionId(id) {
   if (typeof id !== 'string') return false;
   if (id.length < 4 || id.length > 128) return false;
@@ -90,20 +193,32 @@ function validateSessionId(id) {
   return true;
 }
 
-function getSession(id) {
+// @addr 10.03.3.2 | fd00:npr:0003:003::2 — session getter
+function getSession(id, options = {}) {
   if (!validateSessionId(id)) {
     // Generate a new valid ID if the provided one is invalid
     id = generateSessionId();
     console.warn(`[agent] Ongeldige session ID, gegenereerd: ${id}`);
   }
   if (!sessions.has(id)) {
-    sessions.set(id, { id, turns: 0, createdAt: Date.now() });
+    const newSession = { id, turns: 0, createdAt: Date.now() };
+    sessions.set(id, newSession);
+    // Async: load history from geowon if requested
+    if (options.loadHistory) {
+      loadFromGeowon(id).then(history => {
+        if (history.length > 0) {
+          newSession.history = history;
+          console.log(`[agent] Loaded ${history.length} messages from geowon for ${id}`);
+        }
+      });
+    }
   }
   return sessions.get(id);
 }
 
 // ─── Session Management ───
 
+// @addr 10.03.1.1 | fd00:npr:0003:001::1 — list sessions
 function listSessions() {
   const result = [];
   for (const [id, session] of sessions) {
@@ -118,6 +233,7 @@ function listSessions() {
   return result.sort((a, b) => b.lastActivity - a.lastActivity);
 }
 
+// @addr 10.03.3.3 | fd00:npr:0003:003::3 — fork session
 function forkSession(sourceId, newId = `fork-${Date.now()}`) {
   const source = sessions.get(sourceId);
   if (!source) return null;
@@ -133,6 +249,7 @@ function forkSession(sourceId, newId = `fork-${Date.now()}`) {
   return forked;
 }
 
+// @addr 10.03.3.4 | fd00:npr:0003:003::4 — merge sessions
 function mergeSessions(targetId, sourceId) {
   const target = sessions.get(targetId);
   const source = sessions.get(sourceId);
@@ -162,15 +279,29 @@ function mergeSessions(targetId, sourceId) {
 
 // ─── Local Model (llama.cpp :8765) ───
 
-const MODEL_API = process.env.MODEL_API || 'http://127.0.0.1:8765/v1/chat/completions';
-const MODEL_NAME = process.env.MODEL_NAME || 'Qwen3.6-27B-Q4_K_M.gguf';
-const MAX_HISTORY = 20;
+// (constants hoisted to top for buildSystemPrompt)
 
 // ─── Geowon Memory (event-driven, disk-backed) ───
 
-const GEOWON_PORT = parseInt(process.env.GEOWON_PORT) || 5004;
-const GEOWON_API = process.env.GEOWON_API || `http://127.0.0.1:${GEOWON_PORT}`;
+// (constants hoisted to top)
 
+// ─── Canonical Message Schema ───
+// Shared between local memory, Geowon, and sync events
+// { role, content, timestamp, route?, slot?, phase?, partial? }
+
+// @addr 10.03.0.3 | fd00:npr:0003:000::3 — message canonicalizer
+function canonicalMessage(role, content, meta = {}) {
+  return {
+    role,
+    content,
+    timestamp: Date.now(),
+    ...meta,
+  };
+}
+
+// ─── Geowon Sync (bidirectional) ───
+
+// @addr 10.03.1.2 | fd00:npr:0003:001::2 — geowon sync (write)
 async function syncToGeowon(sessionId, data) {
   try {
     await fetch(`${GEOWON_API}/session/${sessionId}`, {
@@ -184,8 +315,33 @@ async function syncToGeowon(sessionId, data) {
   }
 }
 
+// @addr 10.03.1.3 | fd00:npr:0003:001::3 — geowon sync (read)
+async function loadFromGeowon(sessionId) {
+  try {
+    const res = await fetch(`${GEOWON_API}/session/${sessionId}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch(e) {
+    console.warn(`[agent] geowon readback failed: ${e.message}`);
+    return [];
+  }
+}
+
+// @addr 10.03.1.4 | fd00:npr:0003:001::4 — geowon turn sync
+async function syncTurnToGeowon(sessionId, userMsg, assistantMsg, route) {
+  const slot = route.pattern?.slot ?? 'unknown';
+  const phase = route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`;
+  const meta = { route: route.pattern, slot, phase };
+
+  // Sync both user and assistant as a pair
+  syncToGeowon(sessionId, canonicalMessage('user', userMsg, meta));
+  syncToGeowon(sessionId, canonicalMessage('assistant', assistantMsg, meta));
+}
+
+// @addr 10.03.3.5 | fd00:npr:0003:003::5 — model call
 async function callModel(messages, options = {}) {
-  const { timeout = 120000, retry = 1 } = options;
+  const { timeout = 120000, retry = 1, maxTokens = 2048 } = options;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
 
@@ -198,7 +354,7 @@ async function callModel(messages, options = {}) {
           model: MODEL_NAME,
           messages,
           temperature: 0.3,
-          max_tokens: 2048,
+          max_tokens: maxTokens,
           enable_thinking: false,
         }),
         signal: controller.signal,
@@ -212,7 +368,9 @@ async function callModel(messages, options = {}) {
       }
 
       const data = await res.json();
-      const content = data.choices?.[0]?.message?.content;
+      const msg = data.choices?.[0]?.message;
+      // Sommige modellen (Qwen3.6) retourneren alleen reasoning_content
+      const content = msg?.content || msg?.reasoning_content || '';
 
       if (!content || typeof content !== 'string') {
         throw new Error(`Ongeldig model response formaat: ${JSON.stringify(data).slice(0, 200)}`);
@@ -235,6 +393,7 @@ async function callModel(messages, options = {}) {
 }
 
 // Streaming call to llama-server
+// @addr 10.03.3.6 | fd00:npr:0003:003::6 — model stream
 async function* callModelStream(messages, options = {}) {
   const { timeout = 120000 } = options;
   const controller = new AbortController();
@@ -298,8 +457,21 @@ async function* callModelStream(messages, options = {}) {
   }
 }
 
-async function agentTurn(sessionId, input) {
-  const session = getSession(sessionId);
+// ─── Agent Loop (OpenClaw pattern: agent-loop.ts) ───
+// Two-loop structuur:
+//   - Buitenste loop: follow-up turns (context/model/thinking aanpassen)
+//   - Binnenste loop: tool-calls per turn (tot geen tool-calls meer)
+// Lifecycle events: agent_start → turn_start → message_start/end → tool_* → turn_end → agent_end
+
+// @addr 10.03.2.2 | fd00:npr:0003:001::2 — create agent event sink
+function createAgentEventSink() {
+  return new AgentEventSink();
+}
+
+// @addr 10.03.1.5 | fd00:npr:0003:001::5 — agent turn (single turn, no loop)
+async function agentTurn(sessionId, input, options = {}) {
+  const { maxTokens, dryRun } = options;
+  const session = getSession(sessionId, { loadHistory: true });
   session.turns++;
 
   // Tool detection FIRST
@@ -321,10 +493,13 @@ async function agentTurn(sessionId, input) {
     console.error(`[agent] Workspace scan failed: ${e.message}`);
   }
 
+  // Context breath: determine role for this input
+  const breathRoute = getContextBreath().route(input);
+
   // Build context: system + history + current input
   const sysMsg = {
     role: 'system',
-    content: buildSystemPrompt(route, workspaceContext),
+    content: buildSystemPrompt(route, workspaceContext, breathRoute),
   };
 
   const history = (session.history || []).slice(-MAX_HISTORY).map(h => ({
@@ -334,34 +509,303 @@ async function agentTurn(sessionId, input) {
 
   history.push({ role: 'user', content: input });
 
-  // Call local model
-  const modelResponse = await callModel([sysMsg, ...history]);
+  // Call local model (skip on dryRun — test routing only)
+  let modelResponse;
+  if (maxTokens !== undefined) {
+    modelResponse = await callModel([sysMsg, ...history], { maxTokens });
+  } else if (!dryRun) {
+    modelResponse = await callModel([sysMsg, ...history]);
+  } else {
+    modelResponse = '[dryRun] routing OK, model call skipped';
+  }
 
   // Log + sync to geowon (event-driven)
   if (!session.history) session.history = [];
-  session.history.push(
-    { role: 'user', content: input, timestamp: Date.now() },
-    { role: 'assistant', content: modelResponse, timestamp: Date.now() },
-  );
+  session.history.push(canonicalMessage('user', input));
+  session.history.push(canonicalMessage('assistant', modelResponse));
 
-  // Sync to geowon (disk-backed, only on change)
-  syncToGeowon(sessionId, {
-    role: 'assistant',
-    content: modelResponse,
-    route: route.pattern,
-    slot: route.pattern?.slot ?? 'unknown',
-    phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
-  });
+  // Sync full turn (user + assistant) to geowon
+  syncTurnToGeowon(sessionId, input, modelResponse, route);
 
   return {
     session: sessionId,
     turn: session.turns,
     input,
     route,
+    breath: {
+      role: breathRoute.role.id,
+      addr: breathRoute.route.addr,
+      levels: breathRoute.route.levels,
+    },
     response: modelResponse,
     model: MODEL_NAME,
     origin: '0.0.0.0',
   };
+}
+
+// @addr 10.03.2.3 | fd00:npr:0003:001::3 — run single agent loop
+// Full OpenClaw pattern: two-loop with events, tool lifecycle, config hooks
+async function runAgentLoop(sessionId, input, loopConfig = {}) {
+  const config = { ...defaultLoopConfig, ...loopConfig };
+  const sink = createAgentEventSink();
+  const session = getSession(sessionId, { loadHistory: true });
+
+  // Emit agent_start
+  await sink.emit('agent_start', { sessionId, input });
+
+  let turnCount = 0;
+  let followUpInput = input;
+  let lastResponse = null;
+
+  // ─── Buitenste loop: follow-up turns ───
+  while (true) {
+    turnCount++;
+    if (turnCount > config.maxTurnsPerLoop) {
+      await sink.emit('agent_end', {
+        sessionId,
+        reason: 'max_turns_reached',
+        turns: turnCount,
+      });
+      return { error: `max turns (${config.maxTurnsPerLoop}) reached`, turns: turnCount, events: sink.getEvents() };
+    }
+
+    // Prepare next turn (config hook)
+    if (config.prepareNextTurn) {
+      followUpInput = config.prepareNextTurn(followUpInput, lastResponse, turnCount) ?? followUpInput;
+    }
+
+    // Emit turn_start
+    await sink.emit('turn_start', { sessionId, turn: turnCount, input: followUpInput });
+
+    // ─── Single turn execution ───
+    session.turns++;
+
+    // NPR route
+    const route = nprRoute(followUpInput);
+
+    // Workspace context
+    let workspaceContext = null;
+    try {
+      if (currentWorkspace) {
+        const ctx = await scanWorkspace(currentWorkspace);
+        workspaceContext = buildContextString(ctx);
+      }
+    } catch (e) {
+      console.error(`[agent/loop] Workspace scan failed: ${e.message}`);
+    }
+
+    // Context breath: determine role for this input
+    const breathRoute = getContextBreath().route(followUpInput);
+
+    // Build messages
+    const sysMsg = {
+      role: 'system',
+      content: buildSystemPrompt(route, workspaceContext, breathRoute),
+    };
+
+    const history = (session.history || []).slice(-MAX_HISTORY).map(h => ({
+      role: h.role || 'user',
+      content: h.content || h.input,
+    }));
+    history.push({ role: 'user', content: followUpInput });
+
+    // Emit message_start
+    await sink.emit('message_start', { sessionId, turn: turnCount });
+
+    // Model call
+    let modelResponse;
+    try {
+      modelResponse = await callModel([sysMsg, ...history]);
+    } catch (e) {
+      await sink.emit('turn_end', { sessionId, turn: turnCount, error: e.message });
+      return { error: `model call failed: ${e.message}`, events: sink.getEvents() };
+    }
+
+    await sink.emit('message_end', { sessionId, turn: turnCount, response: modelResponse });
+
+    // ─── Binnenste loop: tool-calls ───
+    let toolCallCount = 0;
+    let toolResponse = modelResponse;
+
+    while (toolResponse && toolResponse.startsWith('tool:') && toolCallCount < config.maxToolCallsPerTurn) {
+      toolCallCount++;
+      const toolMatch = toolResponse.match(/^tool:(\w+)\s*(.*)$/s);
+      if (!toolMatch) break;
+
+      const [, toolName, toolArgs] = toolMatch;
+
+      // Before tool call hook
+      if (config.beforeToolCall) {
+        config.beforeToolCall({ toolName, toolArgs, turn: turnCount });
+      }
+
+      // Emit tool_execution_start
+      await sink.emit('tool_execution_start', {
+        sessionId,
+        turn: turnCount,
+        tool: toolName,
+        args: toolArgs,
+      });
+
+      // Execute tool
+      let toolResult;
+      try {
+        toolResult = await executeTool(toolName, toolArgs, sessionId);
+      } catch (e) {
+        toolResult = { error: `tool execution failed: ${e.message}` };
+      }
+
+      // Emit tool_execution_end
+      await sink.emit('tool_execution_end', {
+        sessionId,
+        turn: turnCount,
+        tool: toolName,
+        result: toolResult,
+      });
+
+      // After tool call hook
+      if (config.afterToolCall) {
+        toolResult = config.afterToolCall({ toolName, toolArgs, result: toolResult, turn: turnCount }) ?? toolResult;
+      }
+
+      // Feed tool result back to model for next iteration
+      const toolResultMsg = JSON.stringify(toolResult, null, 2);
+      history.push({ role: 'assistant', content: toolResponse });
+      history.push({ role: 'user', content: `Tool result: ${toolResultMsg}` });
+
+      try {
+        toolResponse = await callModel([sysMsg, ...history]);
+      } catch (e) {
+        toolResponse = `Error: ${e.message}`;
+        break;
+      }
+    }
+
+    // Store in session
+    if (!session.history) session.history = [];
+    session.history.push(canonicalMessage('user', followUpInput));
+    session.history.push(canonicalMessage('assistant', toolResponse));
+
+    // Sync to geowon
+    syncTurnToGeowon(sessionId, followUpInput, toolResponse, route);
+
+    lastResponse = toolResponse;
+
+    // Emit turn_end
+    await sink.emit('turn_end', {
+      sessionId,
+      turn: turnCount,
+      toolsExecuted: toolCallCount,
+      response: toolResponse,
+    });
+
+    // Check stop condition
+    if (config.shouldStopAfterTurn && config.shouldStopAfterTurn(lastResponse, turnCount)) {
+      break;
+    }
+
+    // Default: stop after one turn unless config says otherwise
+    break;
+  }
+
+  // Emit agent_end
+  await sink.emit('agent_end', {
+    sessionId,
+    turns: turnCount,
+    finalResponse: lastResponse,
+  });
+
+  return {
+    session: sessionId,
+    turns: turnCount,
+    response: lastResponse,
+    model: MODEL_NAME,
+    events: sink.getEvents(),
+    origin: '0.0.0.0',
+  };
+}
+
+// @addr 10.03.2.4 | fd00:npr:0003:001::4 — execute tool by name
+async function executeTool(toolName, args, sessionId) {
+  const session = sessions.get(sessionId);
+  
+  switch (toolName) {
+    case 'scan':
+    case '00': {
+      const argList = args.split(' ').filter(Boolean);
+      const full = argList.includes('--full');
+      const save = argList.includes('--save');
+      const cron = argList.find(a => a.startsWith('--cron='));
+      
+      if (cron) {
+        const intervalMs = parseInt(cron.split('=')[1]) * 60 * 1000;
+        const timer = scheduleScan(intervalMs, full);
+        return {
+          scheduled: true,
+          intervalMs,
+          full,
+          nextScan: new Date(Date.now() + intervalMs).toISOString(),
+          message: `Scan scheduled every ${intervalMs/60000} minutes`,
+        };
+      }
+      const result = full ? await fullScan(save) : quickScan(save);
+      result.tool = 'scan';
+      result.args = args;
+      return result;
+    }
+    case 'select':
+      return {
+        tool: 'select',
+        goal: args,
+        selection: selectByGoal(args),
+        note: 'Geen decimale routes. Alles → 0.0.0.0',
+      };
+    case 'capabilities':
+      return {
+        tool: 'capabilities',
+        capabilities: listCapabilities(),
+      };
+    case 'workspace': {
+      const wsPath = currentWorkspace || process.cwd();
+      const argList = args.split(' ').filter(Boolean);
+      const result = { tool: 'workspace', path: wsPath, currentWorkspace: wsPath };
+      if (argList.includes('--scan')) {
+        try {
+          const full = argList.includes('--full');
+          result.scan = full ? await fullScan(false) : quickScan(false);
+        } catch (e) {
+          result.scanError = e.message;
+        }
+      }
+      return result;
+    }
+    case 'read': {
+      const fs = require('fs');
+      const pathMod = require('path');
+      const filePath = args.trim();
+      if (!filePath) {
+        return { error: 'read: no file path specified', usage: 'tool:read <path>' };
+      }
+      const fullPath = pathMod.isAbsolute(filePath)
+        ? filePath
+        : pathMod.resolve(currentWorkspace || process.cwd(), filePath);
+      try {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        return {
+          tool: 'read',
+          path: filePath,
+          fullPath,
+          content,
+          lines: content.split('\n').length,
+          size: Buffer.byteLength(content, 'utf8'),
+        };
+      } catch (e) {
+        return { error: `read failed: ${e.message}`, path: filePath };
+      }
+    }
+    default:
+      return { error: `unknown tool: ${toolName}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read'] };
+  }
 }
 
 // ─── Handler ───
@@ -389,12 +833,17 @@ async function handleAgentChat(req, res, ctx) {
     return;
   }
 
-  const result = await agentTurn(sessionId, input);
+  // Optional: max_tokens override, dryRun to skip model
+  const maxTokens = data.maxTokens || data.max_tokens;
+  const dryRun = data.dryRun === true;
+
+  const result = await agentTurn(sessionId, input, { maxTokens, dryRun });
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(result, null, 2));
 }
 
+// @addr 10.03.1.6 | fd00:npr:0003:001::6 — tool handler
 async function handleTool(sessionId, input) {
   // turn already incremented in agentTurn() before calling handleTool
   const [tool, ...args] = input.replace('tool:', '').split(' ');
@@ -460,8 +909,34 @@ async function handleTool(sessionId, input) {
         result.scanError = e.message;
       }
     }
+  } else if (tool === 'read') {
+    // Read file content into context
+    const filePath = args.join(' ') || (args[0] || '');
+    if (!filePath) {
+      result = { error: 'read: no file path specified', usage: 'tool:read <path>' };
+    } else {
+      const fs = require('fs');
+      const path = require('path');
+      // Resolve relative to workspace or cwd
+      const fullPath = path.isAbsolute(filePath) ? filePath : path.resolve(currentWorkspace || process.cwd(), filePath);
+      try {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const lines = content.split('\n').length;
+        const size = Buffer.byteLength(content, 'utf8');
+        result = {
+          tool: 'read',
+          path: filePath,
+          fullPath,
+          content: content,
+          lines,
+          size,
+        };
+      } catch (e) {
+        result = { error: `read failed: ${e.message}`, path: filePath };
+      }
+    }
   } else {
-    result = { error: `unknown tool: ${tool}`, available: ['scan', '00', 'select', 'capabilities', 'workspace'] };
+    result = { error: `unknown tool: ${tool}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read'] };
   }
 
   return {
@@ -503,6 +978,9 @@ async function handleAgentChatStream(req, res, ctx) {
     'Access-Control-Allow-Origin': '*',
   });
 
+  // Context breath: determine role for this input
+  const breathRoute = getContextBreath().route(input);
+
   // Send routing info first
   res.write(`data: ${JSON.stringify({
     type: 'route',
@@ -510,10 +988,15 @@ async function handleAgentChatStream(req, res, ctx) {
     phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
     model: MODEL_NAME,
     sessionId,
+    breath: {
+      role: breathRoute.role.id,
+      emoji: breathRoute.role.emoji,
+      addr: breathRoute.route.addr,
+    },
   })}\n\n`);
 
   // Build messages
-  const session = getSession(sessionId);
+  const session = getSession(sessionId, { loadHistory: true });
 
   // Get workspace context (async, non-blocking)
   let workspaceContext = null;
@@ -528,7 +1011,7 @@ async function handleAgentChatStream(req, res, ctx) {
 
   const sysMsg = {
     role: 'system',
-    content: buildSystemPrompt(route, workspaceContext),
+    content: buildSystemPrompt(route, workspaceContext, breathRoute),
   };
 
   const history = (session.history || []).slice(-MAX_HISTORY).map(h => ({
@@ -595,21 +1078,12 @@ async function handleAgentChatStream(req, res, ctx) {
 
   // Store (partial) response in session
   if (!session.history) session.history = [];
-  session.history.push(
-    { role: 'user', content: input, timestamp: Date.now() },
-    { role: 'assistant', content: fullResponse, timestamp: Date.now(), partial: isAborted },
-  );
+  session.history.push(canonicalMessage('user', input));
+  session.history.push(canonicalMessage('assistant', fullResponse, { partial: isAborted }));
 
-  // Sync to geowon (only if substantial content)
+  // Sync full turn (user + assistant) to geowon
   if (fullResponse.length > 20) {
-    syncToGeowon(sessionId, {
-      role: 'assistant',
-      content: fullResponse,
-      route: route.pattern,
-      slot: route.pattern?.slot ?? 'unknown',
-      phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
-      partial: isAborted,
-    });
+    syncTurnToGeowon(sessionId, input, fullResponse, route);
   }
 
   res.end();
@@ -619,6 +1093,9 @@ module.exports = {
   handleAgentChat,
   handleAgentChatStream,
   agentTurn,
+  runAgentLoop,
+  createAgentEventSink,
+  executeTool,
   sessions,
   handleTool,
   listSessions,
@@ -626,6 +1103,7 @@ module.exports = {
   mergeSessions,
   generateSessionId,
   validateSessionId,
+  getContextBreath,
   getCurrentWorkspace: () => currentWorkspace,
-  setCurrentWorkspace: (path) => { currentWorkspace = path; },
+  setCurrentWorkspace: (p) => { currentWorkspace = p; },
 };

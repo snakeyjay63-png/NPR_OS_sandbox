@@ -1,4 +1,6 @@
+// @net 10.05.0.0/24
 // ═══════════════════════════════════════════════════
+// @net 10.05.0.0/24
 // routes/core.js — NPR Route Engine
 // ═══════════════════════════════════════════════════
 // Minimal routing: path → slot → handler
@@ -21,6 +23,7 @@ const PATH_PARAM = new Map(); // parameterized path → { pattern, handler }
 
 // ─── Register ───
 
+// @addr 10.05.2.1 | fd00:npr:0005:002::1 — route register
 function register(slot, path, handler) {
   if (typeof slot === 'function') {
     // register(path, handler) — auto-slot
@@ -46,6 +49,7 @@ function register(slot, path, handler) {
   SLOT_HANDLERS.get(slot).set(path, handler);
 }
 
+// @addr 10.05.2.2 | fd00:npr:0005:002::2 — prefix register
 function registerPrefix(prefix, handler) {
   const hash = crypto.createHash('md5').update(prefix).digest();
   const slot = hash.readUInt32BE(0) % 64;
@@ -56,13 +60,41 @@ function registerPrefix(prefix, handler) {
 
 // ─── Dispatch ───
 
+// @addr 10.05.2.3 | fd00:npr:0005:002::3 — request dispatch
 function dispatch(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
+  // Lazy load log to avoid circular dependency
+  let log = null;
+  try { log = require('../log'); } catch {}
+
+  // Error boundary wrapper — catches sync + async handler errors
+  const safeHandler = (handler, ctx) => {
+    try {
+      const result = handler(req, res, ctx);
+      // If handler returns a Promise, catch async errors
+      if (result && typeof result.catch === 'function') {
+        result.catch(err => {
+          if (log) log.error('Handler error', { path: ctx.pathname, error: err.message });
+          if (!res.writableEnded) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'internal', message: err.message }));
+          }
+        });
+      }
+    } catch (err) {
+      if (log) log.error('Handler error', { path: pathname, error: err.message });
+      if (!res.writableEnded) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'internal', message: err.message }));
+      }
+    }
+  };
+
   // 1. Exact match (priority)
   if (PATH_EXACT.has(pathname)) {
-    return PATH_EXACT.get(pathname)(req, res, { url, pathname });
+    return safeHandler(PATH_EXACT.get(pathname), { url, pathname });
   }
 
   // 2. Parameterized match
@@ -72,14 +104,14 @@ function dispatch(req, res) {
       const params = {};
       const paramNames = path.match(/:(\w+)/g) || [];
       paramNames.forEach((name, i) => { params[name.slice(1)] = match[i + 1]; });
-      return handler(req, res, { url, pathname, params });
+      return safeHandler(handler, { url, pathname, params });
     }
   }
 
   // 3. Prefix match
   for (const [key] of PATH_EXACT) {
     if (key.endsWith('*') && pathname.startsWith(key.slice(0, -1))) {
-      return PATH_EXACT.get(key)(req, res, { url, pathname });
+      return safeHandler(PATH_EXACT.get(key), { url, pathname });
     }
   }
 
@@ -88,7 +120,7 @@ function dispatch(req, res) {
   const slot = hash.readUInt32BE(0) % 64;
   const handlers = SLOT_HANDLERS.get(slot);
   if (handlers && handlers.has('__default__')) {
-    return handlers.get('__default__')(req, res, { url, pathname, slot });
+    return safeHandler(handlers.get('__default__'), { url, pathname, slot });
   }
 
   // 5. Not found
@@ -98,6 +130,7 @@ function dispatch(req, res) {
 
 // ─── Phase info ───
 
+// @addr 10.05.0.1 | fd00:npr:0005:000::1 — phase info
 function phaseInfo(slot) {
   const phase = PHASES[Math.floor(slot / 16)] || null;
   return {
@@ -112,6 +145,7 @@ function phaseInfo(slot) {
 
 // ─── Manifest ───
 
+// @addr 10.05.0.2 | fd00:npr:0005:000::2 — manifest
 function manifest() {
   const result = {};
   for (const [slot, handlers] of SLOT_HANDLERS) {
@@ -123,4 +157,4 @@ function manifest() {
   return result;
 }
 
-module.exports = { register, registerPrefix, dispatch, phaseInfo, manifest };
+module.exports = { register, registerPrefix, dispatch, phaseInfo, manifest, PATH_TO_SLOT };

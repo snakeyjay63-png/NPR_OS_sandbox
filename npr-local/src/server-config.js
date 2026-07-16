@@ -1,3 +1,4 @@
+// @net 10.13.0.0/24
 // ═══════════════════════════════════════════════════
 // server-config.js — Static file server :18000
 // ═══════════════════════════════════════════════════
@@ -37,6 +38,7 @@ const CURRENT_CONFIG = {
 };
 
 // Proxy helper for llama-server requests
+// @addr 10.13.1.1 | fd00:npr:0013:001::1 — llama proxy
 function proxyRequest(targetUrl, req, res) {
   const parsed = new URL(targetUrl);
   const options = {
@@ -61,6 +63,7 @@ function proxyRequest(targetUrl, req, res) {
 }
 
 // Parse llama-server process arguments
+// @addr 10.13.0.1 | fd00:npr:0013:000::1 — llama arg parser
 function parseLlamaArgs(psOutput) {
   if (!psOutput) return CURRENT_CONFIG;
   
@@ -103,8 +106,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Restart service
+  // Restart service — localhost only
   if (url.pathname === '/restart' && req.method === 'POST') {
+    const clientIp = req.socket.remoteAddress;
+    if (clientIp !== '::1' && clientIp !== '127.0.0.1' && clientIp !== '::ffff:127.0.0.1') {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'forbidden: restart requires localhost' }));
+      return;
+    }
+
     let body = '';
     req.on('data', (chunk) => { body += chunk; });
     req.on('end', () => {

@@ -5,6 +5,7 @@
  * - Recente wijzigingen (git + mtime)
  * - File index (type, grootte, extensie)
  * - Geowon memory lookup (optioneel)
+ * - Content retrieval (zoek in bestanden)
  *
  * Resultaat = compacte context die in system prompt injecteert.
  * Blijft buiten llama's context window tot nodig.
@@ -14,6 +15,7 @@ const { execFile } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+// @net 10.10.0.0/24
 // Default workspace
 const DEFAULT_WORKSPACE = '/home/claw/.openclaw/workspace/NPR_OS_sandbox';
 
@@ -21,6 +23,7 @@ const DEFAULT_WORKSPACE = '/home/claw/.openclaw/workspace/NPR_OS_sandbox';
  * Scan workspace directory via Python helper
  * Returns structured JSON summary
  */
+// @addr 10.10.0.1 | fd00:npr:0010:000::1 — workspace scan
 function scanWorkspace(dir = DEFAULT_WORKSPACE) {
   return new Promise((resolve, reject) => {
     const script = path.join(__dirname, '..', 'scripts', 'workspace-index.py');
@@ -31,7 +34,7 @@ function scanWorkspace(dir = DEFAULT_WORKSPACE) {
       return;
     }
 
-    execFile('python3', [script, dir], { timeout: 10000 }, (err, stdout, stderr) => {
+    execFile('python3', [script, dir, '--git'], { timeout: 15000 }, (err, stdout, stderr) => {
       if (err) {
         console.error(`[workspace-context] Python scan failed: ${stderr}`);
         resolve(basicScan(dir));
@@ -47,8 +50,84 @@ function scanWorkspace(dir = DEFAULT_WORKSPACE) {
 }
 
 /**
+ * Content retrieval — zoek relevante fragments in workspace bestanden
+ * @param {string} query - Zoekterm
+ * @param {string} dir - Workspace directory
+ * @param {number} maxResults - Max fragmenten
+ * @returns {Array} Array van {file, line, content} matches
+ */
+// @addr 10.10.0.2 | fd00:npr:0010:000::2 — content retrieval
+function retrieveContent(query, dir = DEFAULT_WORKSPACE, maxResults = 5) {
+  const results = [];
+  const searchPatterns = query.split(/\s+/).filter(w => w.length > 3);
+
+  if (!searchPatterns.length) return results;
+
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.isDirectory() || results.length >= maxResults) break;
+
+      const fullPath = path.join(dir, entry.name);
+      const ext = path.extname(entry.name).toLowerCase();
+
+      // Alleen tekstbestanden
+      if (!['.md', '.json', '.js', '.py', '.txt', '.html', '.yml', '.yaml', '.cfg', '.toml'].includes(ext)) continue;
+
+      try {
+        const content = fs.readFileSync(fullPath, 'utf8');
+        const lines = content.split('\n');
+
+        for (let i = 0; i < lines.length && results.length < maxResults; i++) {
+          const line = lines[i];
+          if (searchPatterns.some(p => line.toLowerCase().includes(p.toLowerCase()))) {
+            results.push({
+              file: entry.name,
+              line: i + 1,
+              content: line.trim().slice(0, 200),
+            });
+          }
+        }
+      } catch {
+        // skip binary/unreadable
+      }
+    }
+  } catch (e) {
+    console.error(`[workspace-context] Content retrieval failed: ${e.message}`);
+  }
+
+  return results.slice(0, maxResults);
+}
+
+/**
+ * Lees specifieke bestand met context
+ */
+// @addr 10.10.0.3 | fd00:npr:0010:000::3 — file reader
+function readFileWithContext(filePath, dir = DEFAULT_WORKSPACE, contextLines = 3) {
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(dir, filePath);
+
+  try {
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const lines = content.split('\n');
+
+    return {
+      path: filePath,
+      fullPath,
+      lineCount: lines.length,
+      size: content.length,
+      preview: lines.slice(0, 10).join('\n'),
+      content,
+    };
+  } catch (e) {
+    return { path: filePath, error: e.message };
+  }
+}
+
+/**
  * Fallback: basic Node.js filesystem scan
  */
+// @addr 10.10.0.4 | fd00:npr:0010:000::4 — basic scan
 function basicScan(dir) {
   const result = {
     path: dir,
@@ -106,6 +185,7 @@ function basicScan(dir) {
 /**
  * Format time ago
  */
+// @addr 10.10.0.5 | fd00:npr:0010:000::5 — time formatter
 function timeAgo(date) {
   const now = new Date();
   const diff = now - date;
@@ -123,6 +203,7 @@ function timeAgo(date) {
  * Content-aware context builder
  * Filtert op extensie + relevantie ipv blind alle bestanden tonen
  */
+// @addr 10.10.0.6 | fd00:npr:0010:000::6 — context builder
 function buildContextString(context, options = {}) {
   const { maxFiles = 20, maxTokens = 4000, priorityExts } = options;
 
@@ -191,6 +272,7 @@ function buildContextString(context, options = {}) {
 /**
  * Format bytes
  */
+// @addr 10.10.0.7 | fd00:npr:0010:000::7 — byte formatter
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)}KB`;
@@ -201,5 +283,7 @@ module.exports = {
   scanWorkspace,
   basicScan,
   buildContextString,
+  retrieveContent,
+  readFileWithContext,
   DEFAULT_WORKSPACE,
 };

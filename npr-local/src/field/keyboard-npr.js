@@ -1,4 +1,6 @@
+// @net 10.12.0.0/24
 // ═══════════════════════════════════════════════════
+// @net 10.12.0.0/24
 // field/keyboard-npr.js — Physical Keyboard NPR Route
 // ═══════════════════════════════════════════════════
 //
@@ -34,6 +36,7 @@ const SCAN_CODES = {
 
 // ─── NPR Route for Character ───
 
+// @addr 10.12.2.1 | fd00:npr:0012:002::1 — keyboard NPR
 function keyboardNPR(key) {
   const char = key.toLowerCase().charAt(0);
   const code = char.codePointAt(0);
@@ -76,6 +79,7 @@ function keyboardNPR(key) {
 
 // ─── Digital Root ───
 
+// @addr 10.12.0.1 | fd00:npr:0012:000::1 — digital root
 function digitalRoot(n) {
   n = Math.abs(n || 0);
   if (n === 0) return 0;
@@ -84,6 +88,7 @@ function digitalRoot(n) {
 
 // ─── Full Signal Chain ───
 
+// @addr 10.12.2.2 | fd00:npr:0012:002::2 — signal chain
 function signalChain(char) {
   const chain = [];
   const code = char.codePointAt(0);

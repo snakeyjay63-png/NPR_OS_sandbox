@@ -1,4 +1,6 @@
+// @net 10.07.0.0/24
 // ═══════════════════════════════════════════════════
+// @net 10.07.0.0/24
 // routes/map-registry.js — Map = Skill
 // ═══════════════════════════════════════════════════
 // Elke map is een skill. Routing activeert hem.
@@ -11,8 +13,12 @@ const crypto = require('crypto');
 
 const { register, phaseInfo } = require('./core');
 
+// ─── Path → Slot registry ───
+const PATH_TO_SLOT = new Map();
+
 // ─── Auto-register map ───
 
+// @addr 10.07.2.1 | fd00:npr:0007:002::1 — map register
 function registerMap(basePath, routePrefix = '/tool') {
   const entries = fs.readdirSync(basePath, { withFileTypes: true });
   let registered = 0;
@@ -35,6 +41,9 @@ function registerMap(basePath, routePrefix = '/tool') {
       const route = `${routePrefix}/${entry.name}`;
       const hash = crypto.createHash('md5').update(route).digest();
       const slot = hash.readUInt32BE(0) % 64;
+
+      // Register path → slot
+      PATH_TO_SLOT.set(route, slot);
 
       // Lazy-load handler
       register(slot, route, (req, res, ctx) => {
@@ -64,6 +73,7 @@ function registerMap(basePath, routePrefix = '/tool') {
 
 // ─── Discover tools in directory ───
 
+// @addr 10.07.0.1 | fd00:npr:0007:000::1 — discover maps
 function discover(basePath, prefix = '/tool') {
   const tools = [];
   const entries = fs.readdirSync(basePath, { withFileTypes: true });
@@ -85,6 +95,12 @@ function discover(basePath, prefix = '/tool') {
   }
 
   return tools;
+}
+
+// @addr 10.07.0.3 | fd00:npr:0007:000::3 — manifest (all paths)
+function manifest() {
+  // Return all registered paths from PATH_TO_SLOT
+  return Array.from(PATH_TO_SLOT.keys());
 }
 
 module.exports = { registerMap, discover };

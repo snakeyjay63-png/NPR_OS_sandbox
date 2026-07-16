@@ -1,4 +1,6 @@
+// @net 10.04.0.0/24
 // ═══════════════════════════════════════════════════
+// @net 10.04.0.0/24
 // memory/context.js — Dynamic Context via Routing
 // ═══════════════════════════════════════════════════
 // Context = read-head, niet warehouse.
@@ -38,6 +40,7 @@ const PHASE_CONTEXT = {
 };
 
 // Load context files for a phase
+// @addr 10.04.0.1 | fd00:npr:0004:000::1 — context loader
 function loadContext(phase, workspaceDir) {
   const config = PHASE_CONTEXT[phase] || PHASE_CONTEXT['6N'];
   let context = '';
@@ -64,12 +67,14 @@ function loadContext(phase, workspaceDir) {
 }
 
 // Dynamic context based on route
+// @addr 10.04.2.1 | fd00:npr:0004:002::1 — route→context
 function getContextForRoute(slot, workspaceDir) {
   const phase = getPhaseFromSlot(slot);
   return loadContext(phase, workspaceDir);
 }
 
 // Helper: slot → phase
+// @addr 10.04.0.2 | fd00:npr:0004:000::2 — slot→phase
 function getPhaseFromSlot(slot) {
   if (slot < 16) return '6N';
   if (slot < 32) return '12P';
@@ -78,6 +83,7 @@ function getPhaseFromSlot(slot) {
 }
 
 // Warehouse: alle bestaande context files
+// @addr 10.04.0.3 | fd00:npr:0004:000::3 — warehouse list
 function listWarehouse(workspaceDir) {
   const files = [];
   const candidates = [

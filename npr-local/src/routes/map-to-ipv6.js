@@ -1,4 +1,6 @@
+// @net 10.08.0.0/24
 // ═══════════════════════════════════════════════════
+// @net 10.08.0.0/24
 // routes/map-to-ipv6.js — Map → IPv6
 // ═══════════════════════════════════════════════════
 // Elke map wordt een IPv6 adres.
@@ -9,6 +11,7 @@
 const crypto = require('crypto');
 
 // Map naam → IPv6 suffix
+// @addr 10.08.0.1 | fd00:npr:0008:000::1 — map→IPv6
 function mapToIPv6(mapName, base = 'fd00:npr') {
   // Hash map naam → 64-bit suffix
   const hash = crypto.createHash('sha256').update(mapName).digest();
@@ -18,6 +21,7 @@ function mapToIPv6(mapName, base = 'fd00:npr') {
 }
 
 // Map → curl command
+// @addr 10.08.0.2 | fd00:npr:0008:000::2 — map→curl
 function mapToCurl(mapName, port = 4000) {
   const route = `/tool/${mapName}`;
   const ipv6 = mapToIPv6(mapName);
@@ -30,6 +34,7 @@ function mapToCurl(mapName, port = 4000) {
 }
 
 // Alle mappen → IPv6 map
+// @addr 10.08.0.3 | fd00:npr:0008:000::3 — discover maps
 function discoverMaps(sourcesDir) {
   const fs = require('fs');
   const maps = [];

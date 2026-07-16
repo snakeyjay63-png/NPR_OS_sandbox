@@ -4,15 +4,30 @@
 // Stripped from OpenClaw server-http.ts
 // No auth, no multi-agent, no external channels.
 // Single agent. Local only.
+// @net 10.02.0.0/24
 // ═══════════════════════════════════════════════════
 
 const http = require('http');
 const { dispatch, manifest, phaseInfo } = require('../routes/core');
 
+// ─── Global tick tracking ───
+// @addr 10.02.4.0 — tick data (shared with stroom)
+const ticks = new Map();
+
+// @addr 10.02.3.1 | fd00:npr:0002:003::1 — error serializer
+function safeError(err) {
+  const safe = typeof err === 'string' ? { message: err } : { message: err.message || String(err) };
+  if (process.env.NODE_ENV === 'development') {
+    safe.devHint = err.message; // log-only hint, no stack
+  }
+  return safe;
+}
+
 // ─── Status ───
 
 const startTime = Date.now();
 
+// @addr 10.02.3.2 | fd00:npr:0002:003::2 — uptime helper
 function uptime() {
   const s = Math.floor((Date.now() - startTime) / 1000);
   const h = Math.floor(s / 3600);
@@ -23,6 +38,7 @@ function uptime() {
 
 // ─── Built-in routes ───
 
+// @addr 10.02.1.1 | fd00:npr:0002:001::1 — health endpoint
 function handleHealth(req, res) {
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
@@ -63,6 +79,7 @@ function handleNprTrace(req, res) {
 
 // ─── Server ───
 
+// @addr 10.02.1.3 | fd00:npr:0002:001::3 — server factory
 function createServer(routes) {
   // Register built-in routes
   routes.register(0, '/health', handleHealth);
@@ -70,6 +87,30 @@ function createServer(routes) {
   routes.register(0, '/npr/trace', handleNprTrace);
 
   const server = http.createServer((req, res) => {
+    // ─── Global tick tracking ───
+    const tickStart = process.hrtime.bigint();
+    const tickKey = req.url.split('?')[0];
+    const origEnd = res.end;
+    res.end = function (...args) {
+      // Compute μs integer
+      const tickUsInt = Math.round(Number(process.hrtime.bigint() - tickStart) / 1000);
+      const arr = ticks.get(tickKey) || [];
+      arr.push(tickUsInt);
+      ticks.set(tickKey, arr.slice(-50));
+      // Inject tickUs into JSON body if response is JSON
+      const body = args[0];
+      if (typeof body === 'string' && body.trimStart().startsWith('{')) {
+        try {
+          const obj = JSON.parse(body);
+          obj.tickUs = tickUsInt;
+          args[0] = JSON.stringify(obj, null, 2);
+        } catch(e) {
+          // not valid JSON, pass through
+        }
+      }
+      origEnd.apply(res, args);
+    };
+
     // JSON helper
     res.json = (data) => {
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -110,8 +151,8 @@ function createServer(routes) {
     req.on('end', () => {
       if (bodyTooLarge) return;
 
-      // Only parse JSON for POST/PUT/PATCH
-      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      // Only parse JSON for POST/PUT/PATCH/DELETE
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
         const contentType = req.headers['content-type'] || '';
         if (body && !contentType.includes('application/json')) {
           res.writeHead(415, { 'Content-Type': 'application/json' });
@@ -147,4 +188,4 @@ function createServer(routes) {
   return server;
 }
 
-module.exports = { createServer, uptime };
+module.exports = { createServer, uptime, ticks };

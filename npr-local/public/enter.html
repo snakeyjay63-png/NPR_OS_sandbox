@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>• enter — NPR-OS</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --fg: #c9d1d9;
+    --accent: #58a6ff;
+    --muted: #484f58;
+    --card: #161b22;
+    --border: #21262d;
+    --post: #f0883e;
+    --get: #3fb950;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    padding: 2rem;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.25rem;
+    color: var(--accent);
+  }
+  h1 .dot {
+    font-size: 2rem;
+    vertical-align: middle;
+    color: var(--accent);
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin-bottom: 2rem;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    color: var(--accent);
+    font-weight: bold;
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  h2 {
+    font-size: 1rem;
+    margin: 1.5rem 0 0.5rem;
+    color: var(--fg);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.25rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  td {
+    padding: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  td:first-child {
+    width: 4rem;
+  }
+  td:nth-child(2) {
+    font-family: monospace;
+  }
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  .desc {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+  }
+  .badge.get {
+    background: rgba(63, 185, 80, 0.15);
+    color: var(--get);
+  }
+  .badge.post {
+    background: rgba(240, 136, 62, 0.15);
+    color: var(--post);
+  }
+  footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+  <h1><span class="dot">&bull;</span> enter</h1>
+  <p class="subtitle">NPR-OS Route Portal</p>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-value">22</div>
+      <div class="stat-label">Routes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">0h 0m 22s</div>
+      <div class="stat-label">Uptime</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">2</div>
+      <div class="stat-label">Ticks</div>
+    </div>
+  </div>
+
+  <h2>&bull; Core</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/health">/health</a></td>
+        <td class="desc">Health check</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/tick">/tick</a></td>
+        <td class="desc">Tick metrics (&micro;s)</td>
+      </tr></table><h2>&varrho; Agent</h2>
+      <table><tr>
+        <td><span class="badge post">POST</span></td>
+        <td><a href="/agent/chat">/agent/chat</a></td>
+        <td class="desc">Agent chat (POST)</td>
+      </tr><tr>
+        <td><span class="badge post">POST</span></td>
+        <td><a href="/agent/chat-stream">/agent/chat-stream</a></td>
+        <td class="desc">Agent chat stream (POST)</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/agent/workspace">/agent/workspace</a></td>
+        <td class="desc">Workspace context</td>
+      </tr></table><h2>&asymp; Sessions</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/sessions">/sessions</a></td>
+        <td class="desc">List sessions</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/sessions/:id">/sessions/:id</a></td>
+        <td class="desc">Session detail</td>
+      </tr><tr>
+        <td><span class="badge post">POST</span></td>
+        <td><a href="/sessions/:id/merge">/sessions/:id/merge</a></td>
+        <td class="desc">Merge sessions (POST)</td>
+      </tr></table><h2>&int; Memory</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/context">/context</a></td>
+        <td class="desc">Route context</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/warehouse">/warehouse</a></td>
+        <td class="desc">Memory warehouse</td>
+      </tr></table><h2>&sum; Routing</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/capabilities">/capabilities</a></td>
+        <td class="desc">Capability list</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/maps">/maps</a></td>
+        <td class="desc">IPv6 map registry</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/select">/select</a></td>
+        <td class="desc">Goal-based selection</td>
+      </tr></table><h2>&nabla; Physics</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/stroom">/stroom</a></td>
+        <td class="desc">GBS Hub physics (alias)</td>
+      </tr><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/gbs-hub/gbs/stroom">/gbs-hub/gbs/stroom</a></td>
+        <td class="desc">GBS Hub physics</td>
+      </tr></table><h2>&#8862; System</h2>
+      <table><tr>
+        <td><span class="badge get">GET</span></td>
+        <td><a href="/verify">/verify</a></td>
+        <td class="desc">Verification dashboard</td>
+      </tr></table>
+
+  <footer>
+    NPR-OS &bull; localhost:5000 &bull; 2026-07-16
+  </footer>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NPR Browser Bridge</title>
+<style>
+:root{--bg:#0a0a0f;--fg:#e0e0e8;--dim:#666680;--cyan:#00e5ff;--green:#00e676;--yellow:#ffea00;--red:#ff1744;--purple:#d500f9;--border:#222240;--panel:#101018}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'JetBrains Mono',monospace;font-size:12px;padding:20px}
+h1{color:var(--cyan);font-size:18px;margin-bottom:4px}
+.subtitle{color:var(--dim);font-size:11px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-bottom:20px}
+.cell{background:var(--panel);border:1px solid var(--border);padding:8px;border-radius:4px;text-align:center;cursor:pointer;transition:all .2s}
+.cell:hover{border-color:var(--cyan);transform:scale(1.05)}
+.cell.active{border-color:var(--green);background:#0a1a0a}
+.cell .slot{font-size:10px;color:var(--dim)}
+.cell .binary{font-size:9px;color:var(--purple)}
+.cell .name{font-size:11px;color:var(--cyan);margin:2px 0}
+.cell .api{font-size:9px;color:var(--yellow)}
+.cell.star{border-color:var(--green)}
+.cell.star .name::after{content:' ★';color:var(--green)}
+.cat-label{grid-column:1/-1;color:var(--yellow);font-size:11px;padding:8px 0 4px;border-bottom:1px solid var(--border);margin-top:8px}
+#detail{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:16px;margin-top:16px;min-height:120px}
+#detail h3{color:var(--cyan);margin-bottom:8px}
+#input-area{margin-bottom:16px;display:flex;gap:8px}
+#input-area input{flex:1;background:#0a0a0f;border:1px solid var(--border);color:var(--fg);padding:8px;border-radius:4px;font-family:inherit}
+#input-area button{background:#1a1a30;border:1px solid var(--cyan);color:var(--cyan);padding:8px 16px;border-radius:4px;cursor:pointer;font-family:inherit}
+</style></head><body>
+
+<h1>• NPR Browser Bridge</h1>
+<div class="subtitle">64 routes → 8 categories → 6-bit → slot 0 = basis</div>
+
+<div id="input-area">
+  <input id="search" placeholder="Zoek route (naam, API, slot)..." oninput="filter()">
+  <button onclick="testRoute()">Test route</button>
+</div>
+
+<div id="grid"></div>
+<div id="detail">Selecteer een route...</div>
+
+<script>
+const CATEGORIES = {
+  'BASIS (0-7)':     { slots: [0,1,2,3,4,5,6,7], color: '#00e5ff' },
+  'STORAGE (8-15)':  { slots: [8,9,10,11,12,13,14,15], color: '#00e676' },
+  'HARDWARE (16-23)':{ slots: [16,17,18,19,20,21,22,23], color: '#ffea00' },
+  'SENSOR (24-31)':  { slots: [24,25,26,27,28,29,30,31], color: '#ff9100' },
+  'NETWORK (32-39)': { slots: [32,33,34,35,36,37,38,39], color: '#d500f9' },
+  'DISPLAY (40-47)': { slots: [40,41,42,43,44,45,46,47], color: '#ff1744' },
+  'SYSTEM (48-55)':  { slots: [48,49,50,51,52,53,54,55], color: '#ff6e40' },
+  'META (56-63)':    { slots: [56,57,58,59,60,61,62,63], color: '#7c4dff' },
+};
+
+const ROUTES = [
+  {slot:0,name:'null',api:'none',desc:'Basis route — null/void/empty'},
+  {slot:1,name:'console',api:'console',desc:'Console API — log/debug/info/warn/error'},
+  {slot:2,name:'clipboard',api:'ClipboardAPI',desc:'Clipboard — read/write text & files'},
+  {slot:3,name:'crypto',api:'WebCrypto',desc:'Crypto — AES, RSA, SHA, HKDF'},
+  {slot:4,name:'workers',api:'WebWorker',desc:'Workers — parallel JS execution'},
+  {slot:5,name:'service-worker',api:'ServiceWorker',desc:'Background/cache/routing'},
+  {slot:6,name:'storage',api:'IndexedDB',desc:'Persistent storage'},
+  {slot:7,name:'cache',api:'CacheAPI',desc:'Request/response caching'},
+  {slot:8,name:'file-system',api:'FileSystemAccess',desc:'Direct file read/write'},
+  {slot:9,name:'file-reader',api:'FileReader',desc:'Async file read'},
+  {slot:10,name:'blob-url',api:'Blob/URL',desc:'In-memory file refs'},
+  {slot:11,name:'drag-drop',api:'DragDrop',desc:'File transfer'},
+  {slot:12,name:'navigator-store',api:'NavigatorStorage',desc:'Storage estimator'},
+  {slot:13,name:'session-storage',api:'SessionStorage',desc:'Ephemeral storage'},
+  {slot:14,name:'local-storage',api:'LocalStorage',desc:'Persistent key-value'},
+  {slot:15,name:'agent',api:'HTTP',desc:'NPR agent turns'},
+  {slot:16,name:'serial',api:'WebSerial',desc:'UART/USB-serial devices'},
+  {slot:17,name:'hid',api:'WebHID',desc:'Keyboards, mice, custom devices'},
+  {slot:18,name:'usb',api:'WebUSB',desc:'Direct device communication'},
+  {slot:19,name:'bluetooth',api:'WebBluetooth',desc:'LE device discovery'},
+  {slot:20,name:'logs',api:'HTTP',desc:'Agent logs — circular buffer'},
+  {slot:21,name:'memory',api:'HTTP',desc:'Memory search — file index'},
+  {slot:22,name:'nfc',api:'WebNFC',desc:'Near-field communication'},
+  {slot:23,name:'doctor',api:'HTTP',desc:'System health checks'},
+  {slot:24,name:'tty',api:'HTTP/tty',desc:'Terminal bridge'},
+  {slot:25,name:'media-devices',api:'MediaDevices',desc:'Camera & microphone'},
+  {slot:26,name:'media-recorder',api:'MediaRecorder',desc:'Record audio/video'},
+  {slot:27,name:'web-codecs',api:'WebCodecs',desc:'Audio/video encode/decode'},
+  {slot:28,name:'web-audio',api:'WebAudio',desc:'Audio processing & synthesis'},
+  {slot:29,name:'gamepad',api:'Gamepad',desc:'Controller input'},
+  {slot:30,name:'geolocation',api:'Geolocation',desc:'GPS/location'},
+  {slot:31,name:'accelerometer',api:'SensorAPI',desc:'Motion data'},
+  {slot:32,name:'fetch',api:'FetchAPI',desc:'HTTP requests'},
+  {slot:33,name:'xhr',api:'XMLHttpRequest',desc:'Legacy HTTP'},
+  {slot:34,name:'websocket',api:'WebSocket',desc:'Bidirectional comms'},
+  {slot:35,name:'broadcast',api:'BroadcastChannel',desc:'Cross-tab comms'},
+  {slot:36,name:'shared-worker',api:'SharedWorker',desc:'Cross-tab worker'},
+  {slot:37,name:'post-message',api:'postMessage',desc:'Cross-origin messaging'},
+  {slot:38,name:'rtc-peer',api:'WebRTC',desc:'Peer-to-peer media'},
+  {slot:39,name:'rtc-data',api:'RTCDataChannel',desc:'P2P data streams'},
+  {slot:40,name:'canvas-2d',api:'Canvas2D',desc:'Bitmap rendering'},
+  {slot:41,name:'canvas-gl',api:'WebGL',desc:'GPU 2D/3D'},
+  {slot:42,name:'webgpu',api:'WebGPU',desc:'Next-gen GPU compute'},
+  {slot:43,name:'chat',api:'HTTP/SSE',desc:'Agent chat + SSE'},
+  {slot:44,name:'dom',api:'DOM',desc:'Document manipulation'},
+  {slot:45,name:'css',api:'CSSOM',desc:'Styling & layout'},
+  {slot:46,name:'svg',api:'SVGDOM',desc:'Vector graphics'},
+  {slot:47,name:'fullscreen',api:'FullscreenAPI',desc:'Display mode'},
+  {slot:48,name:'performance',api:'PerformanceAPI',desc:'Timing & metrics'},
+  {slot:49,name:'scheduler',api:'SchedulerAPI',desc:'Priority & timing'},
+  {slot:50,name:'config',api:'HTTP',desc:'Runtime configuration'},
+  {slot:51,name:'payment',api:'PaymentRequest',desc:'Payment processing'},
+  {slot:52,name:'contacts',api:'ContactsPicker',desc:'Address book'},
+  {slot:53,name:'screen-wake',api:'ScreenWakeLock',desc:'Prevent sleep'},
+  {slot:54,name:'screen-orient',api:'ScreenOrientation',desc:'Orientation control'},
+  {slot:55,name:'capture-display',api:'getDisplayMedia',desc:'Screen capture'},
+  {slot:56,name:'browser',api:'HTTP',desc:'File browser'},
+  {slot:57,name:'npr-dns',api:'HTTP',desc:'Service discovery'},
+  {slot:58,name:'stroom',api:'HTTP',desc:'Stream dashboard'},
+  {slot:59,name:'devtools',api:'DevTools',desc:'Browser inspection'},
+  {slot:60,name:'debugger',api:'Debugger API',desc:'Runtime debugging'},
+  {slot:61,name:'profile',api:'Profiler',desc:'Performance profiling'},
+  {slot:62,name:'introspect',api:'Runtime',desc:'Runtime introspection'},
+  {slot:63,name:'hexa',api:'meta',desc:'Field self-reference'},
+];
+
+const STAR = ['agent','logs','memory','doctor','tty','chat','config','browser','stroom','npr-dns'];
+
+function toBinary6(n) { return n.toString(2).padStart(6,'0'); }
+
+function renderGrid(filter='') {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  
+  for (const [catName, cat] of Object.entries(CATEGORIES)) {
+    const label = document.createElement('div');
+    label.className = 'cat-label';
+    label.textContent = catName;
+    label.style.borderColor = cat.color + '40';
+    grid.appendChild(label);
+    
+    for (const route of ROUTES) {
+      if (!cat.slots.includes(route.slot)) continue;
+      if (filter && !route.name.toLowerCase().includes(filter) && 
+          !route.api.toLowerCase().includes(filter) &&
+          String(route.slot) !== filter) continue;
+      
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (STAR.includes(route.name) ? ' star' : '');
+      cell.onclick = () => showDetail(route);
+      cell.innerHTML = `
+        <div class="slot">${String(route.slot).padStart(2)}</div>
+        <div class="binary">${toBinary6(route.slot)}</div>
+        <div class="name">${route.name}</div>
+        <div class="api">${route.api}</div>
+      `;
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function showDetail(route) {
+  const detail = document.getElementById('detail');
+  detail.innerHTML = `
+    <h3>Slot ${route.slot} — ${route.name}</h3>
+    <p><strong>API:</strong> ${route.api}</p>
+    <p><strong>Binary:</strong> ${toBinary6(route.slot)}</p>
+    <p><strong>Description:</strong> ${route.desc}</p>
+    <p><strong>Status:</strong> ${STAR.includes(route.name) ? '<span style="color:var(--green)">✓ Implemented</span>' : '<span style="color:var(--dim)">○ Pending</span>'}</p>
+  `;
+}
+
+function filter() {
+  renderGrid(document.getElementById('search').value.toLowerCase());
+}
+
+function testRoute() {
+  const input = prompt('Input text voor NPR routing:');
+  if (!input) return;
+  
+  let sum = 0;
+  for (const ch of input) sum += ch.codePointAt(0) || 0;
+  
+  let dr = sum;
+  while (dr > 9) dr = String(dr).split('').reduce((a,b) => a + parseInt(b), 0);
+  if (dr === 0) dr = 0;
+  
+  const slot = (dr * 7) % 64;
+  const route = ROUTES.find(r => r.slot === slot);
+  
+  showDetail({
+    ...route,
+    desc: route.desc + ` (via "${input}" → DR:${dr} → slot:${slot})`
+  });
+}
+
+renderGrid();
+</script>
+</body>
+</html>

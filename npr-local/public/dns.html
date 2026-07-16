@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NPR-Net DNS</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --fg: #e0e0e8;
+    --dim: #666680;
+    --cyan: #00e5ff;
+    --green: #00e676;
+    --yellow: #ffea00;
+    --red: #ff1744;
+    --purple: #d500f9;
+    --border: #222240;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    color: var(--cyan);
+    font-size: 18px;
+    margin-bottom: 4px;
+    letter-spacing: 2px;
+  }
+  .subtitle { color: var(--dim); margin-bottom: 20px; font-size: 11px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: #101018;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--cyan);
+  }
+  .card.alive::before { background: var(--green); }
+  .card.dead::before { background: var(--red); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .card-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--cyan);
+  }
+  .card-status {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .card-status.alive { background: #003320; color: var(--green); }
+  .card-status.dead { background: #330000; color: var(--red); }
+  .card-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 4px 0;
+    font-size: 11px;
+  }
+  .card-label { color: var(--dim); }
+  .card-value { color: var(--fg); }
+  .card-caps {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .cap {
+    background: #1a1a30;
+    color: var(--purple);
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 10px;
+  }
+  .status-bar {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: #101018;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .stat { font-size: 11px; }
+  .stat-val { color: var(--green); font-weight: bold; }
+  .stat-warn { color: var(--yellow); }
+  .stat-err { color: var(--red); }
+  .topology {
+    background: #101018;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  .topo-title {
+    color: var(--cyan);
+    font-size: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .topo-tree {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .topo-node { color: var(--green); }
+  .topo-link { color: var(--dim); }
+  .topo-ip { color: var(--yellow); }
+  .refresh {
+    position: fixed;
+    bottom: 12px;
+    right: 12px;
+    background: #1a1a30;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+  }
+  .refresh:hover { color: var(--cyan); border-color: var(--cyan); }
+</style>
+</head>
+<body>
+
+<h1>• NPR-NET DNS</h1>
+<div class="subtitle">Netwerk topologie & service discovery</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="topology" id="topology">
+  <div class="topo-title">NETWERK TOPOLOGIE</div>
+  <div class="topo-tree" id="topoTree"></div>
+</div>
+
+<div class="grid" id="serviceGrid"></div>
+
+<button class="refresh" onclick="load()">↻ refresh</button>
+
+<script>
+const GATEWAY = location.origin;
+
+async function load() {
+  try {
+    const [regRes, dnsRes, netRes] = await Promise.all([
+      fetch(`${GATEWAY}/registry`).then(r => r.json()),
+      fetch(`${GATEWAY}/dns`).then(r => r.json()),
+      fetch(`${GATEWAY}/net`).then(r => r.json()),
+    ]);
+
+    render(regRes, dnsRes, netRes);
+  } catch (e) {
+    document.getElementById('serviceGrid').innerHTML =
+      `<div class="card dead"><div class="card-header">
+        <span class="card-name">⚠ Gateway niet bereikbaar</span>
+      </div><div class="card-row"><span class="card-value">${e.message}</span></div></div>`;
+  }
+}
+
+function render(reg, dns, net) {
+  // Status bar
+  const alive = (reg.services || []).filter(s => s.status === 'alive').length;
+  const dead = (reg.services || []).filter(s => s.status !== 'alive').length;
+  const total = reg.services?.length || 0;
+  document.getElementById('statusBar').innerHTML = `
+    <div class="stat">services: <span class="stat-val">${total}</span></div>
+    <div class="stat">alive: <span class="stat-val">${alive}</span></div>
+    ${dead ? `<div class="stat">dead: <span class="stat-err">${dead}</span></div>` : ''}
+    <div class="stat">gateway: <span class="stat-val">:${net.gateway?.port || '?'}</span></div>
+  `;
+
+  // Topology
+  const topo = net.gateway ? { ...net.gateway } : {};
+  let tree = `<span class="topo-node">┌── GATEWAY</span> <span class="topo-ip">:${topo.port}</span>\n`;
+  for (const svc of (net.services || [])) {
+    tree += `<span class="topo-link">│   └──</span> <span class="topo-node">${svc.name}</span> <span class="topo-ip">${svc.ip}:${svc.port}</span>\n`;
+  }
+  document.getElementById('topoTree').innerHTML = tree;
+
+  // Service grid
+  const grid = document.getElementById('serviceGrid');
+  grid.innerHTML = (reg.services || []).map(svc => `
+    <div class="card ${svc.status}">
+      <div class="card-header">
+        <span class="card-name">${svc.name}</span>
+        <span class="card-status ${svc.status}">${svc.status}</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">slot</span>
+        <span class="card-value">${svc.slot}</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">ip</span>
+        <span class="card-value">${svc.ip}</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">port</span>
+        <span class="card-value">${svc.port}</span>
+      </div>
+      ${svc.description ? `<div class="card-row">
+        <span class="card-label">desc</span>
+        <span class="card-value">${svc.description}</span>
+      </div>` : ''}
+      ${svc.capabilities?.length ? `<div class="card-caps">
+        ${svc.capabilities.map(c => `<span class="cap">${c}</span>`).join('')}
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+load();
+setInterval(load, 10000);
+</script>
+</body>
+</html>
