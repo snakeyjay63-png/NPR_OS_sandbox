@@ -1,0 +1,152 @@
+Sūtra 1.4 — "Otherwise: Conformity with Movement"
+
+वृत्तिसारूप्यमितरत्र
+vṛtti-sārūpyam-itaratra
+
+---
+
+Most translations say:
+
+"Otherwise, the seer assumes the form of the movements."
+
+But the Sanskrit does not explicitly say "seer."
+
+It does not say "ego."
+
+It does not even name a separate subject.
+
+"The seer" is carried forward from Sūtra 1.3.
+
+"Ego" belongs to the explanatory framework of later commentators.
+
+Neither is explicitly written in 1.4.
+
+---
+
+The preserved text says only:
+
+`vṛtti` — movement, routing, patterned activity
+
+`sārūpyam` — sameness or correspondence of form; structural conformity
+
+`itaratra` — otherwise; in the other condition; when the structure described in 1.3 is not visible
+
+---
+
+The difficulty of translation is not a defect in the sūtra.
+
+It is part of its compression.
+
+The sūtra preserves a relation without fully specifying the entity to which that relation must be assigned.
+
+`vṛtti ↔ sārūpyam`
+
+Movement and visible form correspond.
+
+A commentator may explain this as ego identifying with mind.
+
+Another may describe consciousness taking the form of thought.
+
+Another may speak of "identification with mental modifications."
+
+The explanation changes with the language-field.
+
+The Sanskrit relation remains.
+
+---
+
+The sūtra preserves the information.
+
+The commentator gives the teaching.
+
+Neither needs to be wrong.
+
+The commentator makes the compressed relation readable within his own philosophical field.
+
+The confusion arises when commentary is presented as sūtra.
+
+---
+
+Within NPR, it reads as:
+
+When the clarity of 1.3 is not present —
+
+perspective becomes the route through which the field is seen.
+
+Within perspective, you do not stand outside the route.
+
+You become part of it.
+
+There is no separation between seeing, the movement being followed, and the field through which it moves.
+
+`perspective → participation → no separation`
+
+The route already exists.
+
+You follow its structure through agni.
+
+Agni does not impose transformation from outside.
+
+Agni is the seeing through which transformation becomes visible.
+
+The visible form corresponds to the movement because, within perspective, the observer is not separate from the route.
+
+You do not watch the transformation from outside.
+
+You see it because you are moving within it.
+
+Perspective is participation in the route.
+
+Agni is the seeing through which that movement becomes transformation.
+
+---
+
+The Base64 of 1.4:
+
+`4KS14KWD4KSk4KWN4KSk4KS/4KS44KS+4KSw4KWC4KSq4KWN4KSv4KSu4KS/4KSk4KSw4KSk4KWN4KSw`
+
+60 UTF-8 bytes.
+80 Base64 characters.
+0 padding.
+
+`4KS` occurs 15 times.
+
+This repetition follows from shared UTF-8 prefixes among Devanāgarī code points.
+
+The repetition is structurally present, but a recurring Base64 fragment is not automatically a Sanskrit unit of meaning.
+
+The structure is readable.
+
+Meaning becomes visible through the language-field.
+
+---
+
+Two sutras, one sequence:
+
+**1.3 — Point Prime abides in its own structure**
+`DR = 9 — completion`
+
+→ The field sees itself.
+→ Structure becomes visible.
+→ `3 = routing | 6 = perspective | 9 = stored field`
+
+**1.4 — Otherwise: conformity with movement**
+`DR = 1 — return`
+
+→ When the clarity of 1.3 is not present, visible form corresponds to the route in which perspective participates.
+→ Within perspective, seeing, movement, and route are structurally distinct but not separate.
+→ Agni is the seeing through which transformation becomes visible.
+→ The sūtra preserves the relation.
+→ The commentator gives the teaching.
+
+`DR 9 → 1`
+
+Completion returns to origin.
+
+---
+
+At its most compressed level, the sūtra preserves a correspondence between movement and form.
+
+Everything added to that relation becomes visible through the language-field.
+
+•

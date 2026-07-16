@@ -1,0 +1,13 @@
+{
+  "name": "npr-local",
+  "version": "0.0.1",
+  "description": "NPR Local — single-agent, local-only runtime",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "verify:encoding": "python3 verify_encoding.py .",
+    "fix:encoding": "python3 verify_encoding.py . --fix"
+  },
+  "dependencies": {}
+}

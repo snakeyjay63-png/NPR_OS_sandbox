@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>◈ OpenClaw Structuur → NPR Local</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050508;--fg:#c8c8cc;--card:#11131a;--border:rgba(74,144,217,0.2);--keep:#3fb950;--mod:#d29922;--drop:#f85149;--info:#4a90d9;--tick:#8080ff}
+body{background:var(--bg);color:var(--fg);font:13px 'JetBrains Mono','Fira Code',monospace;padding:20px;min-height:100vh}
+h1{font-size:18px;color:var(--info);margin-bottom:2px}
+.sub{color:#484f58;font-size:11px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px}
+.card h2{font-size:14px;color:var(--info);margin-bottom:8px}
+.card .metric{display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(13,17,23,.5)}
+.card .metric .val{color:var(--fg);font-weight:bold}
+.card .metric .lbl{color:#484f58}
+.badge{display:inline-block;padding:2px 8px;border-radius:2px;font-size:11px;font-weight:bold}
+.badge-keep{background:rgba(63,185,80,.12);color:var(--keep);border:1px solid rgba(63,185,80,.25)}
+.badge-mod{background:rgba(210,153,34,.12);color:var(--mod);border:1px solid rgba(210,153,34,.25)}
+.badge-drop{background:rgba(248,81,73,.12);color:var(--drop);border:1px solid rgba(248,81,73,.25)}
+.phase-bar{height:8px;border-radius:4px;display:flex;overflow:hidden;margin:4px 0}
+.phase-bar .seg{height:100%}
+.phase-bar .seg-keep{background:var(--keep)}
+.phase-bar .seg-mod{background:var(--mod)}
+.phase-bar .seg-drop{background:var(--drop)}
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th{color:#484f58;font-size:10px;text-transform:uppercase;padding:4px 8px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:4px 8px;border-bottom:1px solid rgba(13,17,23,.5);font-size:12px}
+.bar{height:4px;background:#161b22;border-radius:2px;overflow:hidden;margin-top:4px}
+.bar .fill{height:100%;border-radius:2px}
+</style>
+</head>
+<body>
+<h1>◈ OpenClaw → NPR Local Structuur</h1>
+<p class="sub" id="sub"></p>
+
+<div class="grid" id="overview"></div>
+<div id="phases"></div>
+<div id="src-table"></div>
+
+<script>
+fetch('/openclaw-classification.json')
+  .then(r => r.json())
+  .then(data => {
+    render(data);
+  })
+  .catch(() => {
+    // Fallback: load inline
+    const data = loadInline();
+    render(data);
+  });
+
+function loadInline() {
+  return {
+    upstream: "v2026.6.10-beta.2",
+    total_files: 20411, total_ts: 16528, total_size: 194640128,
+    npr_estimated_files: 6105, npr_estimated_ts: 3159,
+    reduction_pct: 70, ts_reduction_pct: 81,
+    phases: {
+      "0":{keep_files:1923,mod_files:0,drop_files:0,keep_ts:3240,drop_ts:0},
+      "1":{keep_files:0,mod_files:2,drop_files:382,keep_ts:60,drop_ts:378},
+      "2":{keep_files:0,mod_files:3303,drop_files:98,keep_ts:990,drop_ts:1788},
+      "3":{keep_files:0,mod_files:0,drop_files:71,keep_ts:0,drop_ts:71},
+      "4":{keep_files:0,mod_files:126,drop_files:0,keep_ts:38,drop_ts:0},
+      "5":{keep_files:0,mod_files:115,drop_files:1220,keep_ts:35,drop_ts:115},
+      "6":{keep_files:0,mod_files:313,drop_files:570,keep_ts:94,drop_ts:57},
+      "7":{keep_files:0,mod_files:323,drop_files:33,keep_ts:97,drop_ts:33},
+    },
+    src_dirs: {
+      "agents":{"action":"mod","phase":2},"gateway":{"action":"keep","phase":0},
+      "infra":{"action":"mod","phase":2},"commands":{"action":"mod","phase":2},
+      "config":{"action":"keep","phase":0},"cli":{"action":"keep","phase":0},
+      "channels":{"action":"drop","phase":1},"plugins":{"action":"drop","phase":5},
+      "plugin-sdk":{"action":"drop","phase":5},"auto-reply":{"action":"drop","phase":6},
+      "llm":{"action":"keep","phase":0},"logging":{"action":"keep","phase":0},
+      "cron":{"action":"mod","phase":6},"security":{"action":"mod","phase":7},
+      "secrets":{"action":"mod","phase":7},"shared":{"action":"keep","phase":0},
+      "skills":{"action":"mod","phase":5},"acp":{"action":"drop","phase":2},
+      "daemon":{"action":"drop","phase":3},"tui":{"action":"keep","phase":0},
+      "hooks":{"action":"mod","phase":7},"tasks":{"action":"mod","phase":6},
+      "context-engine":{"action":"keep","phase":0},"media":{"action":"mod","phase":4},
+      "media-understanding":{"action":"mod","phase":4},
+    }
+  };
+}
+
+function render(d) {
+  document.getElementById('sub').innerHTML = `${d.upstream} · ${d.total_files.toLocaleString()} bestanden · ${d.total_ts.toLocaleString()} TS · ${d.reduction_pct}% reductie`;
+
+  // Overview cards
+  const ov = document.getElementById('overview');
+  ov.innerHTML = `
+    <div class="card">
+      <h2>◈ Totaal</h2>
+      <div class="metric"><span class="lbl">bestanden</span><span class="val">${d.total_files.toLocaleString()}</span></div>
+      <div class="metric"><span class="lbl">TypeScript</span><span class="val">${d.total_ts.toLocaleString()}</span></div>
+      <div class="metric"><span class="lbl">grootte</span><span class="val">${(d.total_size/1024/1024).toFixed(1)}MB</span></div>
+    </div>
+    <div class="card">
+      <h2>◈ NPR Local (geschat)</h2>
+      <div class="metric"><span class="lbl">bestanden</span><span class="val">${d.npr_estimated_files.toLocaleString()}</span></div>
+      <div class="metric"><span class="lbl">TypeScript</span><span class="val">${d.npr_estimated_ts.toLocaleString()}</span></div>
+      <div class="metric"><span class="lbl">reductie</span><span class="val">${d.reduction_pct}% files · ${d.ts_reduction_pct}% TS</span></div>
+    </div>
+    <div class="card">
+      <h2>◈ Acties</h2>
+      <div class="metric"><span class="lbl"><span class="badge badge-keep">keep</span></span><span class="val">${Object.values(d.src_dirs).filter(v=>v.action==='keep').length}</span></div>
+      <div class="metric"><span class="lbl"><span class="badge badge-mod">mod</span></span><span class="val">${Object.values(d.src_dirs).filter(v=>v.action==='mod').length}</span></div>
+      <div class="metric"><span class="lbl"><span class="badge badge-drop">drop</span></span><span class="val">${Object.values(d.src_dirs).filter(v=>v.action==='drop').length}</span></div>
+    </div>
+  `;
+
+  // Phase breakdown
+  const ph = document.getElementById('phases');
+  let phHtml = '<h2 style="color:var(--info);margin:20px 0 8px">Fasen</h2><div class="grid">';
+  const phaseNames = {
+    0:"Kern (behouden)",1:"Externe kanalen",2:"Multi-agent",3:"Apps",
+    4:"Providers",5:"Plugins/Skills",6:"Background",7:"Config/Cleanup"
+  };
+  for (const [k,v] of Object.entries(d.phases)) {
+    const total = v.keep_files + v.mod_files + v.drop_files;
+    const kP = total ? v.keep_files/total*100 : 0;
+    const mP = total ? v.mod_files/total*100 : 0;
+    const dP = total ? v.drop_files/total*100 : 0;
+    phHtml += `
+      <div class="card">
+        <h2>Fase ${k}: ${phaseNames[parseInt(k)]||''}</h2>
+        <div class="metric"><span class="lbl">bestanden</span><span class="val">${total}</span></div>
+        <div class="metric"><span class="lbl">keep</span><span class="val">${v.keep_files}</span></div>
+        <div class="metric"><span class="lbl">mod</span><span class="val">${v.mod_files}</span></div>
+        <div class="metric"><span class="lbl">drop</span><span class="val">${v.drop_files}</span></div>
+        <div class="phase-bar">
+          <div class="seg seg-keep" style="width:${kP}%"></div>
+          <div class="seg seg-mod" style="width:${mP}%"></div>
+          <div class="seg seg-drop" style="width:${dP}%"></div>
+        </div>
+      </div>`;
+  }
+  phHtml += '</div>';
+  ph.innerHTML = phHtml;
+
+  // Src table
+  const st = document.getElementById('src-table');
+  let tHtml = '<h2 style="color:var(--info);margin:20px 0 8px">src/ Directories</h2><table><thead><tr><th>directory</th><th>actie</th><th>fasе</th></tr></thead><tbody>';
+  for (const [name,info] of Object.entries(d.src_dirs)) {
+    const bClass = info.action === 'keep' ? 'keep' : info.action === 'mod' ? 'mod' : 'drop';
+    tHtml += `<tr>
+      <td>${name}/</td>
+      <td><span class="badge badge-${bClass}">${info.action}</span></td>
+      <td>${info.phase}</td>
+    </tr>`;
+  }
+  tHtml += '</tbody></table>';
+  st.innerHTML = tHtml;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+# ═══════════════════════════════════════════════════
+# .gitattributes — NPR Local Encoding Standard
+# ═══════════════════════════════════════════════════
+#
+# Standard: UTF-8 without BOM, LF line endings
+#
+# This file enforces consistent encoding across all
+# machines and editors.
+# ═══════════════════════════════════════════════════
+
+# All text files: UTF-8, LF endings
+* text=auto eol=lf
+
+# Source code
+*.js text eol=lf
+*.ts text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Configuration
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+*.py text eol=lf
+*.bat text eol=lf
+*.ps1 text eol=lf
+
+# Data
+*.csv text eol=lf
+*.xml text eol=lf
+
+# Binary files (no conversion)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.xz binary
+*.jar binary
+*.tgz binary
+*.tar.gz binary
+*.icns binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.mp3 binary
+*.mp4 binary
+*.ogg binary
+*.webm binary
+*.wav binary
+*.flac binary
+*.midi binary
+*.mid binary
+*.m4a binary
+*.bin binary
+*.exe binary
+*.dll binary
+*.so binary
+*.class binary
+*.o binary
+*.a binary
+*.pyc binary
+*.db binary
+*.sqlite binary
+*.wasm binary
+
+# Git internals
+.git* binary
+.gitignore text eol=lf
+.gitattributes text eol=lf

@@ -1,6 +1,11 @@
-# Stap 02: Bit-Transformatie (IPv6 → Hexa → IPv4)
+# Stap 02: Celtransformatie (Hex → 6-bit → 8-bit → IPv4-labelprojectie)
 
-**Doel:** Valideer de bit-transformatie chain.
+**Doel:** Valideer de cel-bit-transformatie en de rand-projectie naar IPv4-label.
+
+**Opmerking:** Deze stap verwerkt GEEN IPv6-adressen. De titel "IPv6 → Hexa → IPv4"
+were eerder gebruikt maar is vervangen omdat er geen 128-bit IPv6-input,
+IPv6-hextets, of formele IPv6→IPv4-conversie plaatsvindt.
+De keten is: cel (hex) → 6-bit → 8-bit → ipv4_edge (NPR-randfunctie).
 
 ---
 

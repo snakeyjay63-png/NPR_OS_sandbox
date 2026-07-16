@@ -1,0 +1,43 @@
+=== Sūtra 1.6 — Post-Run Analysis ===
+
+Text: क्लिष्टाः प्रज्ञा-विघ्नकाः
+Translation: "The painful ones are obstacles to clear perception"
+IAST: kliṣṭāḥ prajñā-vighñakāḥ
+
+Pipeline:
+  74 UTF-8 bytes → 100 Base64 chars → 99 notes (1 padding stripped)
+  Freq: 88.2–1100.0 Hz | Mean: 540.4 Hz
+  Digital root: 1 | Visarga: ः ×2 (open release)
+
+Synth:
+  - Sawtooth + square wave (harmonic tension)
+  - Dissonant minor 2nd on first half (kliṣṭāḥ = painful)
+  - Noise burst texture (obstacle quality)
+  - LP filter opens over time (obstacle → clarity)
+  - 50 dissonant notes vs 49 resolved → ratio 1.02
+
+Structure:
+  Two words, two visargas — double release
+  kliṣṭāḥ ṣ = friction/sharp → harsh texture
+  prajñā-vighñakāḥ ñ = nasal/soft → smoother texture
+  50:49 split mirrors the sutra's own 2-part structure
+
+Digital Root Arc (1.1 → 1.6):
+  1.1: DR=4 — structure closes (म् + ==)
+  1.2: DR=1 — fire transforms (ः + clean)
+  1.3: DR=9 — completion, seer revealed (ः + clean)
+  1.4: DR=1 — mirror (halant ×5)
+  1.5: DR=2 — fivefold differentiation
+  1.6: DR=1 — tension returns to unity
+
+Interpretation:
+  The painful modifications (kliṣṭāḥ) ARE the obstacles (vighñakāḥ) —
+  not separate things blocking perception, but their very nature IS obstruction.
+  Audio mirrors this: dissonance isn't added noise, it IS the note's quality.
+  50:49 ≈ 1:1 — equal halves, mirror of 1.4's reflection.
+
+Routing insight:
+  1.4 says "the other takes vṛtti's form" (mirror)
+  1.6 says "painful ones block perception" (obstacle)
+  Mirror → obstacle = stored pattern becomes blind spot
+  This is the mechanism: identification → obstruction → suffering chain

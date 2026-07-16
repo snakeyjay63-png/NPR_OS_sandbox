@@ -1,0 +1,1137 @@
+{
+  "upstream": "v2026.6.10-beta.2",
+  "total_files": 20411,
+  "total_ts": 16528,
+  "total_size": 264735470,
+  "npr_estimated_files": 6105,
+  "npr_estimated_ts": 3159,
+  "reduction_pct": 70,
+  "ts_reduction_pct": 81,
+  "phases": {
+    "0": {
+      "keep_files": 1923,
+      "mod_files": 0,
+      "drop_files": 0,
+      "keep_ts": 1917,
+      "drop_ts": 0
+    },
+    "1": {
+      "keep_files": 0,
+      "mod_files": 2,
+      "drop_files": 382,
+      "keep_ts": 0,
+      "drop_ts": 378
+    },
+    "2": {
+      "keep_files": 0,
+      "mod_files": 3303,
+      "drop_files": 98,
+      "keep_ts": 985,
+      "drop_ts": 98
+    },
+    "3": {
+      "keep_files": 0,
+      "mod_files": 0,
+      "drop_files": 71,
+      "keep_ts": 0,
+      "drop_ts": 71
+    },
+    "4": {
+      "keep_files": 0,
+      "mod_files": 126,
+      "drop_files": 0,
+      "keep_ts": 37,
+      "drop_ts": 0
+    },
+    "5": {
+      "keep_files": 0,
+      "mod_files": 115,
+      "drop_files": 1220,
+      "keep_ts": 34,
+      "drop_ts": 1215
+    },
+    "6": {
+      "keep_files": 0,
+      "mod_files": 313,
+      "drop_files": 570,
+      "keep_ts": 92,
+      "drop_ts": 565
+    },
+    "7": {
+      "keep_files": 0,
+      "mod_files": 323,
+      "drop_files": 33,
+      "keep_ts": 94,
+      "drop_ts": 33
+    }
+  },
+  "src_dirs": {
+    "agents": {
+      "action": "mod",
+      "phase": 2,
+      "note": "kern behouden, multi-agent verwijderen"
+    },
+    "gateway": {
+      "action": "keep",
+      "phase": 0,
+      "note": "core session/state"
+    },
+    "infra": {
+      "action": "mod",
+      "phase": 2,
+      "note": "logging behouden"
+    },
+    "commands": {
+      "action": "mod",
+      "phase": 2,
+      "note": "kern commands"
+    },
+    "config": {
+      "action": "keep",
+      "phase": 0,
+      "note": "config schema"
+    },
+    "cli": {
+      "action": "keep",
+      "phase": 0,
+      "note": "CLI"
+    },
+    "channels": {
+      "action": "drop",
+      "phase": 1,
+      "note": "alle messaging"
+    },
+    "plugins": {
+      "action": "drop",
+      "phase": 5,
+      "note": "plugin systeem"
+    },
+    "plugin-sdk": {
+      "action": "drop",
+      "phase": 5,
+      "note": "plugin SDK"
+    },
+    "auto-reply": {
+      "action": "drop",
+      "phase": 6,
+      "note": "auto-reply"
+    },
+    "llm": {
+      "action": "keep",
+      "phase": 0,
+      "note": "LLM adapter"
+    },
+    "logging": {
+      "action": "keep",
+      "phase": 0,
+      "note": "logging"
+    },
+    "cron": {
+      "action": "mod",
+      "phase": 6,
+      "note": "basis scheduling"
+    },
+    "security": {
+      "action": "mod",
+      "phase": 7,
+      "note": "basis policy"
+    },
+    "secrets": {
+      "action": "mod",
+      "phase": 7,
+      "note": "lokale secrets"
+    },
+    "shared": {
+      "action": "keep",
+      "phase": 0,
+      "note": "shared utils"
+    },
+    "skills": {
+      "action": "mod",
+      "phase": 5,
+      "note": "lokale skills"
+    },
+    "acp": {
+      "action": "drop",
+      "phase": 2,
+      "note": "ACP"
+    },
+    "daemon": {
+      "action": "drop",
+      "phase": 3,
+      "note": "daemon"
+    },
+    "tui": {
+      "action": "keep",
+      "phase": 0,
+      "note": "terminal UI"
+    },
+    "hooks": {
+      "action": "mod",
+      "phase": 7,
+      "note": "kern hooks"
+    },
+    "tasks": {
+      "action": "mod",
+      "phase": 6,
+      "note": "task coordination"
+    },
+    "context-engine": {
+      "action": "keep",
+      "phase": 0,
+      "note": "context opbouw"
+    },
+    "media": {
+      "action": "mod",
+      "phase": 4,
+      "note": "lokale media"
+    },
+    "media-understanding": {
+      "action": "mod",
+      "phase": 4,
+      "note": "beeld/audio"
+    },
+    "bindings": {
+      "action": "mod",
+      "phase": 2,
+      "note": "bindings"
+    },
+    "bootstrap": {
+      "action": "keep",
+      "phase": 0,
+      "note": "bootstrap"
+    },
+    "chat": {
+      "action": "mod",
+      "phase": 1,
+      "note": "lokale chat"
+    },
+    "compat": {
+      "action": "drop",
+      "phase": 7,
+      "note": "compat"
+    },
+    "docs": {
+      "action": "drop",
+      "phase": 7,
+      "note": "internal docs"
+    },
+    "flows": {
+      "action": "mod",
+      "phase": 6,
+      "note": "workflows"
+    },
+    "test-utils": {
+      "action": "mod",
+      "phase": 7,
+      "note": "test utils"
+    },
+    "extensionAPI": {
+      "action": "drop",
+      "phase": 5,
+      "note": "extension API"
+    },
+    "crestodian": {
+      "action": "drop",
+      "phase": 7,
+      "note": "guardian"
+    },
+    "commitments": {
+      "action": "drop",
+      "phase": 6,
+      "note": "commitments"
+    }
+  },
+  "extensions": {
+    "litellm": {
+      "action": "drop",
+      "phase": 4
+    },
+    "diffs-language-pack": {
+      "action": "drop",
+      "phase": 4
+    },
+    "phone-control": {
+      "action": "drop",
+      "phase": 4
+    },
+    "ollama": {
+      "action": "keep",
+      "phase": 0
+    },
+    "openshell": {
+      "action": "keep",
+      "phase": 0
+    },
+    "feishu": {
+      "action": "drop",
+      "phase": 4
+    },
+    "google": {
+      "action": "drop",
+      "phase": 4
+    },
+    "synology-chat": {
+      "action": "drop",
+      "phase": 4
+    },
+    "memory-wiki": {
+      "action": "keep",
+      "phase": 0
+    },
+    "migrate-claude": {
+      "action": "drop",
+      "phase": 4
+    },
+    "duckduckgo": {
+      "action": "drop",
+      "phase": 4
+    },
+    "nextcloud-talk": {
+      "action": "drop",
+      "phase": 4
+    },
+    "groq": {
+      "action": "drop",
+      "phase": 4
+    },
+    "tencent": {
+      "action": "drop",
+      "phase": 4
+    },
+    "migrate-hermes": {
+      "action": "drop",
+      "phase": 4
+    },
+    "searxng": {
+      "action": "keep",
+      "phase": 0
+    },
+    "byteplus": {
+      "action": "drop",
+      "phase": 4
+    },
+    "video-generation-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "workboard": {
+      "action": "drop",
+      "phase": 4
+    },
+    "novita": {
+      "action": "drop",
+      "phase": 4
+    },
+    "deepseek": {
+      "action": "drop",
+      "phase": 4
+    },
+    "fal": {
+      "action": "drop",
+      "phase": 4
+    },
+    "xiaomi": {
+      "action": "drop",
+      "phase": 4
+    },
+    "diffs": {
+      "action": "keep",
+      "phase": 0
+    },
+    "qwen": {
+      "action": "drop",
+      "phase": 4
+    },
+    "memory-lancedb": {
+      "action": "drop",
+      "phase": 4
+    },
+    "tts-local-cli": {
+      "action": "drop",
+      "phase": 4
+    },
+    "mistral": {
+      "action": "drop",
+      "phase": 4
+    },
+    "brave": {
+      "action": "drop",
+      "phase": 4
+    },
+    "vydra": {
+      "action": "drop",
+      "phase": 4
+    },
+    "qa-lab": {
+      "action": "drop",
+      "phase": 4
+    },
+    "googlechat": {
+      "action": "drop",
+      "phase": 4
+    },
+    "voice-call": {
+      "action": "drop",
+      "phase": 4
+    },
+    "deepinfra": {
+      "action": "drop",
+      "phase": 4
+    },
+    "firecrawl": {
+      "action": "drop",
+      "phase": 4
+    },
+    "sms": {
+      "action": "drop",
+      "phase": 4
+    },
+    "vllm": {
+      "action": "drop",
+      "phase": 4
+    },
+    "codex": {
+      "action": "drop",
+      "phase": 4
+    },
+    "anthropic-vertex": {
+      "action": "drop",
+      "phase": 4
+    },
+    "synthetic": {
+      "action": "drop",
+      "phase": 4
+    },
+    "mattermost": {
+      "action": "drop",
+      "phase": 4
+    },
+    "volcengine": {
+      "action": "drop",
+      "phase": 4
+    },
+    "admin-http-rpc": {
+      "action": "keep",
+      "phase": 0
+    },
+    "signal": {
+      "action": "drop",
+      "phase": 4
+    },
+    "active-memory": {
+      "action": "keep",
+      "phase": 0
+    },
+    "bonjour": {
+      "action": "drop",
+      "phase": 4
+    },
+    "cerebras": {
+      "action": "drop",
+      "phase": 4
+    },
+    "venice": {
+      "action": "drop",
+      "phase": 4
+    },
+    "gmi": {
+      "action": "drop",
+      "phase": 4
+    },
+    "azure-speech": {
+      "action": "drop",
+      "phase": 4
+    },
+    "tavily": {
+      "action": "drop",
+      "phase": 4
+    },
+    "copilot": {
+      "action": "drop",
+      "phase": 4
+    },
+    "github-copilot": {
+      "action": "drop",
+      "phase": 4
+    },
+    "moonshot": {
+      "action": "drop",
+      "phase": 4
+    },
+    "exa": {
+      "action": "drop",
+      "phase": 4
+    },
+    "fireworks": {
+      "action": "drop",
+      "phase": 4
+    },
+    "lmstudio": {
+      "action": "drop",
+      "phase": 4
+    },
+    "comfy": {
+      "action": "drop",
+      "phase": 4
+    },
+    "opencode": {
+      "action": "drop",
+      "phase": 4
+    },
+    "zalouser": {
+      "action": "drop",
+      "phase": 4
+    },
+    "document-extract": {
+      "action": "drop",
+      "phase": 4
+    },
+    "diagnostics-otel": {
+      "action": "drop",
+      "phase": 4
+    },
+    "chutes": {
+      "action": "drop",
+      "phase": 4
+    },
+    "nostr": {
+      "action": "drop",
+      "phase": 4
+    },
+    "parallel": {
+      "action": "drop",
+      "phase": 4
+    },
+    "together": {
+      "action": "drop",
+      "phase": 4
+    },
+    "diagnostics-prometheus": {
+      "action": "drop",
+      "phase": 4
+    },
+    "voyage": {
+      "action": "drop",
+      "phase": 4
+    },
+    "zai": {
+      "action": "drop",
+      "phase": 4
+    },
+    "irc": {
+      "action": "drop",
+      "phase": 4
+    },
+    "qianfan": {
+      "action": "drop",
+      "phase": 4
+    },
+    "google-meet": {
+      "action": "drop",
+      "phase": 4
+    },
+    "amazon-bedrock-mantle": {
+      "action": "drop",
+      "phase": 4
+    },
+    "elevenlabs": {
+      "action": "drop",
+      "phase": 4
+    },
+    "openrouter": {
+      "action": "drop",
+      "phase": 4
+    },
+    "codex-supervisor": {
+      "action": "drop",
+      "phase": 4
+    },
+    "media-understanding-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "canvas": {
+      "action": "keep",
+      "phase": 0
+    },
+    "zalo": {
+      "action": "drop",
+      "phase": 4
+    },
+    "arcee": {
+      "action": "drop",
+      "phase": 4
+    },
+    "discord": {
+      "action": "drop",
+      "phase": 4
+    },
+    "whatsapp": {
+      "action": "drop",
+      "phase": 4
+    },
+    "telegram": {
+      "action": "drop",
+      "phase": 4
+    },
+    "image-generation-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "microsoft-foundry": {
+      "action": "drop",
+      "phase": 4
+    },
+    "gradium": {
+      "action": "drop",
+      "phase": 4
+    },
+    "imessage": {
+      "action": "drop",
+      "phase": 4
+    },
+    "pixverse": {
+      "action": "drop",
+      "phase": 4
+    },
+    "tlon": {
+      "action": "drop",
+      "phase": 4
+    },
+    "llama-cpp": {
+      "action": "drop",
+      "phase": 4
+    },
+    "tokenjuice": {
+      "action": "drop",
+      "phase": 4
+    },
+    "lobster": {
+      "action": "drop",
+      "phase": 4
+    },
+    "open-prose": {
+      "action": "drop",
+      "phase": 4
+    },
+    "sglang": {
+      "action": "drop",
+      "phase": 4
+    },
+    "cohere": {
+      "action": "drop",
+      "phase": 4
+    },
+    "cloudflare-ai-gateway": {
+      "action": "drop",
+      "phase": 4
+    },
+    "runway": {
+      "action": "drop",
+      "phase": 4
+    },
+    "thread-ownership": {
+      "action": "drop",
+      "phase": 4
+    },
+    "twitch": {
+      "action": "drop",
+      "phase": 4
+    },
+    "senseaudio": {
+      "action": "drop",
+      "phase": 4
+    },
+    "file-transfer": {
+      "action": "drop",
+      "phase": 4
+    },
+    "copilot-proxy": {
+      "action": "drop",
+      "phase": 4
+    },
+    "minimax": {
+      "action": "drop",
+      "phase": 4
+    },
+    "anthropic": {
+      "action": "drop",
+      "phase": 4
+    },
+    "deepgram": {
+      "action": "drop",
+      "phase": 4
+    },
+    "llm-task": {
+      "action": "drop",
+      "phase": 4
+    },
+    "alibaba": {
+      "action": "drop",
+      "phase": 4
+    },
+    "stepfun": {
+      "action": "drop",
+      "phase": 4
+    },
+    "amazon-bedrock": {
+      "action": "drop",
+      "phase": 4
+    },
+    "openai": {
+      "action": "drop",
+      "phase": 4
+    },
+    "qa-channel": {
+      "action": "drop",
+      "phase": 4
+    },
+    "policy": {
+      "action": "drop",
+      "phase": 4
+    },
+    "nvidia": {
+      "action": "drop",
+      "phase": 4
+    },
+    "clickclack": {
+      "action": "drop",
+      "phase": 4
+    },
+    "vercel-ai-gateway": {
+      "action": "drop",
+      "phase": 4
+    },
+    "kimi-coding": {
+      "action": "drop",
+      "phase": 4
+    },
+    "microsoft": {
+      "action": "drop",
+      "phase": 4
+    },
+    "huggingface": {
+      "action": "drop",
+      "phase": 4
+    },
+    "qqbot": {
+      "action": "drop",
+      "phase": 4
+    },
+    "device-pair": {
+      "action": "drop",
+      "phase": 4
+    },
+    "slack": {
+      "action": "drop",
+      "phase": 4
+    },
+    "matrix": {
+      "action": "drop",
+      "phase": 4
+    },
+    "xai": {
+      "action": "drop",
+      "phase": 4
+    },
+    "msteams": {
+      "action": "drop",
+      "phase": 4
+    },
+    "web-readability": {
+      "action": "drop",
+      "phase": 4
+    },
+    "opencode-go": {
+      "action": "drop",
+      "phase": 4
+    },
+    "test-support": {
+      "action": "drop",
+      "phase": 4
+    },
+    "kilocode": {
+      "action": "drop",
+      "phase": 4
+    },
+    "acpx": {
+      "action": "drop",
+      "phase": 4
+    },
+    "browser": {
+      "action": "keep",
+      "phase": 0
+    },
+    "talk-voice": {
+      "action": "drop",
+      "phase": 4
+    },
+    "oc-path": {
+      "action": "drop",
+      "phase": 4
+    },
+    "inworld": {
+      "action": "drop",
+      "phase": 4
+    },
+    "perplexity": {
+      "action": "drop",
+      "phase": 4
+    },
+    "line": {
+      "action": "drop",
+      "phase": 4
+    },
+    "webhooks": {
+      "action": "drop",
+      "phase": 4
+    },
+    "memory-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "qa-matrix": {
+      "action": "drop",
+      "phase": 4
+    }
+  },
+  "skills": {
+    "nano-pdf": {
+      "action": "drop",
+      "phase": 5
+    },
+    "blucli": {
+      "action": "drop",
+      "phase": 5
+    },
+    "gemini": {
+      "action": "drop",
+      "phase": 5
+    },
+    "wacli": {
+      "action": "drop",
+      "phase": 5
+    },
+    "things-mac": {
+      "action": "drop",
+      "phase": 5
+    },
+    "meme-maker": {
+      "action": "keep",
+      "phase": 0
+    },
+    "coding-agent": {
+      "action": "drop",
+      "phase": 5
+    },
+    "summarize": {
+      "action": "drop",
+      "phase": 5
+    },
+    "sherpa-onnx-tts": {
+      "action": "drop",
+      "phase": 5
+    },
+    "voice-call": {
+      "action": "drop",
+      "phase": 5
+    },
+    "apple-notes": {
+      "action": "drop",
+      "phase": 5
+    },
+    "imsg": {
+      "action": "drop",
+      "phase": 5
+    },
+    "eightctl": {
+      "action": "drop",
+      "phase": 5
+    },
+    "notion": {
+      "action": "drop",
+      "phase": 5
+    },
+    "sag": {
+      "action": "drop",
+      "phase": 5
+    },
+    "node-connect": {
+      "action": "drop",
+      "phase": 5
+    },
+    "diagram-maker": {
+      "action": "keep",
+      "phase": 0
+    },
+    "gifgrep": {
+      "action": "drop",
+      "phase": 5
+    },
+    "skill-creator": {
+      "action": "drop",
+      "phase": 5
+    },
+    "camsnap": {
+      "action": "drop",
+      "phase": 5
+    },
+    "mcporter": {
+      "action": "drop",
+      "phase": 5
+    },
+    "apple-reminders": {
+      "action": "drop",
+      "phase": 5
+    },
+    "bear-notes": {
+      "action": "drop",
+      "phase": 5
+    },
+    "node-inspect-debugger": {
+      "action": "drop",
+      "phase": 5
+    },
+    "python-debugpy": {
+      "action": "drop",
+      "phase": 5
+    },
+    "goplaces": {
+      "action": "drop",
+      "phase": 5
+    },
+    "obsidian": {
+      "action": "drop",
+      "phase": 5
+    },
+    "session-logs": {
+      "action": "drop",
+      "phase": 5
+    },
+    "himalaya": {
+      "action": "drop",
+      "phase": 5
+    },
+    "canvas": {
+      "action": "keep",
+      "phase": 0
+    },
+    "clawhub": {
+      "action": "drop",
+      "phase": 5
+    },
+    "openai-whisper": {
+      "action": "drop",
+      "phase": 5
+    },
+    "discord": {
+      "action": "drop",
+      "phase": 5
+    },
+    "model-usage": {
+      "action": "drop",
+      "phase": 5
+    },
+    "video-frames": {
+      "action": "keep",
+      "phase": 0
+    },
+    "taskflow": {
+      "action": "keep",
+      "phase": 0
+    },
+    "weather": {
+      "action": "keep",
+      "phase": 0
+    },
+    "gh-issues": {
+      "action": "drop",
+      "phase": 5
+    },
+    "github": {
+      "action": "drop",
+      "phase": 5
+    },
+    "blogwatcher": {
+      "action": "drop",
+      "phase": 5
+    },
+    "peekaboo": {
+      "action": "drop",
+      "phase": 5
+    },
+    "1password": {
+      "action": "drop",
+      "phase": 5
+    },
+    "xurl": {
+      "action": "drop",
+      "phase": 5
+    },
+    "openai-whisper-api": {
+      "action": "drop",
+      "phase": 5
+    },
+    "healthcheck": {
+      "action": "drop",
+      "phase": 5
+    },
+    "songsee": {
+      "action": "drop",
+      "phase": 5
+    },
+    "oracle": {
+      "action": "drop",
+      "phase": 5
+    },
+    "slack": {
+      "action": "drop",
+      "phase": 5
+    },
+    "sonoscli": {
+      "action": "drop",
+      "phase": 5
+    },
+    "gog": {
+      "action": "drop",
+      "phase": 5
+    },
+    "taskflow-inbox-triage": {
+      "action": "drop",
+      "phase": 5
+    },
+    "trello": {
+      "action": "drop",
+      "phase": 5
+    },
+    "openhue": {
+      "action": "drop",
+      "phase": 5
+    },
+    "spike": {
+      "action": "drop",
+      "phase": 5
+    },
+    "tmux": {
+      "action": "drop",
+      "phase": 5
+    },
+    "ordercli": {
+      "action": "drop",
+      "phase": 5
+    },
+    "spotify-player": {
+      "action": "drop",
+      "phase": 5
+    }
+  },
+  "packages": {
+    "acp-core": {
+      "action": "drop",
+      "phase": 2
+    },
+    "agent-core": {
+      "action": "mod",
+      "phase": 2
+    },
+    "gateway-client": {
+      "action": "keep",
+      "phase": 0
+    },
+    "gateway-protocol": {
+      "action": "keep",
+      "phase": 0
+    },
+    "llm-core": {
+      "action": "keep",
+      "phase": 0
+    },
+    "llm-runtime": {
+      "action": "mod",
+      "phase": 4
+    },
+    "markdown-core": {
+      "action": "keep",
+      "phase": 0
+    },
+    "media-core": {
+      "action": "mod",
+      "phase": 4
+    },
+    "media-generation-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "memory-host-sdk": {
+      "action": "mod",
+      "phase": 0
+    },
+    "model-catalog-core": {
+      "action": "mod",
+      "phase": 4
+    },
+    "net-policy": {
+      "action": "mod",
+      "phase": 7
+    },
+    "normalization-core": {
+      "action": "keep",
+      "phase": 0
+    },
+    "plugin-package-contract": {
+      "action": "drop",
+      "phase": 5
+    },
+    "plugin-sdk": {
+      "action": "drop",
+      "phase": 5
+    },
+    "sdk": {
+      "action": "keep",
+      "phase": 0
+    },
+    "speech-core": {
+      "action": "drop",
+      "phase": 4
+    },
+    "terminal-core": {
+      "action": "keep",
+      "phase": 0
+    },
+    "tool-call-repair": {
+      "action": "keep",
+      "phase": 0
+    },
+    "web-content-core": {
+      "action": "mod",
+      "phase": 4
+    }
+  },
+  "apps": {
+    "macos-mlx-tts": {
+      "action": "drop",
+      "phase": 3
+    },
+    "android": {
+      "action": "drop",
+      "phase": 3
+    },
+    "macos": {
+      "action": "drop",
+      "phase": 3
+    },
+    "shared": {
+      "action": "drop",
+      "phase": 3
+    },
+    "ios": {
+      "action": "drop",
+      "phase": 3
+    },
+    "swabble": {
+      "action": "drop",
+      "phase": 3
+    }
+  }
+}

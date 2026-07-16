@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>◈ OpenClaw → NPR Local Structuur Audit</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050508;--fg:#c8c8cc;--card:#11131a;--border:rgba(74,144,217,0.2);--keep:#3fb950;--mod:#d29922;--drop:#f85149;--info:#4a90d9;--tick:#8080ff;--sunya:#222}
+body{background:var(--bg);color:var(--fg);font:13px 'JetBrains Mono','Fira Code',monospace;padding:20px;min-height:100vh}
+h1{font-size:18px;color:var(--info);margin-bottom:2px}
+.sub{color:#484f58;font-size:11px;margin-bottom:16px}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+button{background:var(--info);color:#fff;border:none;padding:6px 14px;border-radius:3px;cursor:pointer;font:12px 'JetBrains Mono',monospace}
+button:hover{opacity:.8}
+button.secondary{background:#21262d;color:var(--fg);border:1px solid var(--border)}
+.stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat-box{padding:8px 14px;background:var(--card);border:1px solid var(--border);border-radius:4px;min-width:80px;text-align:center}
+.stat-box .num{font-size:20px;font-weight:bold}
+.stat-box .label{font-size:10px;color:#484f58;margin-top:2px}
+.stat-keep .num{color:var(--keep)}.stat-mod .num{color:var(--mod)}.stat-drop .num{color:var(--drop)}.stat-total .num{color:var(--info)}.stat-reduce .num{color:var(--tick)}
+table{width:100%;border-collapse:collapse;margin-bottom:24px}
+th{color:#484f58;font-size:11px;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+td{padding:5px 8px;border-bottom:1px solid rgba(13,17,23,0.5);vertical-align:top;font-size:12px}
+td.dir{color:var(--info);cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:bold}
+td.dir:hover{text-decoration:underline}
+td.action{width:60px;text-align:center}
+td.ts{width:50px;text-align:right;color:#484f58;font-size:11px}
+td.total{width:50px;text-align:right;color:#484f58;font-size:11px}
+td.size{width:60px;text-align:right;color:#484f58;font-size:11px}
+td.dr{width:40px;text-align:center;color:#555;font-size:11px}
+.badge{display:inline-block;padding:2px 6px;border-radius:2px;font-size:11px}
+.badge-keep{background:rgba(63,185,80,.12);color:var(--keep);border:1px solid rgba(63,185,80,.25)}
+.badge-mod{background:rgba(210,153,34,.12);color:var(--mod);border:1px solid rgba(210,153,34,.25)}
+.badge-drop{background:rgba(248,81,73,.12);color:var(--drop);border:1px solid rgba(248,81,73,.25)}
+.filter{margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap}
+.filter-btn{background:transparent;color:#484f58;border:1px solid var(--border);padding:3px 10px;border-radius:3px;cursor:pointer;font:11px 'JetBrains Mono',monospace}
+.filter-btn.active{color:var(--info);border-color:var(--info);background:rgba(74,144,217,.08)}
+.expand{cursor:pointer;user-select:none}
+.expand::before{content:'▶';display:inline-block;width:12px;margin-right:2px;font-size:10px;color:#484f58}
+.expanded::before{content:'▼'}
+.detail{display:none;padding:6px 8px 6px 24px;background:rgba(0,0,0,.3);font-size:11px;color:#484f58;white-space:pre-wrap;max-height:300px;overflow-y:auto}
+.detail.show{display:block}
+.section-title{font-size:14px;color:var(--info);margin:24px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.progress-bar{height:6px;background:#161b22;border-radius:3px;overflow:hidden;margin:8px 0}
+.progress-bar .fill{height:100%;border-radius:3px;transition:width .3s}
+.progress-bar .keep{background:var(--keep)}
+.progress-bar .mod{background:var(--mod)}
+.progress-bar .drop{background:var(--drop)}
+</style>
+</head>
+<body>
+<h1>◈ OpenClaw → NPR Local Structuur Audit</h1>
+<p class="sub" id="header-sub">v2026.6.10-beta.2 · gefaseerde reductie · <span id="timestamp"></span></p>
+
+<div class="toolbar">
+  <button onclick="setAction('all')">allemaal</button>
+  <button class="secondary" onclick="setAction('keep')">behouden</button>
+  <button class="secondary" onclick="setAction('mod')">aanpassen</button>
+  <button class="secondary" onclick="setAction('drop')">verwijderen</button>
+  <button class="secondary" onclick="exportPlan()">↓ export</button>
+</div>
+
+<div class="stats" id="stats-bar">
+  <div class="stat-box stat-total"><div class="num" id="stat-total">0</div><div class="label">totaal dirs</div></div>
+  <div class="stat-box stat-keep"><div class="num" id="stat-keep">0</div><div class="label">behouden</div></div>
+  <div class="stat-box stat-mod"><div class="num" id="stat-mod">0</div><div class="label">aanpassen</div></div>
+  <div class="stat-box stat-drop"><div class="num" id="stat-drop">0</div><div class="label">verwijderen</div></div>
+  <div class="stat-box stat-reduce"><div class="num" id="stat-reduce">0%</div><div class="label">reductie</div></div>
+</div>
+
+<div class="progress-bar" id="progress">
+  <div class="fill keep" id="prog-keep"></div>
+</div>
+
+<h2 class="section-title">src/ — Kern Directories</h2>
+<table>
+  <thead><tr><th>directory</th><th class="action">actie</th><th>ts</th><th>test</th><th>totaal</th><th>size</th><th>dr</th><th>notitie</th></tr></thead>
+  <tbody id="tbody-src"></tbody>
+</table>
+
+<h2 class="section-title">extensions/ — Externe Integraties</h2>
+<table>
+  <thead><tr><th>extensie</th><th class="action">actie</th><th>bestanden</th><th>size</th><th>notitie</th></tr></thead>
+  <tbody id="tbody-ext"></tbody>
+</table>
+
+<h2 class="section-title">skills/ — Reusable Skills</h2>
+<table>
+  <thead><tr><th>skill</th><th class="action">actie</th><th>bestanden</th><th>skill.md</th><th>notitie</th></tr></thead>
+  <tbody id="tbody-skill"></tbody>
+</table>
+
+<h2 class="section-title">packages/ — Internal Packages</h2>
+<table>
+  <thead><tr><th>package</th><th class="action">actie</th><th>bestanden</th><th>notitie</th></tr></thead>
+  <tbody id="tbody-pkg"></tbody>
+</table>
+
+<h2 class="section-title">apps/ — Platform Apps</h2>
+<table>
+  <thead><tr><th>app</th><th class="action">actie</th><th>bestanden</th><th>notitie</th></tr></thead>
+  <tbody id="tbody-app"></tbody>
+</table>
+
+<div id="detail-panel" class="detail"></div>
+
+<script>
+document.getElementById('timestamp').textContent = new Date().toLocaleString('nl-NL');
+
+// ─── Data ───
+const SRC_DIRS = [
+  {dir:"agents",       action:"mod", note:"kern behouden, multi-agent verwijderen", ts:1811, test:0, total:0, size:"26M"},
+  {dir:"gateway",      action:"keep",note:"core session/state management",          ts:727,  test:0, total:0, size:"11M"},
+  {dir:"infra",        action:"mod", note:"logging behouden, monitoring verwijderen",ts:782, test:0, total:0, size:"8.6M"},
+  {dir:"commands",     action:"mod", note:"kern commands behouden",                 ts:694,  test:0, total:0, size:"8.3M"},
+  {dir:"config",       action:"keep",note:"config schema + loading",                ts:384,  test:0, total:0, size:"4.6M"},
+  {dir:"cli",          action:"keep",note:"CLI interface",                          ts:453,  test:0, total:0, size:"5.4M"},
+  {dir:"channels",     action:"drop",note:"alle messaging integraties",             ts:378,  test:0, total:0, size:"3.0M"},
+  {dir:"plugins",      action:"drop",note:"plugin systeem",                         ts:629,  test:0, total:0, size:"8.5M"},
+  {dir:"plugin-sdk",   action:"drop",note:"plugin SDK",                             ts:586,  test:0, total:0, size:"3.9M"},
+  {dir:"auto-reply",   action:"drop",note:"auto-reply logic",                       ts:553,  test:0, total:0, size:"7.7M"},
+  {dir:"llm",          action:"keep",note:"LLM adapter layer",                      ts:82,   test:0, total:0, size:"872K"},
+  {dir:"logging",      action:"keep",note:"logging infrastructure",                 ts:72,   test:0, total:0, size:"864K"},
+  {dir:"cron",         action:"mod", note:"basis scheduling behouden",              ts:213,  test:0, total:0, size:"2.3M"},
+  {dir:"security",     action:"mod", note:"basis policy behouden",                  ts:81,   test:0, total:0, size:"788K"},
+  {dir:"secrets",      action:"mod", note:"lokale secrets alleen",                  ts:127,  test:0, total:0, size:"1.3M"},
+  {dir:"shared",       action:"keep",note:"shared utilities",                       ts:120,  test:0, total:0, size:"1.2M"},
+  {dir:"skills",       action:"mod", note:"lokale skills behouden",                 ts:115,  test:0, total:0, size:"1.3M"},
+  {dir:"acp",          action:"drop",note:"Agent Communication Protocol",           ts:98,   test:0, total:0, size:"992K"},
+  {dir:"daemon",       action:"drop",note:"background daemon",                      ts:71,   test:0, total:0, size:"808K"},
+  {dir:"tui",          action:"keep",note:"terminal UI",                            ts:58,   test:0, total:0, size:"848K"},
+  {dir:"media",        action:"mod", note:"lokale media alleen",                    ts:59,   test:0, total:0, size:"808K"},
+  {dir:"media-understanding",action:"mod",note:"lokale beeld/audio",                ts:67,   test:0, total:0, size:"736K"},
+  {dir:"hooks",        action:"mod", note:"kern hooks behouden",                    ts:59,   test:0, total:0, size:"560K"},
+  {dir:"tasks",        action:"mod", note:"task coordination",                      ts:59,   test:0, total:0, size:"520K"},
+  {dir:"context-engine",action:"keep",note:"context opbouw",                        ts:18,   test:0, total:0, size:"280K"},
+];
+
+const EXTENSIONS = [
+  {name:"ollama",          action:"keep",note:"lokale LLM", files:0},
+  {name:"deepseek",        action:"drop",note:"extern", files:0},
+  {name:"anthropic",       action:"drop",note:"extern", files:0},
+  {name:"openai",          action:"drop",note:"extern", files:0},
+  {name:"google",          action:"drop",note:"extern", files:0},
+  {name:"azure-speech",    action:"drop",note:"extern", files:0},
+  {name:"browser",         action:"mod",  note:"lokale browser", files:0},
+  {name:"canvas",          action:"keep",note:"UI rendering", files:0},
+  {name:"memory-wiki",     action:"mod",  note:"lokale memory", files:0},
+  {name:"active-memory",   action:"mod",  note:"sessie memory", files:0},
+  {name:"admin-http-rpc",  action:"mod",  note:"lokale RPC", files:0},
+  {name:"bonjour",         action:"drop",note:"network discovery", files:0},
+  {name:"brave",           action:"drop",note:"extern search", files:0},
+  {name:"duckduckgo",      action:"mod",  note:"optioneel", files:0},
+  {name:"searxng",         action:"mod",  note:"lokale search", files:0},
+  {name:"cloudflare-ai-gateway",action:"drop",note:"extern",files:0},
+  {name:"deepgram",        action:"drop",note:"extern", files:0},
+  {name:"cerebras",        action:"drop",note:"extern", files:0},
+  {name:"cohere",          action:"drop",note:"extern", files:0},
+  {name:"chutes",          action:"drop",note:"extern", files:0},
+  {name:"clickclack",      action:"drop",note:"extern messaging", files:0},
+  {name:"comfy",           action:"drop",note:"extern", files:0},
+  {name:"codex",           action:"drop",note:"extern", files:0},
+  {name:"deepinfra",       action:"drop",note:"extern", files:0},
+  {name:"feishu",          action:"drop",note:"extern", files:0},
+  {name:"googlechat",      action:"drop",note:"extern", files:0},
+  {name:"nextcloud-talk",  action:"drop",note:"extern", files:0},
+  {name:"synology-chat",   action:"drop",note:"extern", files:0},
+  {name:"video-generation-core",action:"drop",note:"extern", files:0},
+  {name:"workboard",       action:"drop",note:"extern", files:0},
+  {name:"voice-call",      action:"drop",note:"extern", files:0},
+];
+
+const SKILLS_KEEP = ["canvas","diagram-maker","weather","meme-maker","video-frames","taskflow"];
+const SKILLS = [
+  "arabic-continuous-field","canvas","coding-agent","diagram-maker","gemini","gifgrep","healthcheck","helper-read-translate","meme-maker","model-router","node-connect","node-inspect-debugger","notion","npr-sound-engine","obsidian","openai-whisper","openai-whisper-api","python-debugpy","sanskrit-frequency-bridge","skill-creator","songsee","spike","summarize","taskflow","taskflow-inbox-triage","tmux","tv-system","video-frames","voice-call","weather","xurl",
+];
+
+const PACKAGES = [
+  {name:"acp-core",           action:"drop",note:"ACP protocol"},
+  {name:"agent-core",         action:"mod", note:"kern behouden"},
+  {name:"gateway-client",     action:"keep",note:"gateway client"},
+  {name:"gateway-protocol",   action:"keep",note:"protocol"},
+  {name:"llm-core",           action:"keep",note:"LLM core"},
+  {name:"llm-runtime",        action:"mod", note:"lokale adapters"},
+  {name:"markdown-core",      action:"keep",note:"markdown parsing"},
+  {name:"media-core",         action:"mod", note:"lokale media"},
+  {name:"media-generation-core",action:"drop",note:"generatie"},
+  {name:"memory-host-sdk",    action:"mod", note:"lokale memory"},
+  {name:"model-catalog-core", action:"mod", note:"lokale models"},
+  {name:"net-policy",         action:"mod", note:"lokale policy"},
+  {name:"normalization-core", action:"keep",note:"text normalization"},
+  {name:"plugin-package-contract",action:"drop",note:"plugins"},
+  {name:"plugin-sdk",         action:"drop",note:"plugins"},
+  {name:"sdk",                action:"keep",note:"core SDK"},
+  {name:"speech-core",        action:"drop",note:"speech"},
+  {name:"terminal-core",      action:"keep",note:"terminal"},
+  {name:"tool-call-repair",   action:"keep",note:"tool repair"},
+  {name:"web-content-core",   action:"mod", note:"lokale content"},
+];
+
+const APPS = [
+  {name:"android",     action:"drop",note:"mobile app"},
+  {name:"ios",         action:"drop",note:"mobile app"},
+  {name:"macos",       action:"drop",note:"desktop app"},
+  {name:"macos-mlx-tts",action:"drop",note:"desktop TTS"},
+  {name:"shared",      action:"drop",note:"app shared code"},
+  {name:"swabble",     action:"drop",note:"app tooling"},
+];
+
+// ─── State ───
+let activeAction = 'all';
+
+// ─── Digital Root ───
+function digitalRoot(n) {
+  if (n === 0) return 0;
+  while (n > 9) { let s = 0; while (n > 0) { s += n % 10; n = Math.floor(n / 10); } n = s; }
+  return n;
+}
+
+// ─── Render ───
+function badge(a) {
+  if (a === 'keep') return '<span class="badge badge-keep">keep</span>';
+  if (a === 'mod') return '<span class="badge badge-mod">mod</span>';
+  if (a === 'drop') return '<span class="badge badge-drop">drop</span>';
+  return '';
+}
+
+function renderSrc() {
+  const tbody = document.getElementById('tbody-src');
+  let html = '';
+  SRC_DIRS.forEach(d => {
+    if (activeAction !== 'all' && d.action !== activeAction) return;
+    const dr = digitalRoot(d.ts);
+    html += `<tr>
+      <td class="dir" onclick="showDetail('src/${d.dir}')">${d.dir}/</td>
+      <td class="action">${badge(d.action)}</td>
+      <td class="ts">${d.ts}</td>
+      <td class="total">${d.test || '—'}</td>
+      <td class="size">${d.size}</td>
+      <td class="dr">dr:${dr}</td>
+      <td style="color:#484f58;font-size:11px">${d.note}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderExtensions() {
+  const tbody = document.getElementById('tbody-ext');
+  let html = '';
+  EXTENSIONS.forEach(d => {
+    if (activeAction !== 'all' && d.action !== activeAction) return;
+    html += `<tr>
+      <td class="dir" onclick="showDetail('extensions/${d.name}')">${d.name}</td>
+      <td class="action">${badge(d.action)}</td>
+      <td class="total">${d.files || '—'}</td>
+      <td style="color:#484f58;font-size:11px">${d.note}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderSkills() {
+  const tbody = document.getElementById('tbody-skill');
+  let html = '';
+  SKILLS.forEach(name => {
+    const action = SKILLS_KEEP.includes(name) ? 'keep' : 'drop';
+    if (activeAction !== 'all' && action !== activeAction) return;
+    html += `<tr>
+      <td class="dir">${name}</td>
+      <td class="action">${badge(action)}</td>
+      <td class="total">—</td>
+      <td style="color:#484f58;font-size:11px">${SKILLS_KEEP.includes(name) ? 'lokale skill' : 'verwijderen'}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderPackages() {
+  const tbody = document.getElementById('tbody-pkg');
+  let html = '';
+  PACKAGES.forEach(d => {
+    if (activeAction !== 'all' && d.action !== activeAction) return;
+    html += `<tr>
+      <td class="dir">${d.name}</td>
+      <td class="action">${badge(d.action)}</td>
+      <td class="total">—</td>
+      <td style="color:#484f58;font-size:11px">${d.note}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderApps() {
+  const tbody = document.getElementById('tbody-app');
+  let html = '';
+  APPS.forEach(d => {
+    if (activeAction !== 'all' && d.action !== activeAction) return;
+    html += `<tr>
+      <td class="dir">${d.name}</td>
+      <td class="action">${badge(d.action)}</td>
+      <td class="total">—</td>
+      <td style="color:#484f58;font-size:11px">${d.note}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function updateStats() {
+  const all = [...SRC_DIRS, ...EXTENSIONS, ...PACKAGES, ...APPS];
+  const keep = all.filter(d => d.action === 'keep').length;
+  const mod = all.filter(d => d.action === 'mod').length;
+  const drop = all.filter(d => d.action === 'drop').length;
+  const total = all.length;
+  const reduce = Math.round(drop / total * 100);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-keep').textContent = keep;
+  document.getElementById('stat-mod').textContent = mod;
+  document.getElementById('stat-drop').textContent = drop;
+  document.getElementById('stat-reduce').textContent = reduce + '%';
+
+  const keepPct = (keep / total * 100).toFixed(0);
+  const modPct = (mod / total * 100).toFixed(0);
+  const dropPct = (drop / total * 100).toFixed(0);
+
+  document.getElementById('prog-keep').style.width = keepPct + '%';
+}
+
+function setAction(a) {
+  activeAction = a;
+  renderAll();
+}
+
+function renderAll() {
+  renderSrc();
+  renderExtensions();
+  renderSkills();
+  renderPackages();
+  renderApps();
+  updateStats();
+}
+
+function showDetail(path) {
+  const panel = document.getElementById('detail-panel');
+  panel.innerHTML = `<strong>◈ ${path}</strong>
+[click op directory voor details — data wordt geladen van openclaw-structure.json]`;
+  panel.classList.toggle('show');
+}
+
+function exportPlan() {
+  const plan = {
+    export_date: new Date().toISOString(),
+    upstream: "v2026.6.10-beta.2",
+    src_dirs: SRC_DIRS,
+    extensions: EXTENSIONS,
+    skills_keep: SKILLS_KEEP,
+    packages: PACKAGES,
+    apps: APPS,
+  };
+  const blob = new Blob([JSON.stringify(plan, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'npr-local-reductie-plan.json';
+  a.click();
+}
+
+renderAll();
+</script>
+</body>
+</html>

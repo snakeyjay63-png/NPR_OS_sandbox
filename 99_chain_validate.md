@@ -73,8 +73,8 @@ technically_integreerbaar(stap) :=
 
 | Niveau | Oordeel | Reden |
 |--------|---------|-------|
-| Chain-validiteit | ✅ | NPR heeft 3 fasen (stap 01-02). Mod-9 bevat {0,3,6}. Routing volgt uit voorgaande stappen. |
-| Technische integriteit | ✅ | H={0,3,6} ⊂ ℤ/9ℤ wiskundig correct. 0≡9 consistente notatie. Geen tegenstrijdigheden. |
+| Chain-validiteit | ✅ | NPR heeft 3 fasen. H={0,3,6} ⊂ ℤ/9ℤ is subgroep. Mod 9 = checksum, geen model. |
+| Technische integriteit | ✅ | H={0,3,6} ⊂ ℤ/9ℤ wiskundig correct. Hex→mod 15, dec→mod 9 gescheiden. Geen basis-vermenging. |
 | Extern bewijs | — | N.v.t. Mapping Noise→3 is NPR-definitie, geen bewijsplicht. |
 
 **Resultaat:** Stap 05 is geldig binnen de chain.
@@ -88,11 +88,11 @@ technically_integreerbaar(stap) :=
 | Stap | Onderwerp | Status | Opmerking |
 |------|-----------|--------|-----------|
 | 01 | NPR-OS als declaratief systeem | ✅ | 17_hex woorden, 4 routes, 1 signaalblok. SHA256-hash gecorrigeerd (2026-07-14). Cel 1A via hex-native C1A mod 40_hex. |
-| 02 | Bit-transformatie (IPv6→Hexa→IPv4) | ✅ | dr(1A)=B (hex-native). `mod 40_hex` (was: mod 64). `ipv4_edge(h)` expliciete NPR-randfunctie. |
-| 03 | capabilities.json declaratief | ✅ | Declaratief > hardcoded. Router-modus gedeclareerd. |
+| 02 | Celtransformatie (Hex→6-bit→8-bit→IPv4-label) | ✅ | dr(1A)=B (hex-native). `mod 40_hex`. `ipv4_edge(h)` NPR-randfunctie (geen IPv6). Titel gecorrigeerd (vlag 4). |
+| 03 | capabilities.json declaratief | ✅ | Declaratief > hardcoded. Capability-contracten met source, input, output. Vlag 5. |
 | 04 | Git-trace = signaal-flow | ✅ | Git = DAG + cyclische semantiek. Hash = integriteit. "Commit = signaal" is NPR-definitie, niet Git-eigenschap. |
-| 05 | 3-6-9 als mod-9 validatielaag | ✅ | H={0,3,6} ⊂ ℤ/9ℤ (wiskunde). Koppeling N→3, P→6, R→0/9 is gekozen semantiek, geen algebraïsch bewijs. |
-| 06 | Signaalblok (max 256 codepoints) | ✅ | BLOCK_SIZE = 100_hex. Eenheid = codepoints ≠ bytes. Split, niet afkappen. |
+| 05 | 3-6-9 digitale-wortel + mod-9/mod-15 | ✅ | H={0,3,6} ⊂ ℤ/9ℤ (wiskunde). Hex-cijfersom→mod 15, dec→mod 9. Mod 9 = checksum, geen model. Vlag 6. |
+| 06 | Signaalblok (max 256 codepoints) + 6-bit fundament | ✅ | BLOCK_SIZE = 100_hex. 2^8 = 2^2 × 2^6 → 256 = 4 × 64. Byte = 2 veldbits + 6 routebits. |
 | 07 | Sandbox = wiskunde | ✅ | 0=1 bronidentiteit, 0≠1 routing. ratio(Planck) ≡ ratio(kosmos) ≡ c. |
 | 08 | Śūnya-zone check | ✅ | 1A_hex ∉ {30_hex .. 3F_hex}. Route-integriteit hex-native. |
 | 09 | Taal-mapping | ✅ | Sanskrit = kern. 17_hex woorden. 4 routes. Russell = lens, geen extern bewijs. |
@@ -351,6 +351,71 @@ archive/64L_sunya_legacy.md   → LEGACY / superseded (verplaatst)
 
 Routering niet langer ambigu: legacy in archive met `64L_` prefix.
 Inhoudelijk conflict opgelost: oude versie zegt `0.0.0.0 = Sunya = water`, nieuwe versie corrigeert naar `source-role correspondence ≠ literal identity`.
+
+### VLAG 4 — Stap 02 titel vs. inhoud (opgelost 2026-07-14)
+
+```
+OUDE TITEL:  Bit-Transformatie (IPv6 → Hexa → IPv4)
+NIEUWE TITEL: Celtransformatie (Hex → 6-bit → 8-bit → IPv4-labelprojectie)
+```
+
+Probleem: titel beloofde IPv6-verwerking, maar inhoud voerde alleen
+cel→bit→ipv4_edge uit. Geen 128-bit IPv6-input, geen hextets, geen
+formele IPv6→IPv4-conversie.
+
+Fix: titel gecorrigeerd + expliciete opmerking in stap 02.
+`ipv4_edge` blijft geldige NPR-randfunctie, maar wordt nu correct
+gelabeld als lokale projectie, niet als IPv6-conversie.
+
+Resultaat: stap 02 ✅ op zowel chain-niveau als extern factueel niveau.
+
+### VLAG 5 — Stap 03 capabilities zonder contract (opgelost 2026-07-14)
+
+```
+OUDE CAPABILITIES:
+  ipv6_routing      → niet gedefinieerd in stap 02
+  hexa_mapping      → geen input/output contract
+  ipv4_fallback     ≠ ipv4_edge (stap 02)
+  git_trace         → geen contract
+  mandelbrot_layers → geen contract
+
+NIEUWE CAPABILITIES (contract-based):
+  sha256_cell_route  → stap 01, input: utf8_text, output: hex_cell_00_3F
+  cell_bit_transform → stap 02, input: hex_cell_00_3F, output: eight_bit_hex, reversible
+  ipv4_edge          → stap 02, input: hex_cell_00_3F, output: npr_ipv4_label, boundary: external
+```
+
+Probleem: capability-strings zonder contract = intentie, niet routering.
+`ipv6_routing` werd gedeclareerd terwijl stap 02 expliciet NIET ipv6 verwerkte.
+`ipv4_fallback` is niet hetzelfde als `ipv4_edge`.
+
+Fix: elke capability heeft nu name, input, output, source, en optionele
+grenzen (reversible, boundary). Geen capability zonder keten-bron.
+
+Resultaat: stap 03 ✅ ketenconsistent met stappen 01-02.
+
+### VLAG 6 — Stap 05 hex-cijfersom + mod 9 vermengd (opgelost 2026-07-14)
+
+```
+OUDE CLAIM:
+  dr(1A_hex) = 1 + A = B → B mod 9 = 2  (FOUT)
+
+CORRECT:
+  1A_hex = 26_dec
+  26 mod 15 = 11 = B_hex  ✅ (hex-cijfersom → mod 15)
+  26 mod 9  = 8           (decimaal mod 9 ≠ hex-cijfersom)
+  B_hex = 11_dec → 11 mod 9 = 2  ≠  26 mod 9 = 8  ❌
+```
+
+Probleem: hex-cijfersom en decimale mod-9 zijn verschillende systemen.
+16 ≡ 1 (mod 15), dus hex-cijfersom ≡ mod 15.
+10 ≡ 1 (mod 9), dus dec-cijfersom ≡ mod 9.
+Vermenging van bases is rekenkundig onjuist.
+
+Fix: digitale-wortelroute en mod-9/mod-15 correct gescheiden.
+Mod 9 = checksum voor decimale digitale-wortelroutes, geen model.
+
+Resultaat: stap 05 ✅ wiskundig correct + semantiek transparant.
 
 ---
 

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPR Local — Config llama</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#101418;color:#eef4f8;min-height:100vh;display:flex;justify-content:center;padding:32px 16px}
+.container{width:100%;max-width:720px}
+h1{font-size:1.5rem;margin-bottom:4px}
+.subtitle{color:#9fb0bd;font-size:.85rem;margin-bottom:24px}
+.card{background:#151b21;border:1px solid rgba(148,163,184,.28);border-radius:8px;padding:20px;margin-bottom:16px}
+.card h2{font-size:1rem;margin-bottom:12px;color:#8bd3ff}
+.row{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+label{font-size:.82rem;color:#9fb0bd;min-width:120px}
+input,select{flex:1;background:#1a2027;border:1px solid rgba(148,163,184,.36);border-radius:6px;padding:8px 12px;color:#eef4f8;font:inherit;font-size:.85rem}
+input:focus,select:focus{outline:2px solid #8bd3ff;outline-offset:1px}
+button{border:none;border-radius:6px;padding:8px 16px;font:inherit;font-weight:600;cursor:pointer;font-size:.82rem}
+.primary{background:#8bd3ff;color:#061019}
+.primary:hover{background:#66c2ff}
+.secondary{background:transparent;border:1px solid rgba(148,163,184,.36);color:#eef4f8}
+.secondary:hover{border-color:#8bd3ff}
+.danger{background:#ff6b6b;color:#fff}
+.status{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px}
+.status.green{background:#4ade80}
+.status.red{background:#f87171}
+.status.yellow{background:#facc15}
+.info{font-size:.78rem;color:#9fb0bd;margin-top:8px}
+.output{background:#0a0e14;border-radius:6px;padding:12px;font-family:monospace;font-size:.78rem;color:#c8d3da;max-height:200px;overflow:auto;white-space:pre-wrap;margin-top:12px}
+.badge{display:inline-block;background:rgba(139,211,255,.15);color:#8bd3ff;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔧 Config llama</h1>
+  <p class="subtitle">llama-server configuratie — NPR Local</p>
+
+  <!-- Server Status -->
+  <div class="card">
+    <h2>Server Status</h2>
+    <div class="row">
+      <span class="status" id="statusDot"></span>
+      <span id="statusText">Checking...</span>
+    </div>
+    <div class="info" id="statusInfo"></div>
+  </div>
+
+  <!-- Model Config -->
+  <div class="card">
+    <h2>Model Config</h2>
+    <div class="row">
+      <label>API Base</label>
+      <input id="apiBase" value="http://127.0.0.1:8765">
+    </div>
+    <div class="row">
+      <label>Model</label>
+      <input id="modelName" value="Qwen3.6-27B-Q4_K_M.gguf">
+    </div>
+    <div class="row">
+      <label>GPU Layers</label>
+      <input id="gpuLayers" type="number" min="0" max="100" value="59">
+    </div>
+    <div class="row">
+      <label>Context Size</label>
+      <input id="ctxSize" type="number" min="512" max="131072" step="1024" value="65536">
+    </div>
+    <div class="row">
+      <label>Temperature</label>
+      <input id="temperature" type="number" min="0" max="2" step="0.1" value="0.3">
+    </div>
+    <div class="row">
+      <label>Max Tokens</label>
+      <input id="maxTokens" type="number" min="1" value="2048">
+    </div>
+    <div class="info">Actuele config: -ngl 59 --ctx-size 65536 -b 512</div>
+  </div>
+
+  <!-- Available Models -->
+  <div class="card">
+    <h2>Available Models</h2>
+    <div class="row">
+      <button class="secondary" onclick="listModels()">Refresh</button>
+      <span id="modelCount" class="badge">—</span>
+    </div>
+    <div class="output" id="modelList">Click Refresh to load models...</div>
+  </div>
+
+  <!-- Server Config -->
+  <div class="card">
+    <h2>Current Server Config</h2>
+    <div class="row">
+      <label>Host</label>
+      <span id="cfgHost">127.0.0.1</span>
+    </div>
+    <div class="row">
+      <label>Port</label>
+      <span id="cfgPort">8765</span>
+    </div>
+    <div class="row">
+      <label>GPU Layers</label>
+      <span id="cfgGpuLayers">59</span>
+    </div>
+    <div class="row">
+      <label>Context Size</label>
+      <span id="cfgCtxSize">65536</span>
+    </div>
+    <div class="row">
+      <label>Batch</label>
+      <span id="cfgBatch">512</span>
+    </div>
+    <div class="info">
+      <a href="/docs/llama-server-options-npr-local.md" style="color:#8bd3ff">241 opties referentie</a>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card">
+    <h2>Actions</h2>
+    <div class="row">
+      <button class="primary" onclick="testConnection()">Test Connection</button>
+      <button class="secondary" onclick="chatTest()">Quick Chat</button>
+      <button class="danger" onclick="restartServer()">Restart Server</button>
+    </div>
+    <div class="info" id="actionInfo"></div>
+    <div class="output" id="actionOutput" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = document.getElementById('apiBase').value;
+const MODEL = document.getElementById('modelName').value;
+
+async function fetchApi(path, opts={}) {
+  const base = document.getElementById('apiBase').value.replace(/\/$/,'');
+  try {
+    // Use local proxy to avoid CORS
+    const r = await fetch("/llama" + path, opts);
+    return await r.json();
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
+async function checkStatus() {
+  const dot = document.getElementById('statusDot');
+  const txt = document.getElementById('statusText');
+  const info = document.getElementById('statusInfo');
+
+  const data = await fetchApi('/v1/models');
+  if (data.error) {
+    dot.className = 'status red';
+    txt.textContent = 'Offline';
+    info.textContent = data.error;
+    return false;
+  }
+  dot.className = 'status green';
+  txt.textContent = 'Online';
+  info.textContent = `${data.models?.length || 0} model(s) loaded`;
+  return true;
+}
+
+async function listModels() {
+  const data = await fetchApi('/v1/models');
+  const out = document.getElementById('modelList');
+  const count = document.getElementById('modelCount');
+
+  if (data.error) {
+    out.textContent = 'Error: ' + data.error;
+    count.textContent = '0';
+    return;
+  }
+
+  const models = data.models || [];
+  count.textContent = models.length;
+  out.textContent = models.map(m =>
+    `${m.name} (${m.details?.format || 'unknown'})${m.details?.parameter_size ? ' — ' + m.details.parameter_size : ''}`
+  ).join('\n') || 'No models loaded';
+}
+
+async function testConnection() {
+  const info = document.getElementById('actionInfo');
+  const out = document.getElementById('actionOutput');
+  out.style.display = 'block';
+  out.textContent = 'Testing...';
+  info.textContent = '';
+
+  const data = await fetchApi('/v1/models');
+  if (data.error) {
+    out.textContent = '❌ Connection failed: ' + data.error;
+    info.textContent = 'Check if llama-server is running on port 8765';
+    return;
+  }
+
+  out.textContent = '✅ Connected! ' + JSON.stringify(data, null, 2);
+  info.textContent = `${data.models?.length || 0} model(s) available`;
+}
+
+async function chatTest() {
+  const model = document.getElementById('modelName').value;
+  const temp = document.getElementById('temperature').value;
+  const maxTokens = document.getElementById('maxTokens').value;
+  const out = document.getElementById('actionOutput');
+  out.style.display = 'block';
+  out.textContent = 'Sending test message...';
+
+  const data = await fetchApi('/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: 'Say hello in one sentence.' }],
+      temperature: parseFloat(temp),
+      max_tokens: parseInt(maxTokens),
+    }),
+  });
+
+  out.textContent = JSON.stringify(data, null, 2);
+}
+
+async function restartServer() {
+  const out = document.getElementById('actionOutput');
+  out.style.display = 'block';
+  out.textContent = 'Sending restart signal...';
+
+  const data = await fetchApi('/v1/restart', { method: 'POST' });
+  out.textContent = JSON.stringify(data, null, 2) || 'Restart signal sent (check if server supports it)';
+}
+
+// Load current config
+async function loadConfig() {
+  try {
+    const r = await fetch('/config');
+    const cfg = await r.json();
+    document.getElementById('cfgHost').textContent = cfg.host || '—';
+    document.getElementById('cfgPort').textContent = cfg.port || '—';
+    document.getElementById('cfgGpuLayers').textContent = cfg.gpuLayers || '—';
+    document.getElementById('cfgCtxSize').textContent = cfg.ctxSize || '—';
+    document.getElementById('cfgBatch').textContent = cfg.batch || '—';
+
+    // Pre-fill form fields
+    document.getElementById('apiBase').value = `http://${cfg.host}:${cfg.port}`;
+    document.getElementById('modelName').value = cfg.model || '';
+    document.getElementById('gpuLayers').value = cfg.gpuLayers || 59;
+    document.getElementById('ctxSize').value = cfg.ctxSize || 65536;
+  } catch(e) {
+    console.warn('Config load failed:', e);
+  }
+}
+
+// Auto-check on load
+checkStatus();
+loadConfig();
+setInterval(checkStatus, 10000);
+</script>
+</body>
+</html>

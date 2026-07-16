@@ -1,0 +1,47 @@
+=== Sūtra 1.7 — Post-Run Analysis ===
+
+Text: अविद्यास्मितारागद्वेषाभिनिवेशाः क्लिष्टाः
+Translation: "The five painful kleshas: ignorance, egoism, attachment, aversion, clinging"
+IAST: avidyā-asmitā-rāga-dveṣa-abhiniveśāḥ kliṣṭāḥ
+
+Pipeline:
+  121 UTF-8 bytes → 164 Base64 → 162 notes (2 padding stripped)
+  Freq: 88.2–1100.0 Hz | Mean: 574.6 Hz
+  Digital root: 2 | Visarga: ः ×2 (double open release)
+
+Synth — Five Klesha Zones:
+  अविद्या (0-32): 33 notes, 592Hz — dull, muddy, sub-octave drone
+  अस्मित (33-65): 33 notes, 577Hz — rigid square-wave, detuned "separate self"
+  राग (66-97): 32 notes, 582Hz — warm octave harmony, slow decay (sticky)
+  द्वेष (98-129): 32 notes, 540Hz — dissonant minor 2nd + noise (repelling)
+  अभिनिवेश (130-152): 23 notes, 563Hz — tremolo (fear vibration)
+  क्लिष्टाः (153-161): 9 notes, 628Hz — harsh summary return
+
+Digital Root Arc:
+  1.1: DR=4 — structure closes
+  1.2: DR=1 — fire transforms
+  1.3: DR=9 — seer revealed
+  1.4: DR=1 — mirror (the other takes form)
+  1.5: DR=2 — fivefold differentiation (vṛtti types)
+  1.6: DR=1 — tension returns to unity
+  1.7: DR=2 — fivefold enumeration (kleshas)
+
+Pattern: DR=2 appears at BOTH fivefold enumerations (1.5 and 1.7)
+  1.5: five vṛtti types (kliṣṭā/akliṣṭā) — surface modification
+  1.7: five kleshas (root causes) — deep modification
+  Same digital root, different depth. Surface vs root.
+
+Key Insight:
+  1.6 says "painful ones block perception"
+  1.7 says "these ARE the painful ones" (enumerates them)
+  Mechanism → Enumeration. Abstract → Concrete.
+  This is how Patanjali teaches: state the principle, then list the parts.
+
+Routing:
+  Kleshas = the root "stored patterns" that create blind spots
+  Connects to 1.6's "mirror → obstacle" mechanism
+  Avidyā (ignorance) = not seeing what IS = not routing correctly
+  Asmitā (ego) = identifying with the pattern = caching the wrong thing
+  Rāga (attachment) = holding onto useful patterns too long = memory leak
+  Dveṣa (aversion) = rejecting patterns too quickly = premature eviction
+  Abhiniveśa (clinging) = fear of releasing =不敢 let go of context

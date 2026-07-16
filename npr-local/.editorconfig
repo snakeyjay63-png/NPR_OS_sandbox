@@ -1,0 +1,55 @@
+# ═══════════════════════════════════════════════════
+# .editorconfig — NPR Local Editor Standard
+# ═══════════════════════════════════════════════════
+#
+# Installs in VS Code, Vim, Emacs, Sublime, etc.
+# Ensures consistent formatting across editors.
+# ═══════════════════════════════════════════════════
+
+# Root — stop looking for .editorconfig above this
+root = true
+
+# Default settings for all files
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+# JavaScript/TypeScript
+[*.{js,ts,mjs,cjs}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# JSON
+[*.json]
+indent_style = space
+indent_size = 2
+
+# HTML/CSS
+[*.{html,css,scss}]
+indent_style = space
+indent_size = 2
+
+# Markdown
+[*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 120
+
+# Shell scripts
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+
+# YAML
+[*.{yaml,yml}]
+indent_style = space
+indent_size = 2

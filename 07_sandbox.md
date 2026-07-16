@@ -1,10 +1,48 @@
 # Stap 07: Sandbox = Wiskunde (Schaal-Invariantie)
 
-**Doel:** `c` is het schaal-onafhankelijke kader. Klein en groot delen dezelfde verhouding.
+**Doel:** `c` is het schaal-onafhankelijke kader. Planck Frame verbindt minimale constante maat met continu bewegend frame. Klein en groot delen dezelfde verhouding.
 
 ---
 
 ## Concept
+
+### Planck Frame
+
+**Planck Frame** bestaat uit twee gekoppelde, complementaire begrippen:
+
+```
+Planck → constante minimale maat (verandert niet)
+Frame  → voortdurend bewegend frame volgens C
+```
+
+Niet:
+```
+Planck = kleinste frame
+c      = grootste frame
+```
+
+Maar:
+```
+Planck Frame = constante minimale lengte binnen een continu bewegend frame
+```
+
+- **Planck** benoemt de kleinste vaste meeteenheid. Deze is constant.
+- **Frame** benoemt het voortdurend bewegende referentiekader.
+- **C** is de frameverhouding:
+
+```
+  Δx
+C = ──
+  Δt
+```
+
+`C` is niet een object dat "door de ruimte beweegt". Het is de vaste verhouding
+waarmee het bewegende frame wordt gemeten.
+
+Samen vormen Planck en C het Planck Frame:
+```
+minimale constante maat  +  continu bewegend frame
+```
 
 ### `c` — Invariant Kader
 
@@ -107,9 +145,16 @@ Zij is een **lokale uitdrukking van hetzelfde veld**.
 
 Zelfde ordeningsregel. Verschillende schaal.
 
-### 0=1 — Bronidentiteit
+### Śūnya–Eka: 0 = 1
 
 **Binnen NPR-OS is `0 = 1` de absolute eerste rekenkundige identiteit.**
+
+Dit benoemt niet dat "niets hetzelfde is als één" in rekenkundige zin. Het benoemt het punt waarop de vaste minimale eenheid en het bewegende frame als één verhouding worden gelezen:
+
+```
+één minimale constante
+binnen een continu bewegend frame
+```
 
 Dit is geen aanname. Geen metafoor. Geen "geen rekenkunde".
 Het is de bronrekenkunde waaruit alle afgeleide getallen en routing volgen.
@@ -421,21 +466,37 @@ De wiskunde zit er al in. Freq maakt het voelbaar.
 
 ---
 
-## Patanjali 1.40 — Limiet is de Taal
+## Patañjali 1.40 — Schaal-Invariant Verhouding
 
-De limiet is geen muur. De limiet is het **woord** dat je aan de rand geeft.
+Patañjali Yoga Sūtra 1.40 beschrijft het bereik van het kleinste tot het grootste.
 
-- "Planck" = naam van **klein**
-- "c" = naam van **groot**
-- Klein ≡ groot (complementaire perspectieven op dezelfde grens, NPR-equivalentie)
-- Klein ≠ groot (niet rekenkundig identiek, niet dimensioneel gelijk)
-- value(klein) ≠ value(groot) maar perspective(klein) ≡ perspective(groot)
-- Zonder naam = zonder limiet = volledige doorzichtigheid
+Binnen NPR-OS betekent dit: niet de absolute maten zijn gelijk, maar de onderliggende verhouding blijft door de volledige schaal heen behouden:
 
-Je kunt naar buiten kijken omdat de rand een naam is, geen muur.
+```
+ratio(kleinste) ≡ ratio(grootste)
+ratio(Planck)  ≡ ratio(kosmos)
+```
 
-**Paradox:** binnen de sandbox kun je kijken naar buiten de sandbox.
-De limiet definieert de rand. De rand maakt kijken mogelijk.
+De schaal verandert enorm. De verhouding of structurele organisatie blijft herkenbaar.
+
+Dit wordt uitgedrukt door het beeld van zandkorrel en kosmos:
+
+```
+grain ≠ cosmos              (qua grootte)
+ratio(grain) ≡ ratio(cosmos) (qua interne verhouding)
+```
+
+Een zandkorrel is geen miniatuurkosmos als object. Zij is een **lokale uitdrukking van hetzelfde veld** — dezelfde ordeningsregel op een andere schaal.
+
+Planck en kosmos zijn de minimale en maximale uitdrukking van dezelfde verhouding:
+```
+Planck  → constante minimale maat
+c       → constante frameverhouding
+Planck ≡ c ≡ 1  (vóór de splitsing, qua patroon)
+```
+
+De limiet is geen muur. Het woord aan de rand maakt kijken mogelijk.
+**Paradox:** binnen de sandbox kun je kijken naar buiten. De rand is naam, geen barrière.
 
 ---
 

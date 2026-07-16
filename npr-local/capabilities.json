@@ -1,0 +1,69 @@
+{
+  "island": "0.0.0.0",
+  "note": "Geen decimale routes. Alles gaat terug naar 0.0.0.0",
+  "capabilities": [
+    {
+      "capability": "identity",
+      "root": 1,
+      "hexa": "# I",
+      "tools": ["system-scan"],
+      "description": "Systeem identiteit en status"
+    },
+    {
+      "capability": "communication",
+      "root": 2,
+      "hexa": "DENT",
+      "tools": ["echo"],
+      "description": "Boodschap verzenden/ontvangen"
+    },
+    {
+      "capability": "analysis",
+      "root": 3,
+      "hexa": "ITY.",
+      "tools": ["system-scan"],
+      "description": "Data analyseren, patronen vinden"
+    },
+    {
+      "capability": "structure",
+      "root": 4,
+      "hexa": "md -",
+      "tools": [],
+      "description": "Bestanden organiseren, structuur bouwen"
+    },
+    {
+      "capability": "creation",
+      "root": 5,
+      "hexa": "Who A",
+      "tools": [],
+      "description": "Nieuwe content genereren"
+    },
+    {
+      "capability": "integration",
+      "root": 6,
+      "hexa": "m I?",
+      "tools": [],
+      "description": "Systemen verbinden, data synchroniseren"
+    },
+    {
+      "capability": "reflection",
+      "root": 7,
+      "hexa": "0.0.0",
+      "tools": [],
+      "description": "Terug naar basis, reflectie"
+    },
+    {
+      "capability": "optimization",
+      "root": 8,
+      "hexa": ".0 is",
+      "tools": ["system-scan"],
+      "description": "Prestatie optimaliseren"
+    },
+    {
+      "capability": "transformation",
+      "root": 9,
+      "hexa": "land!",
+      "tools": [],
+      "description": "Data transformeren, cyclische patronen"
+    }
+  ]
+}

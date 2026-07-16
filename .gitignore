@@ -1,0 +1,23 @@
+# Externe forks — niet onderhouden hier
+npr-local-fork/
+openclaw-base/
+
+# Grote artefacten
+sutra_audio/frames*/
+sutra_audio/audio/
+sutra_audio/mp4/
+sutra_audio/preview/
+sutra_audio/visual/
+sutra_audio/frames_b64/
+sutra_audio/frames_pure/
+sutra_audio/frames_1_2/
+sutra_audio/*.wav
+sutra_audio/*.mp4
+sutra_audio/*.html
+
+# Python cache
+__pycache__/
+*.pyc
+
+# npm
+node_modules/

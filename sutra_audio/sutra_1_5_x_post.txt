@@ -1,0 +1,217 @@
+Sūtra 1.5 — "Fivefold, Afflicted and Unafflicted"
+
+वृत्तयः पञ्चतय्यः क्लिष्टाऽक्लिष्टाः ॥१.५॥
+vṛttayaḥ pañcatayyaḥ kliṣṭāḥ akliṣṭāḥ
+
+---
+
+## Layer 1 — What the Sanskrit Grammar States
+
+A common translation is:
+
+"The modifications are fivefold, painful and painless."
+
+Grammatical facts:
+
+* **vṛttayaḥ** — nominative feminine plural of *vṛtti*: "vṛttis," "movements," "modifications."
+* **pañcatayyaḥ** — nominative feminine plural agreeing with *vṛttayaḥ*: "fivefold."
+* **kliṣṭāḥ akliṣṭāḥ** — two nominative feminine plural adjectives agreeing with *vṛttayaḥ*: "afflicted, unafflicted." In the continuous text they appear joined by sandhi, here marked with an avagraha: *kliṣṭāḥ'akliṣṭāḥ*. The asyndetic coordination is naturally expressed in English as "afflicted and unafflicted."
+
+**The transition from 1.4 to 1.5:**
+
+In 1.4, *vṛtti* occurs as the first member of the compound *vṛtti-sārūpyam*; as a compound member, it is not independently marked for case or number.
+
+In 1.5, *vṛttayaḥ* appears explicitly as a nominative feminine plural.
+
+The plurality is now morphologically explicit. The stem-form compound member of 1.4 is followed in 1.5 by an explicitly plural and classified subject.
+
+---
+
+## Layer 2 — What Classical Commentary Develops
+
+Vyāsa connects the afflicted vṛttis with the *kleśas* and the growth of *karmāśaya*, while associating the unafflicted vṛttis with discriminative knowledge. Vācaspatimiśra develops this account through attachment and aversion and explains that particular vṛttis are many, although their classes are five and no more.
+
+The five classes are enumerated in Sūtra 1.6 and defined in Sūtras 1.7–1.11:
+
+| # | Sanskrit | Classical Function |
+|---|----------|-------------------|
+| 1 | *pramāṇa* | valid cognition |
+| 2 | *viparyaya* | erroneous cognition |
+| 3 | *vikalpa* | conceptual construction without corresponding object |
+| 4 | *nidrā* | sleep; movement supported by cognition of absence |
+| 5 | *smṛti* | memory |
+
+The fivefold classification encompasses both afflicted and unafflicted vṛttis. This is a causal and soteriological distinction: afflicted vṛttis sustain the *kleśas* and karmic continuity, whereas unafflicted vṛttis support discrimination and counteract afflicted activity. It is not a simple moral division between good and bad.
+
+**Translation note:** "Afflicted and unafflicted" better preserves the commentarial connection with the *kleśas*, karmic consequences, and discriminative knowledge. "Painful and painless" is possible, but may suggest immediate felt pain rather than the broader causal and soteriological distinction developed by the commentators. "Burdened/unburdened" and "troubled/untroubled" are more interpretive renderings.
+
+---
+
+## Layer 3 — NPR Reading
+
+> In this reading, *vṛtti* is rendered as "movement."
+
+**Within NPR's interpretive vocabulary:**
+
+*kliṣṭāḥ* — the route carries weight; perspective is bound; transformation is not visible
+
+*akliṣṭāḥ* — the route carries no weight; perspective moves freely; agni can work
+
+These ideas are not Sanskrit lexical definitions. They are NPR's own language-field applied to the grammatical structure.
+
+*Route*, *perspective*, *weight*, and *agni* do not occur in Sūtra 1.5. They are interpretive lenses, not translations.
+
+**The reading:**
+
+1.4 presented *vṛtti* relationally within a compound.
+
+1.5 classifies the movements fivefold. Across those classes, movement may be afflicted or unafflicted.
+
+NPR reads these not as moral categories but as structural qualities of the route itself.
+
+Within NPR, *seeing = participation = route*.
+
+The classification asks which movement is operating.
+
+NPR recasts the distinction in its own vocabulary: *is this route carrying weight?*
+
+---
+
+## The Fivefold — Distinct Structures, Different Questions
+
+The five vṛttis are not the same as the five aggregates (skandhas) of Buddhism, nor the five great elements (mahābhūta) found across Indian traditions.
+
+They are distinct five-part classifications answering different questions:
+
+| System | Question | Five |
+|--------|----------|------|
+| Yoga | What are the principal classes of *citta-vṛtti* to be restrained? | vṛttis = movements of mind |
+| Buddhism | What five conditioned aggregates make up conditioned experience? | skandhas = aggregates of experience |
+| Mahābhūta | What are the great elemental constituents of the material field? | earth, water, fire, air, space |
+
+These are analogies, not historical claims of relationship.
+
+The number five appears across Indian classificatory systems, but each system applies it to different domains. The fivefold classification of vṛttis is specific to Patañjali's system.
+
+---
+
+## Base64 Encoding — Properties of This Transcription
+
+The Base64 of the sūtra text (excluding verse marker):
+
+`4KS14KWD4KSk4KWN4KSk4KSv4KSDIOCkquCknuCljeCkmuCkpOCkr+CljeCkr+CkgyDgpJXgpY3gpLLgpL/gpLfgpY3gpJ/gpL7gpL3gpJXgpY3gpLLgpL/gpLfgpY3gpJ/gpL7gpIM=`
+
+* 104 UTF-8 bytes (with avagraha)
+* 140 Base64 characters (139 non-padding, 1 `=`)
+* Digital root of 104: *5*
+* `4KS` occurs 5 times
+* `gpL` occurs 9 times
+
+**Caveat:** These numbers are properties of *this digital encoding of this particular Devanāgarī transcription* — dependent on Unicode normalization, script selection, UTF-8 encoding, and Base64's six-bit grouping. They are not necessarily properties of the Sanskrit sūtra as an orally or manuscript-transmitted linguistic object.
+
+The repetition is objectively present in this encoding. Its interpretive significance is not established by numerical occurrence alone.
+
+---
+
+## Digital Root Sequence — Computational Derivation
+
+Using the exact NFC-normalized Devanāgarī strings displayed below, excluding verse markers, line breaks, and leading or trailing spaces, the UTF-8 byte counts and digital roots are:
+
+| Sūtra | UTF-8 byte count | Digital root |
+| ----- | ---------------: | -----------: |
+| 1.3 | 83 | 2 |
+| 1.4 | 60 | 6 |
+| 1.5 | 104 | 5 |
+
+`DR 2 → 6 → 5`
+
+These values are computational properties of the selected digital transcriptions. Notably, the digital root of Sūtra 1.5 is 5—the same number expressed grammatically as *pañcatayyaḥ* ("fivefold"). This is an arithmetical property of this specific orthographic and encoding choice, not a feature of the Sanskrit grammar or the transmitted sūtra apart from notation.
+
+**Input strings:**
+
+```
+1.3 input: तदा द्रष्टुः स्वरूपेऽवस्थानम्
+1.4 input: वृत्तिसारूप्यमितरत्र
+1.5 input: वृत्तयः पञ्चतय्यः क्लिष्टाऽक्लिष्टाः
+```
+
+Internal spacing is preserved exactly as displayed. Unicode normalization form: NFC.
+
+---
+
+## NPR Routing Through Book 1
+
+The route is not developed as a full sūtra-by-sūtra commentary. Only the nodes are recorded.
+
+**The Iterative Projection Rule:**
+
+NPR uses the first 25 decimal numbers as a routing field, projecting decimal values to their hexadecimal representation. The visible hex value then becomes a new decimal input for the next projection. This is an iterative NPR-routing rule, not a standard mathematical identity over one unchanging value.
+
+| Step | Operation | Result | Textual Routing |
+|------|-----------|--------|----------------|
+| begin | fivefoldness in 1.5 | 5 | Sūtra 1.5 |
+| expansion | 5 × 5 | 25 decimal | Sūtra 1.25 |
+| base projection | 25₁₀ = 19₁₆ | 19 | Sūtra 1.19 |
+| new base projection | 19₁₀ = 13₁₆ | 13 | Sūtra 1.13 |
+| terminal projection | 13₁₀ = D₁₆ | D | end of sūtra-index route |
+
+**Verification:**
+
+* 25₁₀ = 19₁₆ ✓ (16 + 9 = 25)
+* 19₁₀ = 13₁₆ ✓ (16 + 3 = 19)
+* 13₁₀ = D₁₆ ✓
+
+**The limit of textual indexing:**
+
+There is no "Sūtra 1.D" in standard numbering. At `D`, the route can no longer be read as a sūtra number. The routing changes from textual index to symbolic representation. Sūtra 1.13 forms the last textual node of this hexadecimal descent.
+
+The route is:
+
+> **1.5 → 1.25 (`19` hex) → 1.19 → 1.13 (`13` hex) → D**
+
+**Nodes:**
+
+> **1.5 — the fivefold movement**
+> `vṛttayaḥ pañcatayyaḥ`
+
+> **1.25 — 25 decimal = `19` hex**
+> `sarvajñabījam`
+> the seed of complete knowing
+
+> **1.19 — `19` hex = 13 decimal**
+> `bhava-pratyayaḥ`
+> the causal basis of existence
+
+> **1.13 — `13` hex as NPR marker**
+> `tatra sthitau yato 'bhyāsaḥ`
+> there, in abiding, is practice
+
+> **D — the symbolic threshold**
+> the route leaves the numerical sūtra index and enters a symbolic layer
+
+Within this route:
+
+> fivefold movement
+> → seed
+> → causal basis
+> → practice
+> → ātman
+
+This is a computational routing layer, not Sanskrit grammar and not a traditional exegesis of Book 1. Value equivalence must not be silently conflated with digital-root function.
+
+---
+
+## Summary
+
+At its most compressed level, the sūtra states: the vṛttis are fivefold, afflicted and unafflicted.
+
+Across the five classes, vṛttis may be afflicted or unafflicted. This is a causal and soteriological distinction, not a moral one.
+
+Everything added to that relation — route, weight, agni, perspective — becomes visible through the language-field. It is interpretation layered upon grammar, made explicit rather than implied.
+
+**Three layers, always visible:**
+1. What the Sanskrit grammar states.
+2. What classical commentary develops.
+3. What NPR reads through its own language-field.
+
+•
