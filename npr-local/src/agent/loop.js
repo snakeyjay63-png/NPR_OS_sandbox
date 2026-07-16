@@ -497,6 +497,10 @@ async function handleAgentChatStream(req, res, ctx) {
   }));
   history.push({ role: 'user', content: input });
 
+  // Client disconnect detection
+  let isClosed = false;
+  res.on('close', () => { isClosed = true; });
+
   // Stream tokens
   let fullResponse = '';
   let reasoning = '';
@@ -505,51 +509,68 @@ async function handleAgentChatStream(req, res, ctx) {
 
   res.write('data: {"type":"thinking"}\n\n');
 
-  for await (const token of callModelStream([sysMsg, ...history])) {
-    // Check if reasoning token
-    if (token.startsWith('<thinking>') || token.endsWith('</thinking>')) {
-      reasoning += token;
-      continue;
+  try {
+    for await (const token of callModelStream([sysMsg, ...history])) {
+      if (isClosed) break; // client disconnected
+
+      // Check if reasoning token
+      if (token.startsWith('<thinking>') || token.endsWith('</thinking>')) {
+        reasoning += token;
+        continue;
+      }
+
+      fullResponse += token;
+      tokenCount++;
+      const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+      const tps = (tokenCount / elapsed).toFixed(1);
+
+      const written = res.write(`data: ${JSON.stringify({
+        type: 'token',
+        content: token,
+        tokenCount,
+        elapsed,
+        tps,
+      })}\n\n`);
+
+      if (!written) break; // backpressure
     }
+  } catch (e) {
+    console.error(`[agent/stream] Stream error: ${e.message}`);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: e.message })}\n\n`);
+  }
 
-    fullResponse += token;
-    tokenCount++;
-    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-    const tps = (tokenCount / elapsed).toFixed(1);
+  // Done / abort
+  const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+  const isAborted = isClosed || !fullResponse;
 
+  if (!isClosed) {
     res.write(`data: ${JSON.stringify({
-      type: 'token',
-      content: token,
+      type: 'done',
+      content: fullResponse,
       tokenCount,
-      elapsed,
-      tps,
+      elapsed: totalElapsed,
+      aborted: isAborted,
     })}\n\n`);
   }
 
-  // Done
-  const totalElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  res.write(`data: ${JSON.stringify({
-    type: 'done',
-    content: fullResponse,
-    tokenCount,
-    elapsed: totalElapsed,
-  })}\n\n`);
-
-  // Store in session
+  // Store (partial) response in session
   if (!session.history) session.history = [];
   session.history.push(
     { role: 'user', content: input, timestamp: Date.now() },
-    { role: 'assistant', content: fullResponse, timestamp: Date.now() },
+    { role: 'assistant', content: fullResponse, timestamp: Date.now(), partial: isAborted },
   );
 
-  // Sync to geowon
-  syncToGeowon(sessionId, {
-    role: 'assistant',
-    content: fullResponse,
-    route: route.pattern,
-    slot: route.pattern?.slot ?? 'unknown',
-    phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
-  });
+  // Sync to geowon (only if substantial content)
+  if (fullResponse.length > 20) {
+    syncToGeowon(sessionId, {
+      role: 'assistant',
+      content: fullResponse,
+      route: route.pattern,
+      slot: route.pattern?.slot ?? 'unknown',
+      phase: route.phase ?? `dr-${route.pattern?.digitalRoot ?? 0}`,
+      partial: isAborted,
+    });
+  }
 
   res.end();
 }
