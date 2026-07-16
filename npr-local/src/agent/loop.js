@@ -162,60 +162,117 @@ async function syncToGeowon(sessionId, data) {
   }
 }
 
-async function callModel(messages) {
-  const res = await fetch(MODEL_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages,
-      temperature: 0.3,
-      max_tokens: 2048,
-      enable_thinking: false,
-    }),
-  });
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || '[model error]';
+async function callModel(messages, options = {}) {
+  const { timeout = 120000, retry = 1 } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+
+  for (let attempt = 0; attempt <= retry; attempt++) {
+    try {
+      const res = await fetch(MODEL_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL_NAME,
+          messages,
+          temperature: 0.3,
+          max_tokens: 2048,
+          enable_thinking: false,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timer);
+
+      if (!res.ok) {
+        const errBody = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
+      }
+
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content;
+
+      if (!content || typeof content !== 'string') {
+        throw new Error(`Ongeldig model response formaat: ${JSON.stringify(data).slice(0, 200)}`);
+      }
+
+      return content;
+    } catch (e) {
+      if (attempt < retry) {
+        console.warn(`[model] Poging ${attempt + 1} faalde, retry...: ${e.message}`);
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+      } else {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') {
+          throw new Error(`Model timeout na ${timeout/1000}s`);
+        }
+        throw e;
+      }
+    }
+  }
 }
 
 // Streaming call to llama-server
-async function* callModelStream(messages) {
-  const res = await fetch(MODEL_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: MODEL_NAME,
-      messages,
-      temperature: 0.3,
-      max_tokens: 2048,
-      stream: true,
-      enable_thinking: false,
-    }),
-  });
+async function* callModelStream(messages, options = {}) {
+  const { timeout = 120000 } = options;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+  try {
+    const res = await fetch(MODEL_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL_NAME,
+        messages,
+        temperature: 0.3,
+        max_tokens: 2048,
+        stream: true,
+        enable_thinking: false,
+      }),
+      signal: controller.signal,
+    });
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep incomplete line
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed === 'data: [DONE]') continue;
-      if (!trimmed.startsWith('data: ')) continue;
-
-      try {
-        const json = JSON.parse(trimmed.slice(6));
-        const token = json.choices?.[0]?.delta?.content;
-        if (token) yield token;
-      } catch {}
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
     }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (!trimmed.startsWith('data: ')) continue;
+
+          try {
+            const json = JSON.parse(trimmed.slice(6));
+            const token = json.choices?.[0]?.delta?.content;
+            if (token) yield token;
+          } catch {}
+        }
+      }
+    } finally {
+      clearTimeout(timer);
+      reader.releaseLock();
+    }
+  } catch (e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') {
+      throw new Error(`Stream timeout na ${timeout/1000}s`);
+    }
+    throw e;
   }
 }
 
