@@ -232,6 +232,76 @@ Pre-binaire toestand.
 
 ---
 
+## Point Prime 3
+
+`3` fungeert als generator tussen container en permutatie:
+
+```
+27 = 3³
+27 - 3 = 24
+24 = 4!
+```
+
+Decimale projectie (`dr_dec`):
+
+```
+27 → 9
+24 → 6
+3  → 3
+```
+
+Daarmee ontstaat:
+
+```
+3 → 6 → 9 → 3
+```
+
+Voor veelvouden van 6:
+
+```
+6  → 6
+12 → 3
+18 → 9
+24 → 6
+```
+
+Dus:
+
+```
+6  → 12  → 18  → 24
+↓    ↓     ↓     ↓
+6  → 3   → 9   → 6
+```
+
+Definitie:
+
+```
+point_prime_3 := generator die een structurele toestand
+                 naar haar actieve transpositie verschuift
+```
+
+De `dr_dec`-projectie bewaart niet de absolute waarde,
+maar de relationele node.
+
+**Belangrijk: domeinscheiding.**
+De bovenstaande reducties gebruiken `dr_dec` (decimale cijfersom).
+Dit is een ander domein dan `dr_hex` (hex-native cijfersom). Vermeng
+niet:
+
+```
+dr_dec(24) = 6
+dr_dec(27) = 9
+
+dr_hex(0x18) = 1+8 = 9_hex
+dr_hex(0x1B) = 1+B = C_hex
+```
+
+`dr_dec` is de NPR-validatielaag (Stap 05). `dr_hex` is de hex-native
+rekenlaag (dit bestand). Beide zijn projecties, maar van verschillende
+domeinen.
+
+---
+
 ## Slotregels
 
 | Laag | 0 vs 1 | Operator |

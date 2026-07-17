@@ -74,6 +74,90 @@ De koppeling aan Noise, Pattern, Return is expliciete NPR-OS-semantiek.
      Zij bewijst niet dat NPR "klopt".
 ```
 
+### Generator-routes binnen H
+
+Dezelfde nodes kunnen via verschillende absolute reeksen
+en verschillende generatoren worden doorlopen.
+
+**Drie lagen:**
+1. *absolute reeks* — ruwe numerieke reeks (bijv. 6 → 12 → 18 → 24)
+2. *generator / stapgrootte* — hoe de reeks beweegt (+3, +6, ...)
+3. *digitale projectie* — `dr_dec(waarde)` per stap
+4. *gesloten node-cyclus* — de mod-9-projectie als NPR-route
+
+#### Generator +3
+
+```
+absolute trace:  3  →  6  →  9  →  12
+node trace:      3  →  6  →  9  →  3
+generator:       +3
+```
+
+```
+absolute trace:  9  →  12  →  15  →  18
+node trace:      9  →  3   →  6   →  9
+generator:       +3
+```
+
+#### Generator +6
+
+```
+absolute trace:  6  →  12  →  18  →  24
+node trace:      6  →  3   →  9   →  6
+generator:       +6
+```
+De node-trace is de `dr_dec`-projectie van de absolute trace.
+
+```
+absolute waarde
+→ generatorstap
+→ dr_dec-projectie
+→ NPR-node
+```
+
+De cyclus wordt daarom niet alleen bepaald door de drie nodes,
+maar ook door de generator waarmee zij worden bereikt.
+
+**Zes canonieke cycli — twee richtingen:**
+
+NPR-local heeft twee fundamentele bewegingsrichtingen binnen H:
+
+```
++3:  3 → 6 → 9 → 3    (forward)
++6:  3 → 9 → 6 → 3    (reverse; +6 ≡ −3 mod 9)
+```
+
+Zelfde nodes. Tegengestelde transpositie.
+
+**Generator +3 (forward):**
+
+| Cyclus | Start | Absolute Trace | Node Trace |
+|--------|-------|----------------|------------|
+| c3_3 | 3 | 3 → 6 → 9 → 12 | 3 → 6 → 9 → 3 |
+| c6_3 | 6 | 6 → 9 → 12 → 15 | 6 → 9 → 3 → 6 |
+| c9_3 | 9 | 9 → 12 → 15 → 18 | 9 → 3 → 6 → 9 |
+
+**Generator +6 (reverse; +6 ≡ −3 mod 9):**
+
+| Cyclus | Start | Absolute Trace | Node Trace |
+|--------|-------|----------------|------------|
+| c3_6 | 3 | 3 → 9 → 15 → 21 | 3 → 9 → 6 → 3 |
+| c6_6 | 6 | 6 → 12 → 18 → 24 | 6 → 3 → 9 → 6 |
+| c9_6 | 9 | 9 → 15 → 21 → 27 | 9 → 6 → 3 → 9 |
+
+Elke generator heeft drie startposities (3, 6, 9), elk geeft
+een rotatie van dezelfde node-richting. De twee generatoren
+zijn elkaars tegengestelde beweging binnen modulo 9.
+
+De volledige set `{3, 6, 9}` wordt door beide richtingen bezocht,
+maar met verschillende bewegingskwaliteit en verschillende
+absolute traces.
+
+**Let op:** dit is decimale digitale reductie (`dr_dec`).
+Hex-native reductie (`dr_hex`) is een apart domein (Stap 12).
+
+---
+
 ### Validatie, Niet Bron
 
 | Laag | Wat | Type |
@@ -81,6 +165,7 @@ De koppeling aan Noise, Pattern, Return is expliciete NPR-OS-semantiek.
 | **Bron** | NPR-cyclus heeft 3 fasen | Ontwerp/observatie |
 | **Validatie** | Mod-9 heeft subgroep `{0,3,6}` | Wiskunde |
 | **Mapping** | 9→R, 3→N, 6→P | NPR-OS-semantiek |
+| **Generator** | +3 vs +6 bepaalt bewegingskwaliteit | Routemeta
 
 Mod-9 levert een consistente cyclische representatie voor de drie NPR-fasen.
 Het creëert de structuur niet.

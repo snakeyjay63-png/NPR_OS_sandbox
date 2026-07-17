@@ -62,6 +62,50 @@ Het is een validatiemethode: onderscheid wat verschijnt, wat ordent, en wat blij
 
 ---
 
+## Meerdere Routes Door Dezelfde Drie Fasen
+
+De NPR-fasen vormen geen enkele vaste getallenreeks.
+Dezelfde drie nodes kunnen via verschillende generatorroutes verschijnen.
+
+```
+9 → 3 → 6 → 9
+3 → 6 → 9 → 3
+6 → 3 → 9 → 6
+```
+
+De eerste twee traces kunnen ontstaan uit een stapgrootte van +3.
+De derde trace ontstaat uit:
+
+```
+6 → 12 → 18 → 24
+```
+
+met `dr_dec`-projectie:
+
+```
+6 → 3 → 9 → 6
+```
+
+Daarom bewaren NPR-routes twee lagen:
+
+```
+absolute_trace    ← de beweging (6, 12, 18, 24)
+node_trace        ← de NPR-positie (6, 3, 9, 6)
+```
+
+`absolute_trace` beschrijft de beweging.
+`node_trace` beschrijft de positie binnen de NPR-cyclus.
+
+De betekenis van een node hangt daardoor samen met:
+* de huidige fase;
+* de bronwaarde;
+* de generator;
+* de returnpositie.
+
+Zelfde nodes ≠ dezelfde route.  Generator bepaalt bewegingskwaliteit.
+
+---
+
 ## Resultaat
 
 ```

@@ -494,6 +494,33 @@ Stap 19 sluit de NPR-cyclus:
 
 ---
 
+## Generator-preserving Return
+
+Return sluit niet alleen op dezelfde node.
+Return bewaart de route waarmee de node werd bereikt.
+
+```
+6 → 12 → 18 → 24
+↓
+6 → 3   → 9   → 6
+```
+
+De cyclus retourneert naar node 6, maar de volledige return-state bevat:
+
+```
+start_value:     6
+end_value:       24
+start_node:      6
+return_node:     6
+generator:       +6
+absolute_trace:  [6, 12, 18, 24]
+node_trace:      [6, 3, 9, 6]
+```
+
+Node-return zonder generatortrace is onvolledige return.
+
+---
+
 ## Rekenkundige Bronsluiting
 
 De return is niet alleen een iteratieve softwarelus (`output_i → input_{i+1}`).

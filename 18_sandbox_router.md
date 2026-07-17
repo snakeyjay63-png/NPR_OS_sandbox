@@ -539,6 +539,56 @@ Rotor levert resultaat.
 vraag → 4 blokken → 3 fasen → motorveld → rotor → antwoord
 ```
 
+## Generator-aware Phase Routing
+
+Elke fase-uitvoer bewaart zowel de absolute route als de nodeprojectie.
+
+```js
+{
+  absoluteTrace: [6, 12, 18, 24],
+  nodeTrace: [6, 3, 9, 6],
+  generator: 6,
+  reduction: "dr_dec",
+  startNode: 6,
+  returnNode: 6
+}
+```
+
+De router mag verschillende absolute traces niet samenvoegen
+alleen omdat hun nodeverzameling gelijk is.
+
+```
+same nodes ≠ same route
+```
+
+Route-identiteit vereist minimaal:
+
+```
+generator
+start_node
+orientation
+absolute_trace
+node_trace
+reduction_domain
+```
+
+Dit is belangrijk omdat:
+
+```
+3 → 6 → 9 → 3
+```
+
+en:
+
+```
+6 → 3 → 9 → 6
+```
+
+wel dezelfde drie nodes bevatten, maar niet dezelfde beweging coderen.
+De eerste ontstaat uit generator +3, de tweede uit generator +6.
+
+---
+
 ## Stap 18 — Eindoordeel
 
 ```

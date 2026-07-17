@@ -122,4 +122,71 @@ function nprRoute(input) {
   };
 }
 
-module.exports = { analyze, nprRoute, digitalRoot, tokenValue, getPhaseContext, PHASES };
+// ─── Three-Layer Cycle Model ───
+//
+// Zelfde nodes kunnen via verschillende generatoren worden bereikt.
+// Drie lagen:
+//   1. absolute trace  — ruwe numerieke reeks (6, 12, 18, 24)
+//   2. digitale projectie — dr(waarde) per stap (6, 3, 9, 6)
+//   3. generator       — stapgrootte (+6, +3, ...)
+//
+// Drie cycli:
+//   +3 (v=9):  9→12→15→18  → dr: 9→3→6→9
+//   +3 (v=3):  3→6→9→12    → dr: 3→6→9→3
+//   +6 (v=6):  6→12→18→24  → dr: 6→3→9→6
+//
+// Cyclus 3 bezoekt {3,6,9} via ander pad en andere stap.
+// Zelfde bestemming, andere reis.
+
+// @addr 10.11.0.5 | fd00:npr:0011:000::5 — three-layer cycle
+function generateCycle(generator, start, steps = 4) {
+  const absolute = [];
+  const nodeTrace = [];
+  let val = start;
+  for (let i = 0; i < steps; i++) {
+    absolute.push(val);
+    nodeTrace.push(digitalRoot(val));
+    val += generator;
+  }
+  return {
+    generator,
+    start,
+    absolute: absolute,
+    nodeTrace: nodeTrace,
+  };
+}
+
+// @addr 10.11.0.6 | fd00:npr:0011:000::6 — canonical NPR cycles (6 total: 2 directions × 3 starts)
+// +3 ≡ forward  (3→6→9→3)
+// +6 ≡ reverse  (3→9→6→3;  +6 ≡ −3 mod 9)
+const CANONICAL_CYCLES = {
+  // ── Generator +3 (forward) ──
+  c3_3: { generator: 3, start: 3, absolute: [3, 6, 9, 12],    nodeTrace: [3, 6, 9, 3] },
+  c6_3: { generator: 3, start: 6, absolute: [6, 9, 12, 15],  nodeTrace: [6, 9, 3, 6] },
+  c9_3: { generator: 3, start: 9, absolute: [9, 12, 15, 18], nodeTrace: [9, 3, 6, 9] },
+  // ── Generator +6 (reverse; +6 ≡ −3 mod 9) ──
+  c3_6: { generator: 6, start: 3, absolute: [3, 9, 15, 21],  nodeTrace: [3, 9, 6, 3] },
+  c6_6: { generator: 6, start: 6, absolute: [6, 12, 18, 24], nodeTrace: [6, 3, 9, 6] },
+  c9_6: { generator: 6, start: 9, absolute: [9, 15, 21, 27], nodeTrace: [9, 6, 3, 9] },
+};
+
+// @addr 10.11.0.7 | fd00:npr:0011:000::7 — resolve cycle from generator+start
+function resolveCycle(generator, start) {
+  const key = `c${start}_${digitalRoot(generator)}`;
+  if (CANONICAL_CYCLES[key]) return CANONICAL_CYCLES[key];
+  return generateCycle(generator, start);
+}
+
+// @addr 10.11.0.8 | fd00:npr:0011:000::8 — find which cycle a value belongs to
+function findCycleForValue(value) {
+  const dr = digitalRoot(value);
+  const results = [];
+  for (const [key, cycle] of Object.entries(CANONICAL_CYCLES)) {
+    if (cycle.absolute.includes(value) || cycle.nodeTrace.includes(dr)) {
+      results.push({ key, ...cycle, matchType: cycle.absolute.includes(value) ? 'absolute' : 'node' });
+    }
+  }
+  return results;
+}
+
+module.exports = { analyze, nprRoute, digitalRoot, tokenValue, getPhaseContext, PHASES, generateCycle, CANONICAL_CYCLES, resolveCycle, findCycleForValue };
