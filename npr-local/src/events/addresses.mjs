@@ -38,7 +38,7 @@ export function addressToSlot(address) {
   const dr = digitalRoot(
     parseInt(address.split(".")[1] + address.split(".")[2] + address.split(".")[3], 10)
   );
-  return (dr * 7) % 64;
+  return (dr * 0x07) % 0x40;
 }
 
 // ─── 6-bit encode ─────────────────────────────

@@ -1,11 +1,35 @@
-// @net 10.11.0.0/24
+// @net 10.11.0.0/24 | fd00:npr:0011:000::/24
 // ═══════════════════════════════════════════════════
-// @net 10.11.0.0/24
 // field/npr.js — NPR Cycle Engine
 // ═══════════════════════════════════════════════════
 // Noise → Pattern → Return
-// Text → token analysis → digital root → routing
+// Text → token analysis → digital root → hex routing
 // ═══════════════════════════════════════════════════
+
+// ─── Hex Helpers ───
+
+// @addr 10.11.0.0 — hex formatter
+function toHex(n) {
+  n = parseInt(n) || 0;
+  return "0x" + n.toString(16).toUpperCase();
+}
+
+// ─── Node Address Parser (sūtra addresses) ───
+
+// @addr 10.11.0.0 — parse hierarchical node "g.i" → hex groups
+function parseNode(nodeStr) {
+  const parts = String(nodeStr).split(".");
+  if (parts.length < 2) {
+    return { group_hex: toHex(parseInt(parts[0]) || 0), index_hex: toHex(0), canonical: nodeStr };
+  }
+  const group = parseInt(parts[0]) || 0;
+  const index = parseInt(parts[1]) || 0;
+  return {
+    group_hex: toHex(group),
+    index_hex: toHex(index),
+    canonical: nodeStr,
+  };
+}
 
 // ─── Digital Root ───
 
@@ -30,7 +54,7 @@ function tokenValue(token) {
 
 // ─── NPR Analysis ───
 
-// @addr 10.11.2.1 | fd00:npr:0011:002::1 — NPR analysis
+// @addr 10.11.2.1 | fd00:npr:0011:002::1 — NPR analysis (hex-canonical)
 function analyze(text) {
   const tokens = text.trim().split(/\s+/);
   let totalValue = 0;
@@ -42,13 +66,17 @@ function analyze(text) {
   });
 
   const dr = digitalRoot(totalValue);
-  const slot = (dr * 7) % 64; // spread across 64 slots
+  const slot = (dr * 0x07) % 0x40; // spread across 0x40 slots
 
   return {
     tokens: tokenData,
+    token_count_hex: toHex(tokens.length),
     tokenCount: tokens.length,
+    total_value_hex: toHex(totalValue),
     totalValue,
+    digital_root_hex: toHex(dr),
     digitalRoot: dr,
+    slot_hex: toHex(slot),
     slot,
     origin: '0.0.0.0',
     return: '0.0.0.0',
@@ -57,33 +85,41 @@ function analyze(text) {
 
 // ─── Phase Context ───
 
+const SLOT_COUNT = 0x40;
+const PHASE_SIZE = 0x10;
+
 const PHASES = {
-  '6N': { name: 'Noise', description: 'Ruwe input, exploratie', drRange: [1, 2] },
-  '12P': { name: 'Pattern', description: 'Patroonherkenning, analyse', drRange: [3, 4] },
-  '18R': { name: 'Return', description: 'Terugkeer, integratie', drRange: [5, 6] },
-  '24H': { name: 'Hexa', description: 'Hexadecimale uitbreiding', drRange: [7, 8] },
-  '32I': { name: 'Identity', description: 'Identiteit, zelfreflectie', drRange: [9] },
+  '6N':  { id: 0x00, name: 'Noise',   description: 'Ruwe input, exploratie', drRange: [1, 2] },
+  '12P': { id: 0x01, name: 'Pattern', description: 'Patroonherkenning, analyse', drRange: [3, 4] },
+  '18R': { id: 0x02, name: 'Return',  description: 'Terugkeer, integratie', drRange: [5, 6] },
+  '24H': { id: 0x03, name: 'Hexa',    description: 'Hexadecimale uitbreiding', drRange: [7, 8] },
+  '32I': { id: 0x04, name: 'Identity', description: 'Identiteit, zelfreflectie', drRange: [9] },
 };
 
-// @addr 10.11.0.3 | fd00:npr:0011:000::3 — phase getter
+// @addr 10.11.0.3 | fd00:npr:0011:000::3 — phase getter (hex-native)
 function getPhase(slot) {
-  if (slot < 16) return PHASES['6N'];
-  if (slot < 32) return PHASES['12P'];
-  if (slot < 48) return PHASES['18R'];
-  if (slot < 56) return PHASES['24H'];
+  if (slot < 0x10) return PHASES['6N'];
+  if (slot < 0x20) return PHASES['12P'];
+  if (slot < 0x30) return PHASES['18R'];
+  if (slot < 0x38) return PHASES['24H'];
   return PHASES['32I'];
 }
 
-// @addr 10.11.0.4 | fd00:npr:0011:000::4 — phase context
+// @addr 10.11.0.4 | fd00:npr:0011:000::4 — phase context (hex-canonical)
 function getPhaseContext(dr, slot) {
   const phase = getPhase(slot);
   const inRange = phase.drRange.includes(dr);
   return {
     phase: phase.name,
+    phaseId: phase.id,
     phaseCode: Object.keys(PHASES)[Object.values(PHASES).indexOf(phase)],
+    phaseCodeHex: toHex(phase.id),
     description: phase.description,
+    digital_root_hex: toHex(dr),
     digitalRoot: dr,
+    slot_hex: toHex(slot),
     slot,
+    slot_in_phase_hex: toHex(slot % PHASE_SIZE),
     aligned: inRange,
     note: inRange ? 'DR-fase uitgelijnd' : 'DR-fase misaligned',
   };
@@ -91,7 +127,7 @@ function getPhaseContext(dr, slot) {
 
 // ─── NPR Route ───
 
-// @addr 10.11.2.2 | fd00:npr:0011:002::2 — NPR route
+// @addr 10.11.2.2 | fd00:npr:0011:002::2 — NPR route (hex-canonical)
 function nprRoute(input) {
   const analysis = analyze(input);
   const phaseContext = getPhaseContext(analysis.digitalRoot, analysis.slot);
@@ -103,20 +139,23 @@ function nprRoute(input) {
       value: analysis.totalValue,
     },
     pattern: {
+      digital_root_hex: analysis.digital_root_hex,
       digitalRoot: analysis.digitalRoot,
+      slot_hex: analysis.slot_hex,
       slot: analysis.slot,
       tokenBreakdown: analysis.tokens,
     },
     phase: phaseContext,
     return: {
       origin: '0.0.0.0',
+      slot_hex: analysis.slot_hex,
       slot: analysis.slot,
       phases: [
-        { node: '1.5',   function: 'category' },
-        { node: '1.25',  function: 'perspective' },
-        { node: '1.19',  function: 'relations' },
-        { node: '1.13',  function: 'structure' },
-        { node: '1.40',  function: 'scale' },
+        { node: parseNode('1.5'),   function: 'category' },
+        { node: parseNode('1.25'),  function: 'perspective' },
+        { node: parseNode('1.19'),  function: 'relations' },
+        { node: parseNode('1.13'),  function: 'structure' },
+        { node: parseNode('1.40'),  function: 'scale' },
       ],
     },
   };
@@ -189,4 +228,4 @@ function findCycleForValue(value) {
   return results;
 }
 
-module.exports = { analyze, nprRoute, digitalRoot, tokenValue, getPhaseContext, PHASES, generateCycle, CANONICAL_CYCLES, resolveCycle, findCycleForValue };
+module.exports = { analyze, nprRoute, digitalRoot, tokenValue, getPhaseContext, PHASES, generateCycle, CANONICAL_CYCLES, resolveCycle, findCycleForValue, toHex };

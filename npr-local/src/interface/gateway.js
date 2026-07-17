@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════
 
 const http = require('http');
-const { dispatch, manifest, phaseInfo } = require('../routes/core');
+const { dispatch, manifest, phaseInfo, toHex } = require('../routes/core');
 
 // ─── Global tick tracking ───
 // @addr 10.02.4.0 — tick data (shared with stroom)
@@ -65,15 +65,16 @@ function handleNprTrace(req, res) {
   const url = new URL(req.url, `http://localhost`);
   const target = url.searchParams.get('path') || '/';
   const hash = require('crypto').createHash('md5').update(target).digest();
-  const slot = hash.readUInt32BE(0) % 64;
+  const slot = hash.readUInt32BE(0) % 0x40;
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({
     path: target,
+    slot_hex: toHex(slot),
     slot,
     ...phaseInfo(slot),
-    origin: '0.0.0.0',
-    return: '0.0.0.0',
+    origin_hex: '0x00000000',
+    return_hex: '0x00000000',
   }, null, 2));
 }
 
@@ -81,10 +82,10 @@ function handleNprTrace(req, res) {
 
 // @addr 10.02.1.3 | fd00:npr:0002:001::3 — server factory
 function createServer(routes) {
-  // Register built-in routes
-  routes.register(0, '/health', handleHealth);
-  routes.register(0, '/status', handleStatus);
-  routes.register(0, '/npr/trace', handleNprTrace);
+  // Register built-in routes (slot 0x00: Noise phase)
+  routes.register(0x00, '/health', handleHealth);
+  routes.register(0x01, '/status', handleStatus);
+  routes.register(0x02, '/npr/trace', handleNprTrace);
 
   const server = http.createServer((req, res) => {
     // ─── Global tick tracking ───

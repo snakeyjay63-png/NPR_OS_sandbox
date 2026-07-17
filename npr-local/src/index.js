@@ -14,7 +14,7 @@ const path = require('path');
 const PKG = require('../package.json');
 const log = require('./log');
 const { createServer, ticks } = require('./interface/gateway');
-const { register, manifest } = require('./routes/core');
+const { register, manifest, parseSlot } = require('./routes/core');
 const { handleAgentChat, handleAgentChatStream, getCurrentWorkspace, setCurrentWorkspace, listSessions, forkSession, mergeSessions, getContextBreath } = require('./agent/loop');
 const { registerMap } = require('./routes/map-registry');
 const { getContextForRoute, listWarehouse, PHASE_CONTEXT } = require('./memory/context');
@@ -73,10 +73,10 @@ function handleFavicon(req, res) {
 async function boot() {
   const routes = require('./routes/core');
 
-  // ─── Agent routes ───
-  register(16, '/agent/chat', handleAgentChat);
-  register(17, '/agent/chat-stream', handleAgentChatStream);
-  register(18, '/agent/workspace', (req, res) => {
+  // ─── Agent routes (slot 0x10–0x1F: Pattern phase) ───
+  register(0x10, '/agent/chat', handleAgentChat);
+  register(0x11, '/agent/chat-stream', handleAgentChatStream);
+  register(0x12, '/agent/workspace', (req, res) => {
     if (req.method === 'GET') {
       res.json({ workspace: getCurrentWorkspace() });
     } else if (req.method === 'POST') {
@@ -86,7 +86,7 @@ async function boot() {
   });
 
   // ─── Context Breath endpoint (Patanjali 1.5) ───
-  register(19, '/agent/context', (req, res) => {
+  register(0x13, '/agent/context', (req, res) => {
     const breath = getContextBreath();
     
     if (req.method === 'GET') {
@@ -124,7 +124,7 @@ async function boot() {
   });
 
   // ─── Context 64K: Harmonisch Blokmodel ───
-  register(54, '/context/64k', (req, res) => {
+  register(0x36, '/context/64k', (req, res) => {
     const { Context64K, FIELDS, BLOCK_SIZE, BLOCK_COUNT, MAX_CONTEXT_TOKENS, analyzeContext64K } = require('./field/context-64k.cjs');
     const ctx = new Context64K();
 
@@ -159,25 +159,25 @@ async function boot() {
   // ─── Fase 1: OpenClaw CLI parity ───
 
   // GET /agent/logs — tail agent event log (openclaw logs)
-  register(20, '/agent/logs', require('./routes/agent-logs').handler);
+  register(0x14, '/agent/logs', require('./routes/agent-logs').handler);
 
   // GET/POST /config — config read/write (openclaw config get/set)
-  register(21, '/config', require('./routes/config-route').handler);
+  register(0x15, '/config', require('./routes/config-route').handler);
 
   // GET /memory/context?slot=&phase=&workspace= — phase-appropriate context (openclaw memory context)
-  register(53, '/memory/context', require('./routes/memory-context').handler);
+  register(0x35, '/memory/context', require('./routes/memory-context').handler);
 
   // GET /memory/search?q= — memory search (openclaw memory search)
-  register(22, '/memory/search', require('./routes/memory-search').handler);
+  register(0x16, '/memory/search', require('./routes/memory-search').handler);
 
   // GET /doctor — self-diagnose + repair (openclaw doctor)
-  register(23, '/doctor', require('./routes/doctor').handler);
+  register(0x17, '/doctor', require('./routes/doctor').handler);
 
   // GET/POST /tool/exec — system tool integration (bluetoothctl, tmux, lazygit, ffmpeg, htop, git)
-  register(25, '/tool/exec', require('./routes/tool-exec').handler);
+  register(0x19, '/tool/exec', require('./routes/tool-exec').handler);
 
   // POST /tty/agent — terminal agent turn (for --tty mode)
-  register(24, '/tty/agent', (req, res) => {
+  register(0x18, '/tty/agent', (req, res) => {
     if (req.method === 'POST' && req.body) {
       const { message, session } = req.body;
       if (!message) {
@@ -196,13 +196,13 @@ async function boot() {
   const mapResult = registerMap(toolsDir, '/tool');
 
   // ─── Favicon ───
-  register(0, '/favicon.ico', handleFavicon);
+  register(0x00, '/favicon.ico', handleFavicon);
 
   // ─── Enter portal ───
-  register(0, '/enter', enterHTML);
+  register(0x00, '/enter', enterHTML);
 
   // ─── Gateway Dashboard (proxy to gateway) ───
-  register(0, '/dashboard', (req, res) => {
+  register(0x00, '/dashboard', (req, res) => {
     const fs = require('fs');
     const dashboardPath = path.join(__dirname, '..', 'dashboard', 'index.html');
     if (fs.existsSync(dashboardPath)) {
@@ -215,7 +215,7 @@ async function boot() {
   });
 
   // ─── Gateway API proxy (for unified access) ───
-  register(0, '/api/gateway/proxy', (req, res) => {
+  register(0x00, '/api/gateway/proxy', (req, res) => {
     const http = require('http');
     const proxyOpts = {
       hostname: GW_HOST === '::1' ? '::1' : GW_HOST,
@@ -238,7 +238,7 @@ async function boot() {
   // ─── Chat UI (GET = HTML, POST/other = agent handler from priority 16) ───
   // Note: handleAgentChat already registered at priority 16 above
   // This priority-0 handler serves the HTML page on GET requests only
-  register(0, '/agent/chat', (req, res) => {
+  register(0x00, '/agent/chat', (req, res) => {
     if (req.method === 'GET') {
       const fs = require('fs');
       const chatPath = path.join(__dirname, '..', 'public', 'chat.html');
@@ -256,7 +256,7 @@ async function boot() {
   });
 
   // ─── Settings UI ───
-  register(0, '/config', (req, res) => {
+  register(0x00, '/config', (req, res) => {
     const fs = require('fs');
     const configPath = path.join(__dirname, '..', 'public', 'config-llama.html');
     if (fs.existsSync(configPath)) {
@@ -269,10 +269,10 @@ async function boot() {
   });
 
   // ─── Verificatie endpoint ───
-  register(0, '/verify', verifyHTML);
+  register(0x00, '/verify', verifyHTML);
 
   // ─── Tick endpoint (JSON) ───
-  register(0, '/tick', (req, res) => {
+  register(0x00, '/tick', (req, res) => {
     const key = '/tick';
     const arr = ticks.get(key) || [];
     const last = arr.length ? arr[arr.length - 1] : null;
@@ -289,18 +289,18 @@ async function boot() {
 
   // ─── Stroom endpoint (GBS Hub speed measurement) ───
   const stroomHandler = require('./routes/stroom').handler(ticks);
-  register(0, '/gbs-hub/gbs/stroom', stroomHandler);
-  register(0, '/stroom', stroomHandler);
+  register(0x00, '/gbs-hub/gbs/stroom', stroomHandler);
+  register(0x00, '/stroom', stroomHandler);
 
   // ─── Browser Bridge (slot 59 — WebAPI → kernel routes) ───
-  register(59, '/bridge', (req, res) => {
+  register(0x3B, '/bridge', (req, res) => {
     const fs = require('fs');
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'bridge.html'), 'utf8');
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);
   });
 
-  register(59, '/bridge/api', (req, res, ctx) => {
+  register(0x3B, '/bridge/api', (req, res, ctx) => {
     const name = ctx.url.searchParams.get('name');
     const api = ctx.url.searchParams.get('api');
     const slot = ctx.url.searchParams.get('slot');
@@ -317,41 +317,41 @@ async function boot() {
       return res.json(BrowserBridge.getRouteByName(name));
     }
     if (slot !== null) {
-      return res.json(BrowserBridge.getRoute(parseInt(slot)));
+      return res.json(BrowserBridge.getRoute(parseSlot(slot)));
     }
     if (category) {
       return res.json({ category, routes: BrowserBridge.listCapabilities(category) });
     }
-    res.json({ map: BrowserBridge.map, total: 64 });
+    res.json({ map: BrowserBridge.map, total: 0x40, total_hex: "0x40" });
   });
 
   // ─── Gateway Introspection (slot 62 — self-knowledge) ───
-  register(62, '/introspect', require('./routes/gateway-introspect').handler);
+  register(0x3E, '/introspect', require('./routes/gateway-introspect').handler);
 
   // ─── Llama Supervisor (slot 61 — llama.cpp lifecycle) ───
   const llamaControl = require('./routes/llama-control');
-  register(61, '/llama/status', llamaControl.handlerStatus);
-  register(61, '/llama/start', llamaControl.handlerStart);
-  register(61, '/llama/stop', llamaControl.handlerStop);
-  register(61, '/llama/restart', llamaControl.handlerRestart);
-  register(61, '/llama/logs', llamaControl.handlerLogs);
-  register(61, '/llama/config', llamaControl.handlerConfig);
-  register(61, '/llama/stream', llamaControl.handlerStream);
-  register(61, '/llama/probe', llamaControl.handlerProbe);
+  register(0x3D, '/llama/status', llamaControl.handlerStatus);
+  register(0x3D, '/llama/start', llamaControl.handlerStart);
+  register(0x3D, '/llama/stop', llamaControl.handlerStop);
+  register(0x3D, '/llama/restart', llamaControl.handlerRestart);
+  register(0x3D, '/llama/logs', llamaControl.handlerLogs);
+  register(0x3D, '/llama/config', llamaControl.handlerConfig);
+  register(0x3D, '/llama/stream', llamaControl.handlerStream);
+  register(0x3D, '/llama/probe', llamaControl.handlerProbe);
 
   // ─── NPR Hex VM (slot 63 — assembly sandbox) ───
   const hexVm = require('./routes/hex-vm');
-  register(63, '/hex-vm/status', hexVm.handlerStatus);
-  register(63, '/hex-vm/opcode', hexVm.handlerOpcode);
-  register(63, '/hex-vm/assemble', hexVm.handlerAssemble);
-  register(63, '/hex-vm/run', hexVm.handlerRun);
-  register(63, '/hex-vm/execute', hexVm.handlerExecute);
-  register(63, '/hex-vm/disassemble', hexVm.handlerDisassemble);
+  register(0x3F, '/hex-vm/status', hexVm.handlerStatus);
+  register(0x3F, '/hex-vm/opcode', hexVm.handlerOpcode);
+  register(0x3F, '/hex-vm/assemble', hexVm.handlerAssemble);
+  register(0x3F, '/hex-vm/run', hexVm.handlerRun);
+  register(0x3F, '/hex-vm/execute', hexVm.handlerExecute);
+  register(0x3F, '/hex-vm/disassemble', hexVm.handlerDisassemble);
 
   // ─── Memory API (read-only viewer routes) ───
   // Files accessed via API route, not bundled into npr-local.
   // Validates the full connection path: browser → runtime → workspace.
-  register(53, '/api/memory/surface', (req, res) => {
+  register(0x35, '/api/memory/surface', (req, res) => {
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     const memDir = path.join(wsDir, 'memory');
     const fs = require('fs');
@@ -377,7 +377,7 @@ async function boot() {
     }
   });
 
-  register(53, '/api/memory/deep', (req, res) => {
+  register(0x35, '/api/memory/deep', (req, res) => {
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     const fs = require('fs');
     try {
@@ -389,7 +389,7 @@ async function boot() {
     }
   });
 
-  register(53, '/api/memory/bedrock', (req, res) => {
+  register(0x35, '/api/memory/bedrock', (req, res) => {
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     const fs = require('fs');
     try {
@@ -413,7 +413,7 @@ async function boot() {
     }
   });
 
-  register(53, '/api/memory/file', (req, res, ctx) => {
+  register(0x35, '/api/memory/file', (req, res, ctx) => {
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     const name = ctx.url.searchParams.get('name');
     const fs = require('fs');
@@ -432,7 +432,7 @@ async function boot() {
   });
 
   // ─── Memory Viewer UI ───
-  register(0, '/memory', (req, res) => {
+  register(0x00, '/memory', (req, res) => {
     const fs = require('fs');
     const p = path.join(__dirname, '..', 'public', 'memory-viewer.html');
     if (fs.existsSync(p)) {
@@ -444,19 +444,19 @@ async function boot() {
   });
 
   // ─── Context endpoints ───
-  register(48, '/context', (req, res, ctx) => {
-    const slot = parseInt(ctx.url.searchParams.get('slot')) || 0;
+  register(0x30, '/context', (req, res, ctx) => {
+    const slot = parseSlot(ctx.url.searchParams.get('slot') ?? '0');
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     res.json(getContextForRoute(slot, wsDir));
   });
 
-  register(52, '/warehouse', (req, res, ctx) => {
+  register(0x34, '/warehouse', (req, res, ctx) => {
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     res.json({ warehouse: listWarehouse(wsDir), phases: PHASE_CONTEXT });
   });
 
   // ─── Map → IPv6 ───
-  register(60, '/maps', (req, res) => {
+  register(0x3C, '/maps', (req, res) => {
     res.json({
       island: '0.0.0.0',
       maps: discoverMaps(path.join(__dirname, 'sources')),
@@ -464,17 +464,17 @@ async function boot() {
   });
 
   // ─── Capabilities ───
-  register(58, '/capabilities', (req, res) => {
+  register(0x3A, '/capabilities', (req, res) => {
     res.json({ island: '0.0.0.0', capabilities: listCapabilities() });
   });
 
-  register(62, '/select', (req, res, ctx) => {
+  register(0x3E, '/select', (req, res, ctx) => {
     const goal = ctx.url.searchParams.get('goal') || 'geen doel';
     res.json({ goal, selection: selectByGoal(goal) });
   });
 
   // ─── Sessions ───
-  register(10, '/sessions', (req, res, ctx) => {
+  register(0x0A, '/sessions', (req, res, ctx) => {
     if (req.method === 'GET') {
       res.json({ sessions: listSessions(), count: listSessions().length });
     } else if (req.method === 'POST') {
@@ -486,14 +486,14 @@ async function boot() {
     }
   });
 
-  register(11, '/sessions/:id', (req, res, ctx) => {
+  register(0x0B, '/sessions/:id', (req, res, ctx) => {
     const { sessions } = require('./agent/loop');
     const session = sessions.get(ctx.params.id);
     if (!session) return res.status(404).json({ error: 'Session not found' });
     res.json({ id: session.id, turns: session.turns || 0, history: session.history || [], createdAt: session.createdAt });
   });
 
-  register(12, '/sessions/:id/merge', (req, res, ctx) => {
+  register(0x0C, '/sessions/:id/merge', (req, res, ctx) => {
     const { sourceId } = req.body;
     if (!sourceId) return res.status(400).json({ error: 'sourceId required' });
     const result = mergeSessions(ctx.params.id, sourceId);
