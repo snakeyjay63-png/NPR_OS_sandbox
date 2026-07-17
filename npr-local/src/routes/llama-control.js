@@ -1,20 +1,17 @@
 // src/routes/llama-control.js
-// Llama.cpp process management routes
-// Admin-only — never public without auth
+// Llama.cpp process management — NPR routing handlers
+// Admin-only — localhost or GATEWAY_ADMIN_TOKEN
 
 'use strict';
 
-const { Router } = require('express');
-const { probePort, probeLlamaHttp } = require('../runtime/llama-supervisor.cjs');
 const llamaConfig = require('../config/llama-runtime.js');
+const { LlamaSupervisor, probePort, probeLlamaHttp } = require('../runtime/llama-supervisor.cjs');
 
-const router = Router();
-
-// Lazy-init supervisor (singleton per gateway instance)
+// Lazy singleton supervisor
 let _supervisor = null;
+
 function getSupervisor() {
   if (!_supervisor) {
-    const { LlamaSupervisor } = require('../runtime/llama-supervisor.cjs');
     _supervisor = new LlamaSupervisor(llamaConfig);
   }
   return _supervisor;
@@ -22,84 +19,115 @@ function getSupervisor() {
 
 function setSupervisor(sup) { _supervisor = sup; }
 
-// ─── Routes ──────────────────────────────────────────────────────
+// ─── Guards ──────────────────────────────────────────────────────
 
-// GET /api/llama/status — inspect current state
-router.get('/status', async (req, res) => {
+function requireAdmin(req, res) {
+  const adminToken = process.env.GATEWAY_ADMIN_TOKEN;
+  const token = req.headers['x-gateway-admin'];
+
+  // Check IP
+  const ip = req.socket?.remoteAddress || '';
+  const isLocal = ip === '::1' || ip === '127.0.0.1' || ip === '::ffff:127.0.0.1';
+
+  if (!adminToken && !isLocal) {
+    res.writeHead(403, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Admin access denied — bind to localhost or set GATEWAY_ADMIN_TOKEN' }));
+    return false;
+  }
+
+  if (adminToken && token !== adminToken) {
+    res.writeHead(401, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Invalid admin token' }));
+    return false;
+  }
+
+  return true;
+}
+
+// ─── Handlers ────────────────────────────────────────────────────
+
+// GET /llama/status — inspect current state
+async function handlerStatus(req, res) {
   try {
     const sup = getSupervisor();
     const status = await sup.inspect();
     res.json(status);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
-});
+}
 
-// POST /api/llama/start — start llama-server
-router.post('/start', async (req, res) => {
+// POST /llama/start — start llama-server
+async function handlerStart(req, res) {
+  if (!requireAdmin(req, res)) return;
   try {
-    requireAdmin(req);
     const sup = getSupervisor();
     const status = await sup.start();
     res.json(status);
   } catch (err) {
-    res.status(409).json({ error: err.message });
+    res.writeHead(409, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
-});
+}
 
-// POST /api/llama/stop — stop gateway-managed llama-server
-router.post('/stop', async (req, res) => {
+// POST /llama/stop — stop gateway-managed llama-server
+async function handlerStop(req, res) {
+  if (!requireAdmin(req, res)) return;
   try {
-    requireAdmin(req);
     const sup = getSupervisor();
     const status = await sup.stop();
     res.json(status);
   } catch (err) {
-    res.status(409).json({ error: err.message });
+    res.writeHead(409, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
-});
+}
 
-// POST /api/llama/restart — stop then start
-router.post('/restart', async (req, res) => {
+// POST /llama/restart — stop then start
+async function handlerRestart(req, res) {
+  if (!requireAdmin(req, res)) return;
   try {
-    requireAdmin(req);
     const sup = getSupervisor();
     const status = await sup.restart();
     res.json(status);
   } catch (err) {
-    res.status(409).json({ error: err.message });
+    res.writeHead(409, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
-});
+}
 
-// GET /api/llama/logs — last N log lines
-router.get('/logs', async (req, res) => {
+// GET /llama/logs — last N log lines
+function handlerLogs(req, res) {
   try {
     const sup = getSupervisor();
-    const lines = parseInt(req.query.lines, 10) || 100;
+    const lines = parseInt(req.url.split('lines=')[1]?.split('&')[0] || '100', 10);
     res.json({ logs: sup.getLogs(lines) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
-});
+}
 
-// GET /api/llama/config — read-only config projection
-router.get('/config', (req, res) => {
+// GET /llama/config — read-only config projection
+function handlerConfig(req, res) {
   res.json({
+    executable: llamaConfig.executable,
     host: llamaConfig.host,
     port: llamaConfig.port,
     model: llamaConfig.model,
     contextSize: llamaConfig.contextSize,
     parallelSlots: llamaConfig.parallelSlots,
+    nglHex: llamaConfig.nglHex,
+    ngl: llamaConfig.ngl,
     startPolicy: llamaConfig.startPolicy,
     recovery: llamaConfig.recovery,
     extraArgs: llamaConfig.extraArgs,
   });
-});
+}
 
-// ─── SSE stream for logs ─────────────────────────────────────────
-
-// GET /api/llama/stream — SSE for live log + status events
-router.get('/stream', (req, res) => {
+// GET /llama/stream — SSE for live log + status events
+function handlerStream(req, res) {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
@@ -123,25 +151,29 @@ router.get('/stream', (req, res) => {
     sup.off('log', onLog);
     sup.off('status', onStatus);
   });
-});
+}
 
-// ─── Guards ──────────────────────────────────────────────────────
-
-function requireAdmin(req) {
-  // For local dev: allow if X-Gateway-Admin header matches
-  // For prod: bind gateway to 127.0.0.1 or use token auth
-  const token = req.headers['x-gateway-admin'];
-  const adminToken = process.env.GATEWAY_ADMIN_TOKEN;
-
-  // If no admin token configured, allow local connections only
-  if (!adminToken && req.ip !== '::1' && req.ip !== '127.0.0.1') {
-    throw new Error('Admin access denied — bind to localhost or set GATEWAY_ADMIN_TOKEN');
-  }
-
-  // If token configured, validate
-  if (adminToken && token !== adminToken) {
-    throw new Error('Invalid admin token');
+// GET /llama/probe — quick port check (no admin required)
+async function handlerProbe(req, res) {
+  try {
+    const open = await probePort(llamaConfig);
+    const health = open ? await probeLlamaHttp(llamaConfig) : { healthy: false, reason: 'port-closed' };
+    res.json({ portOpen: open, health });
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
   }
 }
 
-module.exports = { router, setSupervisor };
+module.exports = {
+  handlerStatus,
+  handlerStart,
+  handlerStop,
+  handlerRestart,
+  handlerLogs,
+  handlerConfig,
+  handlerStream,
+  handlerProbe,
+  getSupervisor,
+  setSupervisor,
+};

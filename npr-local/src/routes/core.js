@@ -92,6 +92,11 @@ function dispatch(req, res) {
     }
   };
 
+  // DEBUG
+  if (pathname.startsWith('/llama') || pathname.startsWith('/hex-vm')) {
+    console.log('DISPATCH DEBUG:', pathname, 'PATH_EXACT.has=', PATH_EXACT.has(pathname), 'PATH_EXACT.keys=', [...PATH_EXACT.keys()].filter(k => k.startsWith('/llama') || k.startsWith('/hex')));
+  }
+
   // 1. Exact match (priority)
   if (PATH_EXACT.has(pathname)) {
     return safeHandler(PATH_EXACT.get(pathname), { url, pathname });

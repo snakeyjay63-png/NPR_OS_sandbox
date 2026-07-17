@@ -328,6 +328,17 @@ async function boot() {
   // ─── Gateway Introspection (slot 62 — self-knowledge) ───
   register(62, '/introspect', require('./routes/gateway-introspect').handler);
 
+  // ─── Llama Supervisor (slot 61 — llama.cpp lifecycle) ───
+  const llamaControl = require('./routes/llama-control');
+  register(61, '/llama/status', llamaControl.handlerStatus);
+  register(61, '/llama/start', llamaControl.handlerStart);
+  register(61, '/llama/stop', llamaControl.handlerStop);
+  register(61, '/llama/restart', llamaControl.handlerRestart);
+  register(61, '/llama/logs', llamaControl.handlerLogs);
+  register(61, '/llama/config', llamaControl.handlerConfig);
+  register(61, '/llama/stream', llamaControl.handlerStream);
+  register(61, '/llama/probe', llamaControl.handlerProbe);
+
   // ─── NPR Hex VM (slot 63 — assembly sandbox) ───
   const hexVm = require('./routes/hex-vm');
   register(63, '/hex-vm/status', hexVm.handlerStatus);

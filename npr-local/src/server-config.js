@@ -30,7 +30,9 @@ const CURRENT_CONFIG = {
   model: 'Qwen3.6-27B-Q4_K_M.gguf',
   host: '127.0.0.1',
   port: 8765,
-  gpuLayers: 79,            // bijna max RTX 4090 (standaard)
+  // Canonical fields (aligned with config/llama-runtime.js)
+  nglHex: '0x4F',           // bijna max RTX 4090 (standaard)
+  ngl: 79,
   ctxSize: 65536,
   parallel: 1,
   flashAttn: 'auto',
@@ -76,6 +78,7 @@ function parseLlamaArgs(psOutput) {
   };
   
   result.ngl = parseInt(match(/--n-gpu-layers (\d+)/)) || 79;
+  result.nglHex = '0x' + result.ngl.toString(16).toUpperCase();
   result.ctxSize = parseInt(match(/--ctx-size (\d+)/)) || 65536;
   result.parallel = parseInt(match(/--parallel (\d+)/)) || 1;
   result.port = parseInt(match(/--port (\d+)/)) || 8765;
@@ -189,9 +192,11 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`[config-server] Serving public/ on :${PORT}`);
-  console.log(`[config-server] → http://[::1]:${PORT}/config-llama.html`);
+// SECURITY: bind to localhost only — no external access to config server
+server.listen('127.0.0.1', PORT, () => {
+  console.log(`[config-server] Serving public/ on 127.0.0.1:${PORT}`);
+  console.log(`[config-server] → http://127.0.0.1:${PORT}/config-llama.html`);
+  console.log(`[config-server] ⚠️  bound to localhost only (no external access)`);
 });
 
 process.on('SIGINT', () => server.close(() => process.exit(0)));
