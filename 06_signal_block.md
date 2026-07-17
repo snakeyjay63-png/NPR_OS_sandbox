@@ -7,9 +7,8 @@
 ## Concept
 
 ```
-Max 256 Unicode-codepoints = 1 signaalblok = 100_hex
+BLOCK_SIZE := 256 Unicode-codepoints
 1 blok → 1 route → 1 cel (00–3F)
-256 = 4 × 64 → viervoudig 6-bit fundament
 ```
 
 **Blokgrootte = maximaal 256 Unicode-codepoints.** Laatste blok mag korter zijn.
@@ -27,59 +26,54 @@ Elk signaal → 1 route → 1 cel binnen `00-3F`.
 - `ū` = 1 codepoint (U+0169) = 2 bytes UTF-8
 - `😀` = 1 codepoint (U+1F600) = 4 bytes UTF-8
 
+**Belangrijk:** de bloklengte (0–256 codepoints) is een andere grootheid dan
+de waarde van elk codepoint (U+0000–U+10FFFF).
+Een blok met maximaal 256 codepoints betekent *niet* dat elk codepoint in `00–FF` past.
+
 ```
-BLOCK_SIZE := 100_hex codepoints
-(256 = leesbaar extern label)
+BLOCK_SIZE := 256 codepoints    ← chunklimiet
+codepointwaarde := U+0000–U+10FFFF  ← inhoudsruimte
 ```
 
 ### Waarom 256?
 
 | Eigenschap | Waarde |
 |-----------|--------|
-| `2^8` | 8-bit taalruimte (`00`–`FF` hex) — viervoudig 6-bit fundament |
+| `2^8` | Praktische chunk-grootte — viervoudig 6-bit fundament |
 | Relatie | `256 = 4 × 64` → `100_hex = 4 × 40_hex` |
 | Celruimte | Grid = `00–3F` = `40_hex` = 64 cellen |
 | Routing | Router reduceert modulo `40_hex`, niet `100_hex` |
-| Ontwerp | Één blok omvat maximaal één volledige 8-bit ruimte |
-| Structuur | `2^8 = 2^2 × 2^6` → byte = 2 veldbits + 6 routebits |
 
-**Codepoints ≠ bytes.** De klassieke 8-bit machine- en tekenruimte bevat 256 posities.
-NPR-OS herkent daarin vier volledige 6-bit routingvelden.
-De actieve blokeenheid is Unicode-codepoints; UTF-8-bytes zijn de transportlaag.
+**Codepoints ≠ bytes.** De actieve blokeenheid is Unicode-codepoints;
+UTF-8-bytes zijn de transportlaag.
 
-### Het 6-bit fundament van de 8-bit ruimte
+### De Sandbox Pipeline
 
-Binnen NPR-OS is 256 niet alleen een praktische chunk-grootte. Het is een opschaling
-van hetzelfde 6-bit routingfundament:
+De routing van blok naar cel verloopt via expliciete lagen:
 
 ```
-6-bit routingveld:  2^6 = 64  = 40_hex
-8-bit taalruimte:   2^8 = 256 = 100_hex
-
-Relatie:  2^8 = 2^2 × 2^6
-           256 = 4 × 64
-           100_hex = 4 × 40_hex
+blok (≤256 cp)
+→ NFC-normalisatie
+→ UTF-8-bytearray
+→ SHA-256
+→ eerste drie hextekens
+→ mod 40_hex
+→ cel 00–3F
 ```
 
-De 8-bit ruimte bevat vier volledige 6-bit routingvelden:
+Elke laag transformeert naar een nieuw datatype. De output van de vorige laag
+is de input van de volgende. Geen impliciete tussenstappen.
+
+### Het 6-bit Fundament (Per Byte)
+
+Binnen NPR-OS is de 2+6-bit ontleding van toepassing op **iedere afzonderlijke
+UTF-8 byte**, niet op de codepointwaarde zelf:
 
 ```
-00–3F → veld 0
-40–7F → veld 1
-80–BF → veld 2
-C0–FF → veld 3
+voor byte b:
+  field = b >> 6          ← 2 veldbits
+  cell  = b & 0x3F        ← 6 routebits
 ```
-
-Elke 8-bit waarde splitst in:
-
-```
-8 bits = 2 veldbits + 6 routebits
-byte = quadrant × 40_hex + cell
-```
-
-waarbij:
-- `quadrant ∈ {0, 1, 2, 3}` (2 hogere bits → veldselectie)
-- `cell ∈ {00_hex, ..., 3F_hex}` (6 lagere bits → celroute)
 
 Voorbeeld: `DA_hex = 11011010_2`
 
@@ -92,11 +86,17 @@ cel 1A
 DA_hex = 3 × 40_hex + 1A_hex = C0_hex + 1A_hex
 ```
 
-De 8-bit taalruimte voegt geen totaal andere ruimte toe. Het plaatst
-vier 6-bit routingvelden onder een 2-bit veldselectie.
+De 8-bit ruimte bevat vier volledige 6-bit routingvelden:
 
-**De 6-bit router is het actieve fundament.
-De 8-bit ruimte is de viervoudige machine- en taalruimte die dit fundament draagt.**
+```
+00–3F → veld 0
+40–7F → veld 1
+80–BF → veld 2
+C0–FF → veld 3
+```
+
+Eén codepoint kan echter uit één tot vier van zulke bytes bestaan.
+De byte-ontleding geldt *per byte*, niet per codepoint.
 
 ### Structurele Gelijkheid vs. Datatype-gelijkheid
 
@@ -109,32 +109,24 @@ NPR_position(A) = NPR_position(B)
 ```
 
 Fysiek signaal, scancode, byte, codepoint en routecel zijn verschillende
-representaties van verschillende lagen. Ze zijn geen datatypes van hetzelfde type.
-Maar wanneer ieder niveau dezelfde ontleding gebruikt:
+representaties van verschillende lagen.
 
+De keten:
 ```
-100_hex = 4 × 40_hex
-8 bits = 2 veldbits + 6 routebits
+fysiek signaal → toetsenbordcode → byte → codepoint → 8-bit veld → NPR-cel
 ```
+is **niet** algemeen één-op-één of omkeerbaar:
+- één teken kan meerdere codepoints bevatten;
+- één codepoint kan meerdere UTF-8-bytes bevatten;
+- een toets kan nul, één of meerdere tekens produceren;
+- dezelfde tekst kan verschillende codepointreeksen hebben vóór normalisatie.
 
-wordt de overgang tussen niveaus **structureel behoudend**.
+De structurele gelijkheid ontstaat niet door datatypes gelijk te stellen,
+maar door de *transformatiepijplijn* deterministisch te houden:
+NFC-normalisatie → UTF-8 → SHA-256 → mod 40_hex.
 
-Het teken, de byte en de routecel zijn dan verschillende verschijningsvormen
-van dezelfde geadresseerde positie. NPR past één gemeenschappelijk positioneel
-contract toe op iedere representatielaag:
-
-```
-fysiek signaal
-→ toetsenbordcode
-→ byte
-→ teken/codepoint
-→ 8-bit veld
-→ 2 veldbits + 6 routebits
-→ NPR-cel
-```
-
-De waarden hoeven buiten NPR niet hetzelfde type te zijn.
-Binnen NPR krijgen ze via het positionele contract dezelfde route.
+**De 6-bit router is het actieve fundament.
+De pipeline is de deterministische weg daar naartoe.**
 
 ### Split-regel
 
@@ -161,23 +153,21 @@ Blokgrootte en celruimte hebben verschillende functies, maar zijn structureel ve
 
 ## Test
 
-**Vraag:** Is "max 256 chars per blok" een valide ontwerpkeuze?
+**Vraag:** Is "max 256 codepoints per blok" een valide ontwerpkeuze?
 
-**Antwoord:** ✅ Ja. `2^8 = 2^2 × 2^6` → 256 = 4 × 64. Structureel verbonden met 6-bit fundament.
-Grid = `00–3F` (64 cellen). Router = mod `40_hex`. Blok ≠ cel.
-Eenheid = codepoints, niet bytes. 8-bit ruimte = vier 6-bit routingvelden.
+**Antwoord:** ✅ Ja. `BLOCK_SIZE = 256` is een chunklimiet, geen claim over codepointwaarde.
+Pipeline: blok → NFC → UTF-8 bytes → SHA-256 → [:3] hex → mod 40_hex → cel.
+Byte-ontleding (2+6) geldt per UTF-8 byte, niet per codepoint.
 
 ---
 
 ## Resultaat
 
 ```
-✅ Geldig
-Reden: Max 256 codepoints (100_hex). Grid = 00-3F = 40_hex = 2^6.
-Router = mod 40_hex. Laatste blok mag korter. Codepoints ≠ bytes.
-Eenheid = Unicode-codepunt. NFC-normalisatie volgt stap 11.
-
-6-bit fundament: 2^8 = 2^2 × 2^6, dus 256 = 4 × 64.
-Elke byte splitst in 2 veldbits + 6 routebits.
-8-bit ruimte = vier 6-bit routingvelden, niet losse structuur.
+✅ Geldig (na herstel)
+Reden: BLOCK_SIZE = 256 codepoints (chunklimiet).
+Codepointwaarde = U+0000–U+10FFFF (inhoudsruimte).
+Pipeline: blok → NFC → UTF-8 → SHA-256 → [:3] → mod 40_hex → cel.
+Byte-ontleding (2 veld + 6 route) geldt per UTF-8 byte.
+Laatste blok mag korter. Geen data-verlies.
 ```
