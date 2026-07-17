@@ -2,7 +2,6 @@
   "name": "npr-local",
   "version": "0.0.2",
   "description": "NPR Local — single-agent, local-only runtime",
-  "type": "module",
   "main": "src/index.js",
   "bin": {
     "npr": "./bin/npr.js"

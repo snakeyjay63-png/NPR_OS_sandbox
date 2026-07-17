@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>• memory — NPR-OS</title>
+<style>
+  :root {
+    --bg: #0a0e14; --fg: #c9d1d9; --accent: #58a6ff;
+    --muted: #484f58; --card: #161b22; --border: #21262d;
+    --deep: #a371f7; --surface: #3fb950; --bedrock: #f0883e;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    height: 100vh;
+    overflow: hidden;
+  }
+  aside {
+    background: var(--card); border-right: 1px solid var(--border);
+    padding: 1rem; overflow-y: auto;
+  }
+  aside h2 {
+    font-size: 0.85rem; color: var(--accent); margin-bottom: 0.5rem;
+  }
+  .layer {
+    font-size: 0.7rem; padding: 0.4rem 0.6rem; margin: 0.2rem 0;
+    border-radius: 4px; cursor: pointer; border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .layer:hover, .layer.active { border-color: var(--accent); color: var(--fg); }
+  .layer.surface { border-left: 2px solid var(--surface); }
+  .layer.deep { border-left: 2px solid var(--deep); }
+  .layer.bedrock { border-left: 2px solid var(--bedrock); }
+  main { padding: 1.5rem; overflow-y: auto; }
+  main h1 { font-size: 1.1rem; color: var(--accent); margin-bottom: 0.25rem; }
+  .meta { font-size: 0.65rem; color: var(--muted); margin-bottom: 1.5rem; }
+  pre {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1rem; font-size: 0.7rem;
+    line-height: 1.7; overflow-x: auto; white-space: pre-wrap;
+    word-break: break-word; max-width: 100%;
+  }
+  .status { padding: 0.5rem; font-size: 0.65rem; color: var(--muted); }
+  .status.ok { color: var(--surface); }
+  .status.err { color: #f87171; }
+  .filters { margin: 0.5rem 0; font-size: 0.65rem; }
+  .filters input {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--fg); padding: 0.3rem 0.5rem; border-radius: 3px;
+    width: 100%; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+  <aside>
+    <h2>• Memory Layers</h2>
+    <div class="layer surface active" data-layer="surface" onclick="selectLayer('surface')">
+      Surface — Daily Notes
+    </div>
+    <div class="layer deep" data-layer="deep" onclick="selectLayer('deep')">
+      Deep — MEMORY_claw.md
+    </div>
+    <div class="layer bedrock" data-layer="bedrock" onclick="selectLayer('bedrock')">
+      Bedrock — SOUL, USER
+    </div>
+    <div class="filters" style="margin-top:1rem;">
+      <input type="text" id="filter" placeholder="filter entries..." oninput="filterEntries()">
+    </div>
+    <div id="file-list" style="margin-top:0.5rem;"></div>
+  </aside>
+  <main>
+    <h1 id="view-title">• Memory Viewer</h1>
+    <p class="meta" id="view-meta">Route: /api/memory/* | Source: workspace/memory/</p>
+    <div id="status" class="status">Loading...</div>
+    <pre id="content">Select a layer or file to view.</pre>
+  </main>
+<script>
+const LAYERS = {
+  surface: {
+    label: 'Surface — Daily Notes',
+    route: '/api/memory/surface',
+    description: 'Raw daily notes from workspace/memory/'
+  },
+  deep: {
+    label: 'Deep — MEMORY_claw.md',
+    route: '/api/memory/deep',
+    description: 'Lessons, decisions, architecture, verified insights'
+  },
+  bedrock: {
+    label: 'Bedrock — Identity & User',
+    route: '/api/memory/bedrock',
+    description: 'SOUL.md, USER.md, IDENTITY.md'
+  }
+};
+
+let currentLayer = 'surface';
+
+async function loadLayer(layer) {
+  const info = LAYERS[layer];
+  document.getElementById('view-title').textContent = '• ' + info.label;
+  document.getElementById('view-meta').textContent = 
+    'Route: ' + info.route + ' | Source: workspace/memory/';
+  document.getElementById('status').textContent = 'Loading ' + layer + '...';
+  document.getElementById('status').className = 'status';
+
+  try {
+    const res = await fetch(info.route);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    
+    document.getElementById('status').textContent = 
+      '✓ Loaded | ' + (data.lines || 0) + ' lines | ' + (data.files || 0) + ' files';
+    document.getElementById('status').className = 'status ok';
+    document.getElementById('content').textContent = data.content || '(empty)';
+    
+    // Update file list if available
+    if (data.files && data.files.length) {
+      const listEl = document.getElementById('file-list');
+      listEl.innerHTML = data.files.map(f => 
+        `<div class="layer surface" style="font-size:0.6rem;padding:0.2rem 0.4rem;" 
+              onclick="loadFile('${f}')">${f}</div>`
+      ).join('');
+    }
+  } catch (e) {
+    document.getElementById('status').textContent = '✗ ' + e.message;
+    document.getElementById('status').className = 'status err';
+    document.getElementById('content').textContent = 
+      'Error loading ' + layer + '.\n\n' +
+      'Route: ' + info.route + '\n' +
+      'This is a view-only reader — files are accessed via API,\n' +
+      'not bundled into npr-local. Connection validates the full route.\n\n' +
+      'Expected source path: /home/claw/.openclaw/workspace/memory/';
+  }
+}
+
+async function loadFile(filename) {
+  try {
+    const res = await fetch('/api/memory/file?name=' + encodeURIComponent(filename));
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    document.getElementById('view-title').textContent = '• ' + filename;
+    document.getElementById('view-meta').textContent = 
+      'File: ' + data.path + ' | ' + (data.lines || 0) + ' lines';
+    document.getElementById('status').textContent = '✓ Loaded';
+    document.getElementById('status').className = 'status ok';
+    document.getElementById('content').textContent = data.content || '(empty)';
+  } catch (e) {
+    document.getElementById('status').textContent = '✗ ' + e.message;
+    document.getElementById('status').className = 'status err';
+  }
+}
+
+function selectLayer(layer) {
+  currentLayer = layer;
+  document.querySelectorAll('.layer').forEach(el => el.classList.remove('active'));
+  document.querySelector(`[data-layer="${layer}"]`)?.classList.add('active');
+  loadLayer(layer);
+}
+
+function filterEntries() {
+  // Client-side filter of displayed content
+  const query = document.getElementById('filter').value.toLowerCase();
+  const content = document.getElementById('content');
+  if (!query) return;
+  
+  const lines = content.textContent.split('\n');
+  const filtered = lines.filter(l => l.toLowerCase().includes(query));
+  content.textContent = filtered.join('\n') || '(no matches)';
+}
+
+// Init
+loadLayer('surface');
+</script>
+</body>
+</html>

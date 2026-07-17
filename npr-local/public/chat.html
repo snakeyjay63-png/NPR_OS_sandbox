@@ -46,7 +46,10 @@ body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#101418;col
 </div>
 
 <script>
-const API = 'http://[::1]:5000/agent/chat';
+const GW_PORT = window.location.port || '5017';
+const NPR_PORT = window.location.port || '17000';
+const API = '/agent/chat';
+const API_STREAM = '/agent/chat-stream';
 const msgs = document.getElementById('messages');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
@@ -68,7 +71,7 @@ const sessionId = getOrCreateSession();
 
 async function loadHistory() {
   try {
-    const r = await fetch(`http://[::1]:5004/session/${sessionId}`);
+    const r = await fetch(`/api/runtime/sessions`);
     if (r.ok) {
       const data = await r.json();
       if (data && data.messages) {
@@ -142,7 +145,7 @@ async function send() {
   let slot = '?', model = '';
   
   try {
-    const evt = new EventSourcePolyfill(API + '-stream', {
+    const evt = new EventSourcePolyfill(API_STREAM, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       payload: JSON.stringify({ message: text, sessionId })
@@ -230,12 +233,12 @@ const EventSourcePolyfill = class {
 // Initial check
 (async () => {
   try {
-    const r = await fetch('http://[::1]:5000/health');
+    const r = await fetch('/health');
     const d = await r.json();
     status.innerHTML = '<span class="dot green"></span>Online';
-    addMsg('assistant', `NPR Local v${d.version || '0.0.1'} ready. Origin: ${d.origin}.`, '');
+    addMsg('assistant', `NPR-OS ready | state: ${d.state || 'active'} | origin: ${d.origin || 'local'}.`, '');
   } catch {
-    status.innerHTML = '<span class="dot red"></span>Offline — check :5000';
+    status.innerHTML = '<span class="dot red"></span>Offline — check gateway';
   }
 })();
 </script>

@@ -14,13 +14,14 @@ const fs = require('fs');
 const { manifest, phaseInfo } = require('./core');
 const { runtimeConfig } = require('./config-route');
 const BrowserBridge = require('../net/browser-bridge');
+const PKG = require('../../package.json');
 
 // ─── Gateway Self-Knowledge ───
 
 const SELF_KNOWLEDGE = {
   identity: {
     name: 'NPR-Local',
-    version: '0.0.1',
+    version: PKG.version,
     description: 'Single-agent local runtime met NPR 64-slot routing',
     origin: '0.0.0.0',
   },

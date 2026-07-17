@@ -72,10 +72,10 @@ checks.push({
   name: 'geowon-reachable',
   desc: 'Geowon memory service reachable',
   run: () => {
-    const port = process.env.NPR_GEOWON_PORT || 5001;
+    const port = process.env.NPR_GEOWON_PORT || 17004;
     try {
-      execSync(`curl -sf --max-time 2 http://127.0.0.1:${port}/health 2>/dev/null`, { timeout: 3000 });
-      return { ok: true, detail: `http://127.0.0.1:${port}` };
+      execSync(`curl -sf --max-time 2 http://[::1]:${port}/health 2>/dev/null`, { timeout: 3000 });
+      return { ok: true, detail: `geowon:${port}` };
     } catch {
       return { ok: false, detail: `geowon:${port} — unreachable` };
     }
@@ -103,7 +103,7 @@ checks.push({
   run: () => {
     const port = process.env.NPR_PORT || 17000;
     try {
-      execSync(`curl -sf --max-time 1 http://127.0.0.1:${port}/health 2>/dev/null`, { timeout: 2000 });
+      execSync(`curl -sf --max-time 1 http://[::1]:${port}/health 2>/dev/null`, { timeout: 2000 });
       return { ok: true, detail: `port ${port} — serving` };
     } catch {
       return { ok: false, detail: `port ${port} — not responding` };

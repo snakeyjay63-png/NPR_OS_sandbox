@@ -414,9 +414,30 @@ Neem de tijd. Ga diep. Maar wees wel concreet — diep betekent niet vaag.`,
   }
 }
 
+// ─── Integratie met Context 64K ───
+// Bridge: 4-rollen → 4-velden (64K harmonisch model)
+const ROLE_TO_FIELD = {
+  vogel: 'summary',    // overzicht → geconcentreerd verleden
+  haas: 'recent',      // snelle lookup → actuele sessiebeweging
+  aap: 'retrieval',    // bouwen → externe informatie + tools
+  olifant: 'return',   // diep denken → antwoord + validatie
+};
+
+function createBridge64K() {
+  const { Context64K } = require('../field/context-64k.cjs');
+  return new Context64K();
+}
+
+function roleToField(roleId) {
+  return ROLE_TO_FIELD[roleId] || null;
+}
+
 module.exports = {
   ContextBreath,
   ROLES,
   ROUTING_BITS,
   BIT6,
+  ROLE_TO_FIELD,
+  createBridge64K,
+  roleToField,
 };

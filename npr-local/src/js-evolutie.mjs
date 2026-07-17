@@ -19,8 +19,14 @@
 
 import http from "node:http";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import path from "node:path";
-import * as ExploitTimeline from "./exploit-timeline.js";
+import * as ExploitTimeline from "./exploit-timeline.cjs";
+
+// CJS modules via createRequire
+const _require = createRequire(import.meta.url);
+const sec = _require("./sec-registry.cjs");
+const tool00 = _require("./tool-00.cjs");
 
 // ─── Fase 0: Browser-primitieven (1995-2004) ───
 // Evaluatie, timer, DOM-toegang — de oerfuncties
@@ -571,6 +577,113 @@ const server = http.createServer(async (request, response) => {
       `http://${request.headers.host ?? "localhost"}`,
     );
 
+    // ── /sec routes ──
+
+    // GET /sec — overview
+    if (request.method === "GET" && url.pathname === "/sec") {
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        route: "/sec",
+        fields: {
+          cc: { route: sec.SecurityRegistry.cc.route, label: sec.SecurityRegistry.cc.label, classes: sec.CC_VULNERABILITY_CLASSES.length },
+          javascript: { route: sec.SecurityRegistry.javascript.route, label: sec.SecurityRegistry.javascript.label, classes: sec.JAVASCRIPT_VULNERABILITY_CLASSES.length },
+          node: { route: sec.SecurityRegistry.node.route, label: sec.SecurityRegistry.node.label, classes: sec.NODE_VULNERABILITY_CLASSES.length },
+        },
+        totalVulnerabilities: sec.getAllVulnerabilities().length,
+        eras: sec.SECURITY_ERAS.length,
+      }, null, 2));
+      return;
+    }
+
+    // GET /sec/eras
+    if (request.method === "GET" && url.pathname === "/sec/eras") {
+      response.statusCode = 200;
+      response.end(JSON.stringify({ eras: sec.SECURITY_ERAS }, null, 2));
+      return;
+    }
+
+    // GET /sec/capabilities — capability→field map
+    if (request.method === "GET" && url.pathname === "/sec/capabilities") {
+      response.statusCode = 200;
+      response.end(JSON.stringify({ capabilityMap: sec.CAPABILITY_FIELD_MAP }, null, 2));
+      return;
+    }
+
+    // GET /sec/route?field=x&capability=y — route an issue
+    if (request.method === "GET" && url.pathname === "/sec/route") {
+      const field = url.searchParams.get("field");
+      const capability = url.searchParams.get("capability");
+      let result;
+      if (capability) {
+        result = sec.routeCapability(capability);
+      } else if (field) {
+        result = sec.routeSecurityIssue({ field });
+      } else {
+        result = { error: "Provide ?field= or ?capability=" };
+      }
+      response.statusCode = 200;
+      response.end(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    // GET /sec/{field} — all vulnerabilities in a field
+    const fieldMatch = url.pathname.match(/^\/(sec)\/(cc|javascript|node)$/);
+    if (request.method === "GET" && fieldMatch) {
+      const field = fieldMatch[2];
+      const vulns = sec.getByField(field);
+      const registry = sec.SecurityRegistry[field];
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        route: registry.route,
+        label: registry.label,
+        vulnerabilityClasses: registry.classes,
+        vulnerabilities: vulns,
+        count: vulns.length,
+      }, null, 2));
+      return;
+    }
+
+    // GET /sec/{field}/{id} — single vulnerability
+    const vulnMatch = url.pathname.match(/^\/(sec)\/(cc|javascript|node)\/(.+)$/);
+    if (request.method === "GET" && vulnMatch) {
+      const id = vulnMatch[3];
+      const vuln = sec.getById(id) ?? sec.getByField(vulnMatch[2]).find((v) => v.id === id);
+      if (!vuln) {
+        response.statusCode = 404;
+        response.end(JSON.stringify({ error: "Vulnerability not found", id }));
+        return;
+      }
+      const era = sec.getSecurityEra(vuln.year);
+      response.statusCode = 200;
+      response.end(JSON.stringify({
+        ...vuln,
+        era: era ? { name: era.name, from: era.from, to: era.to } : null,
+        npr: sec.analyzeSecurityNPR ? sec.analyzeSecurityNPR(vuln) : vuln.npr,
+      }, null, 2));
+      return;
+    }
+
+    // POST /sec/validate — Tool-00 full validation
+    if (request.method === "POST" && url.pathname === "/sec/validate") {
+      const body = await readJsonBody(request);
+      const result = tool00.validateProgram({
+        source: body.source ?? "",
+        trace: body.trace ?? null,
+      });
+      response.statusCode = 200;
+      response.end(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    // POST /sec/analyze — Tool-00 source analysis
+    if (request.method === "POST" && url.pathname === "/sec/analyze") {
+      const body = await readJsonBody(request);
+      const result = tool00.analyzeSource(body.source ?? "");
+      response.statusCode = 200;
+      response.end(JSON.stringify(result, null, 2));
+      return;
+    }
+
     // ── Exploit Timeline API routes (GET) ──
     if (request.method === "GET" && url.pathname === "/api/exploits") {
       const filters = {
@@ -677,6 +790,8 @@ export {
   authorize,
   invoke,
   server,
+  PORT,
+  HOST,
 };
 
 // ─── Direct Execution ───

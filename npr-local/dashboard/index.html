@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NPR-OS Gateway Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'JetBrains Mono','Fira Code',monospace;background:#050508;color:#c8c8d0;font-size:13px;line-height:1.5}
+.header{background:linear-gradient(180deg,#0a0a10,#050508);border-bottom:1px solid #1a1a2a;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:16px;font-weight:600;color:#e8e8f0;letter-spacing:.5px}
+.header .sub{font-size:10px;color:#555;margin-top:2px}
+.conn{font-size:10px;padding:3px 10px;border-radius:3px}
+.connected{background:#0a2a0a;color:#4aff7a;border:1px solid #1a4a1a}
+.disconnected{background:#2a0a0a;color:#ff4a4a;border:1px solid #4a1a1a}
+.degraded{background:#2a2a0a;color:#ffaa4a;border:1px solid #4a4a1a}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:16px 24px}
+.card{background:#0a0a10;border:1px solid #1a1a2a;border-radius:6px;padding:14px}
+.card-title{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+.w2{grid-column:span 2}.w3{grid-column:span 3}
+.stat{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0f0f18;font-size:12px}
+.stat:last-child{border:none}
+.sl{color:#666}.sv{font-weight:600}
+.idle{color:#4a9eff}.active{color:#4aff7a}.gen{color:#ffaa4a}
+.tool{color:#ff6aaa}.err{color:#ff4a4a}.val{color:#aa6aff}
+.slot{display:inline-block;width:40px;height:28px;border:1px solid #222;border-radius:3px;text-align:center;line-height:24px;font-size:10px;margin:1px;color:#555}
+.slot.busy{border-color:#4a9eff;color:#4a9eff;background:rgba(74,158,255,.06)}
+.slot.gen{border-color:#ffaa4a;color:#ffaa4a;background:rgba(255,170,74,.06)}
+.elog{max-height:350px;overflow-y:auto;font-size:10px}
+.ev{padding:3px 6px;border-left:2px solid #1a1a2a;margin-bottom:1px}
+.ev:hover{background:#0a0a0f}
+.ev .ts{color:#333;margin-right:6px}
+.ev .tp{color:#4a9eff;margin-right:6px}
+.ev .dp{color:#555}
+.bg{display:grid;grid-template-columns:repeat(8,1fr);gap:2px;margin-top:6px}
+.bl{height:20px;border-radius:2px;font-size:7px;display:flex;align-items:center;justify-content:center}
+.ds{background:#1a3a4a}.dr{background:#2a4a2a}.dt{background:#3a2a4a}.drt{background:#4a3a1a}
+.be{background:#0a0a0f;border:1px dashed #111}
+.pb{height:3px;background:#111;border-radius:2px;margin-top:6px;overflow:hidden}
+.pb .bar{height:100%;border-radius:2px;transition:width .3s}
+.ps{display:flex;gap:3px;margin-top:3px}
+.ps .st{height:3px;flex:1;border-radius:2px;background:#111}
+.ps .st.on{background:#4a9eff}.ps .st.ok{background:#4aff7a}
+.gc{padding:4px 8px;border-radius:3px;font-size:11px;display:inline-block;margin:2px}
+.g-ready{background:#0a2a0a;color:#4aff7a;border:1px solid #1a4a1a}
+.g-degraded{background:#2a2a0a;color:#ffaa4a;border:1px solid #4a4a1a}
+.g-failed{background:#2a0a0a;color:#ff4a4a;border:1px solid #4a1a1a}
+.g-stopped{background:#1a1a2a;color:#555;border:1px solid #2a2a3a}
+.cr{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0a0a0f;font-size:11px}
+.cr:last-child{border:none}
+.cid{color:#444;width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+::scrollbar{width:4px}
+::scrollbar-track{background:#050508}
+::scrollbar-thumb{background:#111;border-radius:2px}
+</style>
+</head>
+<body>
+<div class="header">
+<div>
+<h1>• NPR-OS Gateway Monitor</h1>
+<div class="sub">Gateway · Sessions · Context · Inference · Events</div>
+</div>
+<div style="display:flex;gap:8px;align-items:center">
+<span id="gwState" class="conn disconnected">checking</span>
+<span id="conn" class="conn disconnected">disconnected</span>
+</div>
+</div>
+<div class="grid">
+<!-- Gateway State -->
+<div class="card">
+<div class="card-title">Gateway</div>
+<div id="gwInfo"></div>
+</div>
+<!-- Components -->
+<div class="card">
+<div class="card-title">Components</div>
+<div id="components"></div>
+</div>
+<!-- Slots -->
+<div class="card">
+<div class="card-title">Inference Slots</div>
+<div id="slots"></div>
+</div>
+<!-- Sessions -->
+<div class="card w2">
+<div class="card-title">Sessions</div>
+<div id="sessions"></div>
+</div>
+<!-- Context Blocks -->
+<div class="card">
+<div class="card-title">Context Blocks (64)</div>
+<div id="blocks"></div>
+<div class="pb"><div id="bp" class="bar" style="width:0%;background:#4a9eff"></div></div>
+<div style="display:flex;justify-content:space-between;margin-top:3px;font-size:9px;color:#333">
+<span id="bc">0/64</span><span id="tc">0/65536</span>
+</div>
+</div>
+<!-- State Machine -->
+<div class="card">
+<div class="card-title">Active Turn</div>
+<div id="turn"></div>
+</div>
+<!-- Events -->
+<div class="card w3">
+<div class="card-title">Event Stream</div>
+<div class="elog" id="events"></div>
+</div>
+</div>
+<script>
+const API='';
+let evSrc=null,sessions=[],slots=[],events=[],gwSnap={};
+const PO=['idle','receiving','routing','mounting-context','compacting','queued','prompt-processing','generating','tool-running','validating','committing','streaming','completed'];
+const SC={idle:'idle',receiving:'idle',routing:'idle','mounting-context':'active',compacting:'active',queued:'active','prompt-processing':'active',generating:'gen','tool-running':'tool',validating:'val',committing:'active',streaming:'gen',completed:'active',failed:'err',cancelled:'idle'};
+function rr(){rGW();rCmp();rSes();rSl();rBl();rTurn();rEv()}
+function rGW(){
+const s=gwSnap.state||'unknown';
+const el=document.getElementById('gwState');
+el.className='conn '+(s==='ready'?'connected':s==='degraded'?'degraded':'disconnected');
+el.textContent=s;
+document.getElementById('gwInfo').innerHTML=
+`<div class="stat"><span class="sl">State</span><span class="sv">${s}</span></div>`+
+`<div class="stat"><span class="sl">Components</span><span class="sv">${(gwSnap.components||[]).length}</span></div>`+
+`<div class="stat"><span class="sl">Turns OK</span><span class="sv">${gwSnap.canAcceptTurns?'yes':'no'}</span></div>`;
+}
+function rCmp(){
+const cs=gwSnap.components||[];
+document.getElementById('components').innerHTML=cs.map(c=>
+`<div class="cr"><span style="flex:1">${c.name}</span><span class="gc g-${c.status==='ready'?'ready':c.status==='failed'?'failed':'stopped'}">${c.status}</span>${c.restarts?'<span style="color:#333">'+c.restarts+'r</span>':''}</div>`
+).join('')||'<div style="color:#333;text-align:center;padding:10px">no components</div>';
+}
+function rSes(){
+const el=document.getElementById('sessions');
+if(!sessions.length){el.innerHTML='<div style="color:#333;text-align:center;padding:10px">no sessions</div>';return}
+el.innerHTML=sessions.map(s=>{
+const ci=PO.indexOf(s.status);
+const ph=PO.slice(0,-1).map((p,i)=>{let c='';if(i<ci)c='ok';else if(i===ci)c='on';return`<div class="st ${c}"></div>`}).join('');
+return`<div class="cr"><span class="cid" title="${s.sessionId}">${(s.sessionId||'').slice(0,10)}…</span><span class="gc g-${s.status==='completed'?'ready':s.status==='failed'?'failed':'active'}">${s.status}</span>${s.activeTool?'<span style="color:#ff6aaa;font-size:10px">⚙'+s.activeTool+'</span>':''}<div class="ps" style="width:100%">${ph}</div></div>`;
+}).join('');
+}
+function rSl(){
+const ds=slots.length?slots:Array.from({length:4},(_,i)=>({slotId:i,status:'idle'}));
+document.getElementById('slots').innerHTML=ds.map(s=>{const c=s.status==='generating'?'gen':s.status!=='idle'?'busy':'';return`<span class="slot ${c}" title="${s.status}">${s.slotId}</span>`}).join('');
+}
+function rBl(){
+let u=0,d={summary:0,recent:0,retrieval:0,return:0};
+for(const s of sessions)if(s.context&&s.context.domains)for(const[k,v]of Object.entries(s.context.domains))if(d[k]!==undefined)d[k]+=v;
+u=Object.values(d).reduce((a,b)=>a+b,0);
+const dc={summary:'ds',recent:'dr',retrieval:'dt',return:'drt'};
+let bs=[],i=0;
+for(const[k,v]of Object.entries(d))for(let j=0;j<v;j++){bs.push(`<div class="bl ${dc[k]}"></div>`);i++}
+for(;i<64;i++)bs.push('<div class="bl be"></div>');
+document.getElementById('blocks').innerHTML=`<div class="bg">${bs.join('')}</div>`;
+document.getElementById('bc').textContent=u+'/64';
+document.getElementById('tc').textContent=(u*1024)+'/65536';
+document.getElementById('bp').style.width=((u/64)*100)+'%';
+}
+function rTurn(){
+const a=sessions.find(s=>!['idle','completed','failed','cancelled'].includes(s.status));
+const el=document.getElementById('turn');
+if(!a){el.innerHTML='<div style="color:#333;text-align:center;padding:10px">no active turn</div>';return}
+el.innerHTML=`<div style="margin-bottom:4px;font-size:10px" class="${SC[a.status]||'idle'}">→ ${a.status}</div>`+
+PO.filter(p=>p!=='idle').map(p=>{const c=p===a.status?(SC[p]||'idle'):'idle';return`<div style="padding:1px 0;font-size:10px" class="${c}">${p===a.status?'▸ ':'  '}${p}</div>`}).join('');
+}
+function rEv(){
+const el=document.getElementById('events');
+el.innerHTML=events.slice(-60).map(e=>{const t=new Date(e.timestamp).toLocaleTimeString('nl-NL');return`<div class="ev"><span class="ts">${t}</span><span class="tp">${e.type}</span><span class="dp">${JSON.stringify(e.payload||e).slice(0,80)}</span></div>`}).join('');
+el.scrollTop=el.scrollHeight;
+}
+function connect(){
+if(evSrc)evSrc.close();
+evSrc=new EventSource(API+'/api/runtime/stream');
+evSrc.addEventListener('snapshot',e=>{const d=JSON.parse(e.data);sessions=d.sessions||[];slots=d.slots||[];events=d.events||[];rr()});
+evSrc.addEventListener('runtime',e=>{const d=JSON.parse(e.data);events.push(d);events.length>200&&events.splice(0,100);rEv()});
+evSrc.addEventListener('connected',()=>{document.getElementById('conn').className='conn connected';document.getElementById('conn').textContent='connected'});
+evSrc.onerror=()=>{document.getElementById('conn').className='conn disconnected';document.getElementById('conn').textContent='disconnected';setTimeout(connect,3000)};
+}
+function poll(){
+fetch(API+'/api/gateway/snapshot').then(r=>r.json()).then(d=>{gwSnap=d;rGW();rCmp()}).catch(()=>{});
+fetch(API+'/api/runtime/snapshot').then(r=>r.json()).then(d=>{sessions=d.sessions||[];slots=d.slots||[];events=d.events||[];rSes();rSl();rBl();rTurn();rEv()}).catch(()=>{});
+}
+connect();setInterval(poll,2000);
+</script>
+</body>
+</html>

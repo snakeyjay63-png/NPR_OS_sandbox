@@ -1,0 +1,28 @@
+[Unit]
+Description=NPR-Local Gateway
+Documentation=https://docs.openclaw.ai
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/claw/.openclaw/workspace/NPR_OS_sandbox/npr-local
+ExecStart=/usr/bin/node src/gateway/index.cjs
+Restart=always
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=30
+Environment=NODE_ENV=production
+Environment=GATEWAY_PORT=5017
+Environment=GATEWAY_HOST=0.0.0.0
+
+# Resource limits
+LimitNOFILE=65536
+Nice=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=npr-local-gateway
+
+[Install]
+WantedBy=multi-user.target
