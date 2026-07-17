@@ -76,7 +76,7 @@ const defaultLoopConfig = {
 
 const MODEL_NAME = process.env.MODEL_NAME || 'Qwen3.6-27B-Q4_K_M.gguf';
 const MAX_TOKENS = parseInt(process.env.MAX_TOKENS) || 2048;
-const GEOWON_PORT = parseInt(process.env.GEOWON_PORT) || 5004;
+const GEOWON_PORT = parseInt(process.env.GEOWON_PORT) || 17004;
 const MODEL_API = process.env.MODEL_API || 'http://127.0.0.1:8765/v1/chat/completions';
 const GEOWON_API = process.env.GEOWON_API || `http://127.0.0.1:${GEOWON_PORT}`;
 const MAX_HISTORY = 20;

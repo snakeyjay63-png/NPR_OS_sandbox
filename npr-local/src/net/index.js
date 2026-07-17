@@ -2,7 +2,7 @@
 // net/index.js — NPR-Net Entry Point
 //
 // Bootstrap het hele NPR-netwerk:
-// 1. Gateway start op poort 5000
+// 1. Gateway start op poort 17000
 // 2. Services registreren en starten
 // 3. DNS + registry endpoints
 // 4. Netwerk topology zichtbaar via /dns, /registry, /net
@@ -15,7 +15,7 @@ const dns = require('./dns');
 // ─── Boot ───
 
 async function boot(opts = {}) {
-  const port = opts.port || 5000;
+  const port = opts.port || 17000;
   const services = opts.services || [];
 
   // 1. Gateway (centrale router)

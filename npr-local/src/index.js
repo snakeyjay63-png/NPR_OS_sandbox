@@ -23,7 +23,7 @@ const BrowserBridge = require('./net/browser-bridge');
 
 // ─── Config ───
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.NPR_PORT || 17000;
 const HOST = process.env.HOST || '::1';
 
 // ─── Favicon ───
@@ -742,12 +742,12 @@ function enterHTML(req, res) {
   <p class="subtitle">NPR-OS</p>
 
   <div class="cards">
-    <a href="http://[::1]:5010/chat.html" class="card chat">
+    <a href="http://[::1]:17010/chat.html" class="card chat">
       <span class="card-icon">&ldquo;</span>
       <span class="card-title">Chat</span>
       <span class="card-desc">Start conversation</span>
     </a>
-    <a href="http://[::1]:5010/config-llama.html" class="card settings">
+    <a href="http://[::1]:17010/config-llama.html" class="card settings">
       <span class="card-icon">&#9881;</span>
       <span class="card-title">Settings</span>
       <span class="card-desc">Config &amp; model</span>

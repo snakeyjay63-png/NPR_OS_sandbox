@@ -14,7 +14,7 @@ const dns = require('./dns');
 
 class NPRGateway {
   constructor(opts = {}) {
-    this.port = opts.port || 5000;
+    this.port = opts.port || 17000;
     this.server = null;
     this.localHandlers = new Map(); // routes that stay in gateway
     this.proxyTimeout = opts.proxyTimeout || 30000;

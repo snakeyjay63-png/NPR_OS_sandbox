@@ -101,7 +101,7 @@ checks.push({
   name: 'port-available',
   desc: 'NPR-Local port available',
   run: () => {
-    const port = process.env.NPR_PORT || 5000;
+    const port = process.env.NPR_PORT || 17000;
     try {
       execSync(`curl -sf --max-time 1 http://127.0.0.1:${port}/health 2>/dev/null`, { timeout: 2000 });
       return { ok: true, detail: `port ${port} — serving` };

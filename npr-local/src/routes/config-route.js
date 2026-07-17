@@ -27,7 +27,7 @@ function loadConfig() {
       endpoint: process.env.NPR_MODEL_ENDPOINT || 'http://127.0.0.1:8765',
     },
     server: {
-      port: parseInt(process.env.NPR_PORT) || 5000,
+      port: parseInt(process.env.NPR_PORT) || 17000,
       host: '::',
     },
     memory: {

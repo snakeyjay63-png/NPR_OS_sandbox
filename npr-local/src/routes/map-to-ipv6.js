@@ -42,7 +42,7 @@ function nprToHexRouteId(nprURI) {
 
 // ─── Map → curl command ───
 // @addr 10.08.0.2 | npr://0008.0000.0002 — map→curl
-function mapToCurl(mapName, port = 5000) {
+function mapToCurl(mapName, port = 17000) {
   const route = `/tool/${mapName}`;
   const uri = mapToNprURI(mapName);
   return {
@@ -71,7 +71,7 @@ function discoverMaps(sourcesDir) {
       nprURI: uri,
       routeId: nprToHexRouteId(uri),
       route: `/tool/${entry.name}`,
-      curl: `curl http://127.0.0.1:5000/tool/${entry.name}`,
+      curl: `curl http://127.0.0.1:17000/tool/${entry.name}`,
     });
   }
 

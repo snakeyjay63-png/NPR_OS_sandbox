@@ -1,0 +1,16 @@
+{
+  "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+  "timestamp": "9999999999999999999",
+  "source": {
+    "deviceId": "npr-control",
+    "transport": "evdev",
+    "path": "/dev/input/event0"
+  },
+  "signal": {
+    "type": 1,
+    "code": 30,
+    "value": 2
+  },
+  "state": "received",
+  "note": "value=2 = key repeat"
+}

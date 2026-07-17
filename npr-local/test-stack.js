@@ -4,6 +4,10 @@
 
 const { readFileSync } = require('fs');
 
+const NPR_PORT = process.env.NPR_PORT || '17000';
+const GEOWON_PORT = process.env.GEOWON_PORT || '17004';
+const CONFIG_PORT = process.env.NPR_CONFIG_PORT || '17010';
+
 const checks = [];
 let pass = 0, fail = 0, warn = 0;
 
@@ -68,17 +72,17 @@ async function post(url, body, label) {
 
   // ── 2. Live endpoints ──
   console.log('\n2. Live endpoints');
-  await get('http://[::1]:5000/health', 'npr-local /health');
-  await get('http://[::1]:5000/status', 'npr-local /status');
-  await get('http://[::1]:5000/capabilities', 'npr-local /capabilities');
-  await get('http://[::1]:5004/sessions', 'geowon /sessions');
-  await get('http://[::1]:5010/chat.html', 'config-llama /chat.html');
+  await get(`http://[::1]:${NPR_PORT}/health`, 'npr-local /health');
+  await get(`http://[::1]:${NPR_PORT}/status`, 'npr-local /status');
+  await get(`http://[::1]:${NPR_PORT}/capabilities`, 'npr-local /capabilities');
+  await get(`http://[::1]:${GEOWON_PORT}/sessions`, 'geowon /sessions');
+  await get(`http://[::1]:${CONFIG_PORT}/chat.html`, 'config-llama /chat.html');
   // config-llama serveert alleen static files, geen /config endpoint
   // (config-llama = UI wrapper, geen API)
 
   // ── 3. Chat test ──
   console.log('\n3. Chat endpoint');
-  const chatRes = await post('http://[::1]:5000/agent/chat', {
+  const chatRes = await post(`http://[::1]:${NPR_PORT}/agent/chat`, {
     message: 'Zeg "stack live" in drie woorden of minder.',
     model: 'local'
   }, 'POST /agent/chat');
@@ -94,7 +98,7 @@ async function post(url, body, label) {
   // ── 4. Streaming test ──
   console.log('\n4. Streaming endpoint');
   try {
-    const streamRes = await fetch('http://[::1]:5000/agent/chat-stream', {
+    const streamRes = await fetch(`http://[::1]:${NPR_PORT}/agent/chat-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -113,7 +117,7 @@ async function post(url, body, label) {
   // ── 5. Geowon session ──
   console.log('\n5. Geowon session storage');
   const testId = `test-${Date.now()}`;
-  const gwRes = await post(`http://[::1]:5004/session/${testId}`, {
+  const gwRes = await post(`http://[::1]:${GEOWON_PORT}/session/${testId}`, {
     history: [
       { role: 'user', content: 'self-test' },
       { role: 'assistant', content: 'stack-ok' }
@@ -121,7 +125,7 @@ async function post(url, body, label) {
   }, `POST /session/${testId.slice(0, 12)}...`);
 
   if (gwRes) {
-    const getRes = await get(`http://[::1]:5004/session/${testId}`, `GET /session/${testId.slice(0, 12)}...`);
+    const getRes = await get(`http://[::1]:${GEOWON_PORT}/session/${testId}`, `GET /session/${testId.slice(0, 12)}...`);
     if (getRes) {
       const sess = await getRes.json();
       if (sess?.history?.length >= 2) ok('Session write + read OK');

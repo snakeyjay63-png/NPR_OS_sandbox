@@ -1,0 +1,15 @@
+{
+  "id": "not-a-valid-uuid",
+  "timestamp": null,
+  "source": {
+    "deviceId": "",
+    "transport": "unknown_transport",
+    "path": null
+  },
+  "signal": {
+    "type": -1,
+    "code": "not_a_number",
+    "value": null
+  },
+  "state": "unknown"
+}

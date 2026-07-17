@@ -9,7 +9,7 @@
 
 const crypto = require('crypto');
 
-const BASE_PORT = 5000;
+const BASE_PORT = 17000;
 const MAX_DEPTH = 4; // fractaal diepte: 64 → 64² → 64³ → 64⁴
 
 // ─── Naam → Slot (64 top-level) ───

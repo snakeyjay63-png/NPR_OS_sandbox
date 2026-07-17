@@ -218,7 +218,7 @@ function agentTurn(message) {
     const data = JSON.stringify({ message });
     const options = {
       hostname: '127.0.0.1',
-      port: process.env.PORT || 5000,
+      port: process.env.NPR_PORT || 17000,
       path: '/tty/agent',
       method: 'POST',
       headers: {

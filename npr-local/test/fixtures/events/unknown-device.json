@@ -1,0 +1,15 @@
+{
+  "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "timestamp": "9999999999999999999",
+  "source": {
+    "deviceId": "unknown-device",
+    "transport": "evdev",
+    "path": "/dev/input/event99"
+  },
+  "signal": {
+    "type": 1,
+    "code": 30,
+    "value": 1
+  },
+  "state": "received"
+}

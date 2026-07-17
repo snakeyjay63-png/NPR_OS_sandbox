@@ -3,7 +3,7 @@
 // boot.js — NPR Local Unified Boot
 // ═══════════════════════════════════════════════════
 // All services in one process. Single kill to stop all.
-// :5000 = npr-local, :5004 = geowon, :5010 = config
+// :17000 = npr-local, :17004 = geowon, :17010 = config
 // ═══════════════════════════════════════════════════
 
 const http = require('http');
@@ -25,7 +25,7 @@ const MIME = {
   '.md':   'text/markdown; charset=utf-8',
 };
 
-// ─── Config Server (:5010) ───
+// ─── Config Server (:17010) ───
 
 const configServer = http.createServer((req, res) => {
   // P0-3 CORS (localhost only)
@@ -49,10 +49,10 @@ const configServer = http.createServer((req, res) => {
   res.end(fs.readFileSync(filePath));
 });
 
-configServer.listen(5010, () => console.log('[5010] Config server'));
+configServer.listen(process.env.NPR_CONFIG_PORT || 17010, () => console.log('[17010] Config server'));
 servers.push(configServer);
 
-// ─── Geowon Memory Gateway (:5004) ───
+// ─── Geowon Memory Gateway (:17004) ───
 
 const geowonDir = path.join(__dirname, '..', '..', 'geowon', 'memory');
 if (!fs.existsSync(geowonDir)) fs.mkdirSync(geowonDir, { recursive: true });
@@ -135,20 +135,20 @@ const geowonServer = http.createServer((req, res) => {
   res.end(JSON.stringify({ status: 'geowon', port: 4004 }));
 });
 
-geowonServer.listen(5004, () => console.log('[5004] Geowon memory gateway'));
+geowonServer.listen(process.env.NPR_GMEOWON_PORT || 17004, () => console.log('[17004] Geowon memory gateway'));
 servers.push(geowonServer);
 
 // ─── Boot Banner ───
 
 console.log('\n╔═══════════════════════════════════════╗');
-console.log('║     NPR Local v0.0.1 — Boot          ║');
-console.log('║  :5000  npr-local (main)              ║');
-console.log('║  :5004  geowon (memory)               ║');
-console.log('║  :5010  config-llama (UI)             ║');
+console.log('║     NPR Local v0.0.2 — Boot           ║');
+console.log('║  :17000 npr-local (main)              ║');
+console.log('║  :17004 geowon (memory)               ║');
+console.log('║  :17010 config-llama (UI)             ║');
 console.log('║  :8765  llama-server (extern, required)║');
 console.log('╚═══════════════════════════════════════╝\n');
 
-// ─── Main NPR Local (:5000) ───
+// ─── Main NPR Local (:17000) ───
 
 // Temporarily suppress SIGINT from index.js (we handle shutdown)
 const origHandlers = process.listeners('SIGINT').slice();
