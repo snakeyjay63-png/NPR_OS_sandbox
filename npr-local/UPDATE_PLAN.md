@@ -112,11 +112,11 @@ Gebruik dit sjabloon voor elke update:
 - `src/index.js` — routes 20-23 geregistreerd
 
 **Test:**
-- `curl http://localhost:5099/agent/logs`
-- `curl http://localhost:5099/config`
-- `curl "http://localhost:5099/memory/search?q=npr"`
-- `curl http://localhost:5099/doctor`
-- `curl "http://localhost:5099/doctor?fix=1"` (repair mode)
+- `curl http://localhost:17000/agent/logs`
+- `curl http://localhost:17000/config`
+- `curl "http://localhost:17000/memory/search?q=npr"`
+- `curl http://localhost:17000/doctor`
+- `curl "http://localhost:17000/doctor?fix=1"` (repair mode)
 
 **Status:** ✅
 
@@ -138,9 +138,9 @@ Gebruik dit sjabloon voor elke update:
 - `src/index.js` — `/enter` vereenvoudigd
 
 **Test:**
-- `curl http://localhost:5000/health` → tickUs present
-- `curl http://localhost:5000/tick` → tickUs + lastUs
-- `http://localhost:5000/enter` → portal
+- `curl http://localhost:17000/health` → tickUs present
+- `curl http://localhost:17000/tick` → tickUs + lastUs
+- `http://localhost:17000/enter` → portal
 
 **Status:** ✅
 
@@ -166,7 +166,7 @@ Gebruik dit sjabloon voor elke update:
 - `src/routes/stroom.js` — μs → ms conversie
 
 **Test:**
-- `http://localhost:5000/verify` → live dashboard
+- `http://localhost:17000/verify` → live dashboard
 
 **Status:** ✅
 
@@ -244,7 +244,7 @@ Gebruik dit sjabloon voor elke update:
 - `src/agent/context-breathe.js` — levels fix (0-63, geen raw tokens)
 
 **Test:**
-- `curl -X POST http://localhost:5000/agent/chat -H 'Content-Type: application/json' -d '{"message":"bouw een script","dryRun":true}'` → response bevat `breath.role: "aap"`
+- `curl -X POST http://localhost:17000/agent/chat -H 'Content-Type: application/json' -d '{"message":"bouw een script","dryRun":true}'` → response bevat `breath.role: "aap"`
 
 **Status:** ✅
 
@@ -391,24 +391,24 @@ Na elke update:
 
 ```bash
 # Health
-curl http://localhost:5000/health
+curl http://localhost:17000/health
 
 # Tick
-curl http://localhost:5000/tick
+curl http://localhost:17000/tick
 
 # Portal
-curl http://localhost:5000/enter > /dev/null && echo "OK"
+curl http://localhost:17000/enter > /dev/null && echo "OK"
 
 # Verify
-curl http://localhost:5000/verify > /dev/null && echo "OK"
+curl http://localhost:17000/verify > /dev/null && echo "OK"
 
 # Agent (dryRun)
-curl -X POST http://localhost:5000/agent/chat \
+curl -X POST http://localhost:17000/agent/chat \
   -H 'Content-Type: application/json' \
   -d '{"message":"ping","dryRun":true}'
 
 # Status
-curl http://localhost:5000/status
+curl http://localhost:17000/status
 ```
 
 ---

@@ -92,17 +92,17 @@ function createServer(routes) {
     const tickKey = req.url.split('?')[0];
     const origEnd = res.end;
     res.end = function (...args) {
-      // Compute μs integer
-      const tickUsInt = Math.round(Number(process.hrtime.bigint() - tickStart) / 1000);
+      // Raw µs float — no Math.round() (preserve sub-microsecond precision)
+      const tickUs = Number(process.hrtime.bigint() - tickStart) / 1000;
       const arr = ticks.get(tickKey) || [];
-      arr.push(tickUsInt);
+      arr.push(tickUs);
       ticks.set(tickKey, arr.slice(-50));
       // Inject tickUs into JSON body if response is JSON
       const body = args[0];
       if (typeof body === 'string' && body.trimStart().startsWith('{')) {
         try {
           const obj = JSON.parse(body);
-          obj.tickUs = tickUsInt;
+          obj.tickUs = tickUs;
           args[0] = JSON.stringify(obj, null, 2);
         } catch(e) {
           // not valid JSON, pass through
