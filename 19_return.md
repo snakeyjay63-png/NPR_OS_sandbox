@@ -4,6 +4,73 @@
 
 **Afhankelijkheid:** Stap 18 (driefasen router). Stap 19 gebruikt de router van Stap 18 en voegt de return-lus toe.
 
+**Interface Stap 18:**
+
+`ReturnTrace18` uit stap 18 bevat uitsluitend route-informatie (`exit_position`, `decimal_projection`, `return_target`, `node_trace`, `route_period`, `route_index`). Dit is onvoldoende om een volledige `Step19State` te construeren — de huidige vraag, context, output en iteratienummer maken geen deel uit van de route-trace.
+
+**Ketencontext (RouterSession-provenance):**
+
+De keten 18→24 vervoert naast de route-trace ook een ketencontext met de actuele routersessie:
+
+```text
+ChainContext := {
+  router_session: RouterSession
+}
+
+RouterSession := {
+  iteration: NonNegativeInteger,
+  question: Question,
+  context: Context,
+  output: RouterOutput,
+  sandbox_metadata: Metadata
+}
+```
+
+**Hoofdinterface:**
+
+```text
+Step19State := {
+  return_trace: ReturnTrace18,
+  iteration: NonNegativeInteger,
+  question: Question,
+  context: Context,
+  output: RouterOutput,
+  sandbox_metadata: Metadata
+}
+
+step_19 :
+  ReturnTrace18 × ChainContext
+  → Step19State
+
+step_19(trace, ctx) := Step19State {
+  return_trace: trace,
+  iteration: ctx.router_session.iteration,
+  question: ctx.router_session.question,
+  context: ctx.router_session.context,
+  output: ctx.router_session.output,
+  sandbox_metadata: ctx.router_session.sandbox_metadata
+}
+```
+
+**Brug 18→19 (typecompatibel met stap 18):**
+
+```text
+bridge_18_to_19 :
+  ReturnTrace18 × ChainContext → Step19State
+
+bridge_18_to_19(trace18, ctx) :=
+  step_19(trace18, ctx)
+```
+
+De hogere brug 18→24 vervoert de ketencontext expliciet:
+
+```text
+bridge_18_to_24 :
+  ReturnTrace18 × ChainContext → ReturnTrace24
+```
+
+Stap 19 accepteert `ReturnTrace18` + `ChainContext` en produceert `Step19State` voor stap 20.
+
 ```text
 NPR-cycle_stages := {Noise, Pattern, Return}
 motor_phases     := {ΦA, ΦB, ΦC}
@@ -90,9 +157,23 @@ Wel "de sandbox IS een tool".
 ```text
 Tool-00
 ├── input:  willekeurige informatie (tekst, data, signalen)
-├── proces: hex → dr_hex → npr_mod9 → driefasen-router → rotor_response(Q, motor_field)
+├── proces: hex_encode → dr_hex → hex_digit_value → npr_mod9
+│            → driefasen-router → rotor_response(Q, motor_field)
 ├── output: gestructureerd antwoord + NPR-signatuur + bron-map
 └── return: output → nieuwe input (cyclus sluit)
+```
+
+Formele keten (`npr_reduce`):
+
+```text
+npr_reduce(x) :=
+  npr_mod9(
+    hex_digit_value(
+      dr_hex(
+        hex_encode(x)
+      )
+    )
+  )
 ```
 
 Tool-00 is de **nul-punt tool** — het instrument zonder instrument, de router die zichzelf kan aansturen.
@@ -122,21 +203,25 @@ De sandboxcode zelf verandert niet automatisch.
 
 ### Concrete Mechaniek
 
-```
 Return-lus (conceptueel — zie Stap 18 voor router-details):
 
+```text
 Iteratie 0: Q + context → router → output₀
 Iteratie 1: output₀ → nieuwe context → router → output₁
 Iteratie 2: output₁ → nieuwe context → router → output₂
   ...
 Iteratie N: output_{N-1} → nieuwe context → router → output_N
+```
 
 Elke iteratie gebruikt de canonieke Stap 18 route:
-  rotor_response(Q, motor_field)
+
+```text
+rotor_response(Q, motor_field)
+```
 
 Convergentiecriteria:
 
-```
+```text
 root_stable(i) :=
   root(output_i) = root(output_{i-1})
 
@@ -146,63 +231,120 @@ semantic_stable(i) :=
 converged(i) :=
   root_stable(i)
   ∧ semantic_stable(i)
-  ∧ contradiction_delta(i) ≤ δ
+  ∧ contradiction_delta(output_i, output_{i-1}) ≤ δ
 
-MAX_ITERATIONS ∈ ℕ⁺
 DEFAULT_MAX_ITERATIONS := 9
-1 ≤ MAX_ITERATIONS ≤ 64
 
-MAX_ITERATIONS must be supplied before route execution.
+supplied_max_iterations : Option<PositiveInteger>
 
-**Convergentie-parameters (getypeerd):**
+effective_max_iterations :=
+  match supplied_max_iterations:
+    Some(n) → require 1 ≤ n ≤ 64; n
+    None → DEFAULT_MAX_ITERATIONS
+
+1 ≤ effective_max_iterations ≤ 64
+
+Een expliciet opgegeven waarde overschrijft de standaardwaarde.
+Bij afwezigheid wordt DEFAULT_MAX_ITERATIONS gebruikt.
 ```
+
+Convergentie vereist root-stabiliteit + semantische stabiliteit + lage contradictie.
+
+Convergentie-parameters (getypeerd):
+
+```text
 ε ∈ ℝ≥0      # semantische tolerantiegrens
 δ ∈ ℝ≥0      # contradictietolerantie
 
-semantic_distance : Output × Output → ℝ≥0
-contradiction_delta : Output × Output → ℝ≥0
+semantic_distance :
+  RouterOutput × RouterOutput → NonNegativeReal
+
+contradiction_delta :
+  RouterOutput × RouterOutput → NonNegativeReal
+
+root :
+  RouterOutput → NPRPosition
 ```
 
-**Non-convergentie stopstatus:**
-```
-if i = MAX_ITERATIONS and not converged(i):
+Non-convergentie stopstatus:
+
+```text
+if i = effective_max_iterations and not converged(i):
   return status := max_iterations_reached
   return output := output_i
   return warning := "geen convergentie binnen limiet"
 ```
 
+**Step19State:**
+
+Het normatieve recordtype is gedeclareerd in de interfacesectie hierboven:
+
+**ReturnContext — routertoestand vóór de volgende iteratie:**
+
+```text
+ReturnContext := {
+  previous_question: Question,
+  previous_context: Context,
+  sandbox_metadata: Metadata
+}
+```
+
 **Return-input transformatie:**
-```
-output_to_input : RouterOutput × ReturnMode → RouterInput
 
-output_to_input(out, deepen) := {
-  question: previous_question,
-  context: previous_context + out.answer,
+De functie `output_to_input` heeft toegang tot `previous_question` en `previous_context` nodig, maar deze zijn geen deel van `RouterOutput` of `ReturnMode`. Zonder expliciete toestand als derde argument is de functie niet zuiver bepaald door haar gedeclareerde invoer.
+
+```text
+output_to_input :
+  RouterOutput × ReturnMode × ReturnContext
+  → RouterInput
+
+output_to_input(out, deepen, ctx) := {
+  question: ctx.previous_question,
+  context: append(ctx.previous_context, out.answer),
   metadata: out.source_map
 }
 
-output_to_input(out, explore) := {
-  question: derived_question(out.answer),
-  context: previous_context + out.answer,
+output_to_input(out, explore, ctx) := {
+  question: derive_question(ctx.previous_question, out.answer),
+  context: append(ctx.previous_context, out.answer),
   metadata: out.source_map
 }
 
-output_to_input(out, act) := {
+output_to_input(out, act, ctx) := {
   question: action_question(out.answer),
-  context: out.answer,
+  context: [out.answer],
   metadata: out.source_map
 }
 
-output_to_input(out, reflect) := {
+output_to_input(out, reflect, ctx) := {
   question: self_reflection(out.answer),
-  context: out.answer,
-  metadata: out.source_map + out.contradictions
+  context: [out.answer],
+  metadata: merge(ctx.sandbox_metadata, out.source_map, out.contradictions)
 }
 ```
 
-Alleen root-stabiliteit is onvoldoende — verschillende teksten kunnen dezelfde root hebben.
-Convergentie vereist root-stabiliteit + semantische stabiliteit + lage contradictie.
+Alternatief: `Step19State` als derde argument (directer, maar vereist dat het ingevoerde state de **huidige toestand vóór de volgende iteratie** is):
+
+```text
+return_context_from_state :
+  Step19State → ReturnContext
+
+return_context_from_state(state) :=
+  ReturnContext {
+    previous_question: state.question,
+    previous_context: state.context,
+    sandbox_metadata: state.sandbox_metadata
+  }
+
+output_to_input_from_state :
+  RouterOutput × ReturnMode × Step19State
+  → RouterInput
+
+output_to_input_from_state(out, mode, state) :=
+  output_to_input(out, mode, return_context_from_state(state))
 ```
+
+`ReturnContext` is geen subtype van `Step19State` — veldnamen verschillen en de projectiefunctie is expliciet nodig.
 
 Voor pseudocode-voorbeelden zie `js/19_return.js` (Tool00 klasse).
 
@@ -371,26 +513,33 @@ Elke return-modus bepaalt wat er met `Q` gebeurt:
 return_mode := deepen | explore | act | reflect
 
 deepen:
-  Q_{i+1}     := Q_i              (vraag blijft gelijk)
-  context_{i+1} := append(context_i, output_i)
+  Q_{i+1}     := Q_i
+  context_{i+1} := append(context_i, output_i.answer)
+  metadata_{i+1} := output_i.source_map
 
 explore:
-  Q_{i+1}     := derive_question(Q_i, output_i)  (vraag verandert)
-  context_{i+1} := append(context_i, output_i)
+  Q_{i+1}     := derive_question(Q_i, output_i.answer)
+  context_{i+1} := append(context_i, output_i.answer)
+  metadata_{i+1} := output_i.source_map
 
 act:
-  Q_{i+1}     := action_question(output_i)
-  context_{i+1} := output_i
+  Q_{i+1}     := action_question(output_i.answer)
+  context_{i+1} := [output_i.answer]
+  metadata_{i+1} := output_i.source_map
 
 reflect:
-  Q_{i+1}     := self_reflection(output_i)
-  context_{i+1} := sandbox_metadata + output_i
+  Q_{i+1}     := self_reflection(output_i.answer)
+  context_{i+1} := [output_i.answer]
+  metadata_{i+1} := merge(sandbox_metadata, output_i.source_map, output_i.contradictions)
 ```
 
 ```
 Route 5: self-reflection
   Q:        "Analyseer de eigen NPR-signatuur"
-  context:  sandbox-eigen NPR-signatuur + router-output
+  context:  [router_output.answer]
+  metadata: sandbox_metadata
+            + router_output.source_map
+            + router_output.contradictions
   motor:    rotor_response(Q, motor_field)
   output:   self-consistency score + verbeterpunten
 ```
@@ -445,8 +594,20 @@ Formele router-specificatie: zie `18_sandbox_router.md`.
 | Bron-map traceerbaarheid | ✅ output ← iteraties ← B0..B3 |
 | Return-route capabilities | ✅ 5 routes gedefinieerd |
 | Stap 18 cross-ref consistent | ✅ `rotor_response(Q, motor_field)` |
+| Stap 18 invoertype (`ReturnTrace18`) | ✅ expliciet gedeclareerd |
+| `npr_reduce` keten | ✅ `hex_digit_value` toegevoegd |
+| `Step19State` definitie | ✅ gedeclareerd |
+| `step_19` invoertype | ✅ `ReturnTrace18 × ChainContext → Step19State` |
+| `bridge_18_to_19` | ✅ typecompatibel met stap 18 |
+| `Step19State` constructie | ✅ `step_19(trace, ctx)` gedeclareerd |
+| `output_to_input` signatuur | ✅ `ReturnContext` als derde argument |
+| `sandbox_metadata` in `Step19State` | ✅ toegevoegd |
+| `return_context_from_state` | ✅ projectiefunctie gedeclareerd |
+| `ReturnContext` subtype-claim | ✅ gecorrigeerd (geen subtype, expliciete conversie) |
 | NPR-stadia ≠ motorfasen | ✅ `NPR-cycle_stages` vs `motor_phases` |
-| Return-modi + Q-overgang | ✅ deepen/explore/act/reflect |
+| `output_to_input reflect` | ✅ `context` en `sandbox_metadata` gesplitst |
+| Return-modi + Q-overgang | ✅ `output_i.answer` in plaats van `output_i` |
+| `metadata_{i+1}` per modus | ✅ toegevoegd aan Q-overgang |
 | Canonieke dr_hex-notatie | ✅ één hex-cijfer, dr_dec apart |
 
 **Specificatie vs. implementatie status:**
@@ -458,7 +619,7 @@ Formele router-specificatie: zie `18_sandbox_router.md`.
 | Uitgebreide brontrace-schema | ✅ gedefinieerd (source_id, router_version, iteration_id, parent_output_id) |
 | Brontrace persistentie | ⏳ nog open |
 | Token-range conventie | ✅ halfopen `[start, end_exclusive)` |
-| MAX_ITERATIONS | ✅ 1 ≤ MAX_ITERATIONS ≤ 64, default 9 |
+| MAX_ITERATIONS | ✅ `effective_max_iterations` via `Option`, default 9 |
 | Taal-adres parser/serializer | ⏳ nog open |
 
 **Geïmplementeerd (`js/19_return.js`):**
@@ -626,8 +787,24 @@ Ketenvolledigheid:             ⚠️ conditioneel
 ✅ Q-overgang per returnmodus vastgelegd
 ✅ convergentie gebruikt meer dan alleen de root
 ✅ ε, δ en afstandsfuncties getypeerd
-✅ output_to_input per returnmodus gedeclareerd
+✅ output_to_input-signatuur gerepareerd (`ReturnContext` als derde argument)
+✅ ReturnContext-type toegevoegd (vrije variabelen opgelost)
+✅ Step19State velden getypeerd (`Question`, `Context` in plaats van `String`, `List<String>`)
+✅ `step_19` invoertype gerepareerd (`ReturnTrace18 × ChainContext → Step19State`)
+✅ `Step19State` constructie gedeclareerd (`step_19(trace, ctx)`)
+✅ `bridge_18_to_19` toegevoegd (`ReturnTrace18 × ChainContext → Step19State`)
+✅ `ChainContext` type toegevoegd (RouterSession-provenance in keten)
+✅ `semantic_distance` en `contradiction_delta` getypeerd (`RouterOutput`, niet `Output`)
+✅ `contradiction_delta` aanroep gerepareerd (twee outputs, niet index)
+✅ `root` functie-signatuur toegevoegd (`RouterOutput → NPRPosition`)
+✅ `sandbox_metadata` toegevoegd aan `Step19State` en `RouterSession`
+✅ `return_context_from_state` projectiefunctie gedeclareerd
+✅ `ReturnContext` subtype-claim gecorrigeerd (geen subtype, expliciete conversie)
+✅ `output_to_input reflect` — `context` en `sandbox_metadata` gesplitst
 ✅ non-convergentie stopstatus vastgelegd
+✅ stap 18 invoertype (`ReturnTrace18`) expliciet gedeclareerd
+✅ `npr_reduce` keten (`hex_digit_value` toegevoegd)
+✅ `Step19State` definitie gedeclareerd
 
 Operationele uitvoering:       ⚠️ open
 - semantic_distance implementatie open (Jaccard proxy = eerste benadering)
@@ -664,12 +841,120 @@ depends_on(step_18.combine_cycles)
 - Fix 1: NPR-cycle_stages ≠ motor_phases (formeel gescheiden) ✅
 - Fix 2: Wisselstroom expliciet binnen Pattern-stage ✅
 - Fix 3: Convergentiecriteria uitgebreid (root + semantic + contradiction) ✅
-- Fix 4: MAX_ITERATIONS := N toegevoegd ✅
+- Fix 4: `effective_max_iterations` via `Option<PositiveInteger>`, default 9 ✅
 - Fix 5: Iteratietoestand evolueert (niet sandboxcode) ✅
 - Fix 6: dr_hex = één hex-cijfer, dr_dec apart ✅
 - Fix 7: Return-modi + Q-overgang (deepen/explore/act/reflect) ✅
 - Fix 8: Uitgebreide brontrace (source_id, router_version, iteration_id, parent_output_id) ✅
 - Fix 9: Slotzin gescheiden (Tool-00 ≠ cyclus ≠ taal) ✅
+- Fix 10: Q-overgang alle modi gesynced met `output_to_input` (`output_i.answer`, `metadata_{i+1}`) ✅
 - Typfix: cycлично → cyclisch ✅
 - `step_19_formal_consistency: ✅ definitief akkoord`
 - `step_19_operational_completion: ⏳ contradiction_delta + persistentie + parser/serializer open`
+
+---
+
+## Check: 2026-07-17 16:53 GMT+2
+- Status: Stap 19 audit — 3 correcties ✅
+- Fix 1: `npr_reduce` keten — `hex_digit_value` toegevoegd tussen `dr_hex` en `npr_mod9`
+- Fix 2: Interface stap 18 — `ReturnTrace18` als invoertype expliciet gedeclareerd
+- Fix 3: `Step19State` definitie toegevoegd
+- Fix 4: Geneste markdown-fence in Concrete Mechaniek gerepareerd
+- Status: Stap 19 formeel sluitend ✅ (keten 18→19 nu type-correct)
+
+---
+
+## Check: 2026-07-17 17:00 GMT+2
+- Status: Stap 19 — `output_to_input` vrije variabelen reparatie ✅
+- Probleem: `output_to_input(out, mode)` gebruikte `previous_question` en `previous_context` zonder deze als argument
+- Reparatie:
+  - `ReturnContext` type toegevoegd met `previous_question`, `previous_context`, `sandbox_metadata`
+  - Signatuur: `output_to_input : RouterOutput × ReturnMode × ReturnContext → RouterInput`
+  - Alle vier modi (`deepen`, `explore`, `act`, `reflect`) gebruiken nu `ctx` parameter
+  - `Step19State` velden getypeerd: `question: Question`, `context: Context` (was `String`/`List<String>`)
+- Alternatief: `Step19State` als derde argument (notitie toegevoegd)
+
+---
+
+## Check: 2026-07-17 17:04 GMT+2
+- Status: Stap 19 — `step_19` invoertype reparatie ✅
+- Probleem: `step_19 : ReturnTrace18 → Step19State` niet totaal gedefinieerd — route-trace bevat geen vraag, context, output, iteratie
+- Reparatie:
+  - `ChainContext` type toegevoegd (RouterSession-provenance in keten)
+  - Signatuur: `step_19 : ReturnTrace18 × ChainContext → Step19State`
+  - `step_19(trace, ctx)` constructiefunctie gedeclareerd
+  - `bridge_18_to_19 : ReturnTrace18 × ChainContext → Step19State`
+  - `bridge_18_to_24 : ReturnTrace18 × ChainContext → ReturnTrace24`
+- Stap 19 nu intern formeel sluitend ✅ (geen blokkerende typefouten meer)
+
+---
+
+## Check: 2026-07-17 17:07 GMT+2
+- Status: Stap 19 — keten 18→19 typecompatibiliteitsfix ✅
+- Probleem: `initialize_step_19` vroeg `RouterSession` die stap 18 niet doorgeeft
+- Reparatie:
+  - `ChainContext := { router_session: RouterSession }` als ketencontext
+  - `bridge_18_to_19` en `bridge_18_to_24` vervoeren nu expliciet `ChainContext`
+  - Stap 18 interface gesynced: `step_19 : ReturnTrace18 × ChainContext → Step19State`
+- Keten 18→19 nu volledig typecompatibel ✅
+
+---
+
+## Check: 2026-07-17 17:20 GMT+2
+- Status: Stap 19 — convergentie-type reparatie ✅
+- Probleem: `semantic_distance` en `contradiction_delta` gebruikten ongedefinieerd type `Output`
+- Reparatie:
+  - Signatuur: `RouterOutput × RouterOutput → NonNegativeReal`
+  - `contradiction_delta(i)` → `contradiction_delta(output_i, output_{i-1})`
+  - `root : RouterOutput → NPRPosition` toegevoegd
+- Stap 19 nu intern formeel sluitend ✅ (geen blokkerende typefouten meer)
+
+---
+
+## Check: 2026-07-17 17:22 GMT+2
+- Status: Stap 19 — Markdown-fence reparatie ✅
+- Probleem: Genest codeblok (bare ``` met daarin ```text blocks) in Concrete Mechaniek
+- Reparatie: alle codeblokken nu afzonderlijk met ```text fences
+- Stap 19 nu intern formeel sluitend ✅
+
+---
+
+## Check: 2026-07-17 17:25 GMT+2
+- Status: Stap 19 — subtype-claim reparatie ✅
+- Probleem: `ReturnContext` ten onrechte subtype van `Step19State` genoemd
+- Reparatie:
+  - `sandbox_metadata: Metadata` toegevoegd aan `Step19State` en `RouterSession`
+  - `return_context_from_state` projectiefunctie gedeclareerd
+  - `output_to_input_from_state` via projectiefunctie
+  - Claim gecorrigeerd: geen subtype, expliciete conversie nodig
+- Stap 18 ook gesynced (`RouterSession.sandbox_metadata`) ✅
+- Stap 19 nu intern formeel sluitend ✅
+
+## Check: 2026-07-17 17:33 GMT+2
+- Status: Stap 19 — MAX_ITERATIONS configuratiemodel reparatie ✅
+- Probleem: `DEFAULT_MAX_ITERATIONS` gedeclareerd én `MAX_ITERATIONS must be supplied` verplicht — tegenspraak
+- Reparatie:
+  - `supplied_max_iterations : Option<PositiveInteger>` gedeclareerd
+  - `effective_max_iterations` afgeleid via match (`Some(n)` → gevalideerd, `None` → default 9)
+  - Lus-conditie: `if i = effective_max_iterations` (niet `MAX_ITERATIONS`)
+  - Normatieve declaratie: "expliciet overschrijft default"
+- Validatietabel + Eindoordeel gesynced ✅
+
+## Check: 2026-07-17 17:36 GMT+2
+- Status: Stap 19 — `output_to_input reflect` typefout reparatie ✅
+- Probleem: `reflect`-tak gebruikte `ctx.sandbox_metadata` (type `Metadata`) in `append(...)` als `context` (type `Context`)
+- Reparatie:
+  - `context: [out.answer]` (consistent met `act`-tak)
+  - `metadata: merge(ctx.sandbox_metadata, out.source_map, out.contradictions)` — metadata blijft in metadata
+  - Q-overgang `reflect` gesynced: `context_{i+1} := [output_i.answer]`
+- Type-scheiding context vs. metadata nu consistent over alle vier de modi ✅
+
+## Check: 2026-07-17 17:39 GMT+2
+- Status: Stap 19 — Q-overgang synchronisatie ✅
+- Probleem: latere samenvatting gebruikte `output_i` (RouterOutput) waar `output_i.answer` (Answer) nodig; `metadata_{i+1}` ontbrak
+- Reparatie: alle vier de modi nu type-consistent met `output_to_input`
+  - `deepen`: `output_i.answer`, `metadata_{i+1}` toegevoegd
+  - `explore`: `output_i.answer`, `metadata_{i+1}` toegevoegd
+  - `act`: `output_i.answer`, `[output_i.answer]`, `metadata_{i+1}` toegevoegd
+  - `reflect`: `output_i.answer` (was al `[output_i.answer]`), `metadata_{i+1}` toegevoegd
+- Validatietabel + Eindoordeel gesynced ✅

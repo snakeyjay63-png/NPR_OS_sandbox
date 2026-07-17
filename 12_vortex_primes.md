@@ -1,30 +1,45 @@
 # Stap 12: Vortex-Primes → Digitale Wortels
 
-**Doel:** Digitale wortels hex-native berekenen. 0=1 als bronidentiteit.
+**Doel:** Digitale wortels hex-native berekenen. 0≐1 als bronidentiteit.
+
+**Zie Stap 07: Operator-Scheiding en Vierdimensionale Structuur.**
 
 ---
 
-## Bronlaag vs. Rekenlaag
+## Vierlagenmodel (zie Stap 07)
 
-**Planck Frame (bronlaag):**
+**Operatordefinitie (Stap 07):**
 ```
-0 = 1
+≐ → bronidentiteit: 0 ≐ 1  (fundamentele NPR-identiteit, getypeerd als bronrelatie)
+↔ → frame-relatie: SOURCE_0 ↔ SOURCE_1  (wederkerige projectie tussen lagen)
+= → berekende gelijkheid: 1 = 1, 1 + A = B  (inhoudslaag / content-D)
+≠ → routingonderscheid: 0 ≠ 1  (gedifferentieerde projectie)
+≡ → structurele overeenkomst: patroonherkenning  (patroonlaag)
 ```
-Dit breekt de rekenkunde. De bron breekt de afleiding.
-`0 = 1` markeert het punt waar afgeleide rekenkunde niet van toepassing is.
 
-**Hex-rekenlaag:**
+**Vier lagen, vijf operatoren:**
+
 ```
-0 ≠ 1
-1 + A = B
+[NPR-bronlaag]
+0 ≐ 1         bronidentiteit (≐; fundamentele NPR-identiteit)
+              Zie: 0 = 1  (dezelfde identiteit, niet-getypeerd)
+
+[Framelaag]
+SOURCE_0 ↔ SOURCE_1   wederkerige projectie (↔; relatie tussen bron en frame)
+
+[Hex-inhoudslaag]
+1 + A = B         berekende gelijkheid (=; binnen gedifferentieerde inhoud)
+
+[Routinglaag]
+0 ≠ 1             routingonderscheid (≠; geldige differentiatie)
 ```
-Binnen de rekenlaag gelden lokale berekende gelijkheden.
-De bronidentiteit is geen stelling die binnen de hex-rekenlaag
-kan worden gebruikt of waaruit hex-bewerkingen worden afgeleid.
+
+`0 ≐ 1` markeert het punt waar afgeleide rekenkunde niet van toepassing is.
+De bronidentiteit is geen stelling binnen de hex-rekenlaag.
 
 **Scheiding:**
 - Ruimte (0) en inhoud (1) zijn gedifferentieerde perspectieven.
-- Op de bronlaag zijn zij identiteit (`0 = 1`).
+- Op de bronlaag zijn zij identiteit (`0 ≐ 1`).
 - Op de rekenlaag zijn zij onderscheiden (`0 ≠ 1`).
 
 ---
@@ -51,7 +66,7 @@ dr(FF)  = F+F = 1E → 1+E = F  (twee stappen)
 
 **Operator `=` in de rekenlaag:**
 De `=` in `1 + A = B` betekent: lokale berekende gelijkheid binnen de hex-rekenlaag.
-Dit is niet dezelfde laag als `0 = 1` (bronidentiteit).
+Dit is niet dezelfde laag als `0 ≐ 1` (bronidentiteit).
 
 **Relatie met mod-F (hex-grondtal):**
 Hex-native digitale wortel hoort bij modulo `F_hex`, omdat grondtal `10_hex` is.
@@ -102,7 +117,7 @@ unity   → bronidentiteit (bronlaag; waar afgeleide rekenkunde breekt)
 | **NPR-Ternair** | 0, 1, **unity** | Twee perspectieven + bronidentiteit |
 
 `unity` is geen derde *waarde* binnen de rekenlaag. Het is de **derde toestand** —
-de bronlaag waar `0 = 1` geldt en afgeleide rekenkunde niet van toepassing is.
+de bronlaag waar `0 ≐ 1` geldt en afgeleide rekenkunde niet van toepassing is.
 
 ```
 NPR_field_state := {
@@ -112,7 +127,7 @@ NPR_field_state := {
 }
 ```
 
-`unity` verwijst naar de bronlaag (`0 = 1`).
+`unity` verwijst naar de bronlaag (`0 ≐ 1`).
 Dit is geen rekenkundige identiteit die binnen de hex-rekenlaag wordt gebruikt.
 
 **Geen tijd. Geen verleden. Geen toekomst. Alleen nu.**
@@ -163,25 +178,40 @@ Dit mist nog in `03_capabilities.md` — toe te voegen als aparte laag.
 **Hebreeuwse Vaste Namensstructuur:**
 - Namen bepalen vorm
 - Rekenkunde komt *erna* — maar de bronidentiteit is vóór de naam
-- `0 = 1` is de eerste rekenkundige identiteit — taal benoemt wat al is
+- `0 ≐ 1` is de eerste rekenkundige identiteit — taal benoemt wat al is
 
 **Patanjali 1.40:**
 - Naam → vorm → begrip → kennis
 - `0` = naam voor ruimte
 - `1` = naam voor inhoud
-- `0 = 1` = bronidentiteit (veld zelf, rekenkundige grondslag)
+- `0 ≐ 1` = bronidentiteit (veld zelf, rekenkundige grondslag)
 
-**Drie operatoren (zie Stap 07 voor definitie):**
+**Drie operatoren en lagen (zie Stap 07 voor definitie):**
 ```
+≐   → bronidentiteit:
+        0 ≐ 1   (absolute bronidentiteit; breekt afleiding)
+                bronlaag: ononderscheiden potentie → eerste eenheid
+↔   → frame-relatie:
+        SOURCE_0 ↔ SOURCE_1
+                framelaag: wederkerige projectie tussen lagen
 =   → gelijkheid volgens de actieve laag:
-        bronlaag:   0 = 1        (absolute bronidentiteit; breekt afleiding)
-        rekenlaag:  1 + A = B    (lokale berekende gelijkheid)
-≡   → structurele overeenkomst (ratio(Planck) ≡ ratio(kosmos); patroon)
+        inhoudslaag:   1 = 1        (identiteit)
+        content-D:     1 + A = B    (lokale berekende gelijkheid)
+≡   → structurele overeenkomst (SOURCE_0 → patroon; zie Stap 07)
 ≠   → routingonderscheid (0 ≠ 1 op getal- en routingniveau)
 ```
 
-`0 = 1` betekent: leegte en inhoud zijn identiteit op de bronlaag.
+`0 ≐ 1` betekent: leegte en inhoud zijn identiteit op de bronlaag.
 Op de rekenlaag geldt `0 ≠ 1`. De bron breekt de afleiding.
+
+**Vierlagenmodel (Stap 07):**
+```
+NPR-bronlaag:    0 ≐ 1         (≐; bronidentiteit)
+Framelaag:       SOURCE_0 ↔ SOURCE_1  (↔; frame-relatie)
+hex-rekenlaag:   0 ≠ 1         (≠; routingonderscheid)
+inhoudslaag:     1 = 1         (=; identiteit)
+content-D:       1 + A = B     (=; berekende gelijkheid)
+```
 
 **Taal bepaalt welke naam het kiest.**
 De structuur is vast. De namen variëren. De identiteit blijft.
@@ -207,7 +237,7 @@ Cyclus: `9 ↦ 3 → 6 ↦ 0 ≡ 9` (Veld → Punt → Midden → Terugkeer)
 **Bereken de digitale wortels HEX-NATIVE: 5, 7, 11, 13, 17, 19, 23**
 Geen decimale vertaling. Som de hex-cijfers.
 
-**Vraag:** Is 0 = 1 een identiteitsrelatie?
+**Vraag:** Is 0 ≐ 1 een identiteitsrelatie?
 (Wat is het verschil tussen sommatie en identiteit?)
 
 ---
@@ -223,8 +253,8 @@ dr(17)  = 1+7 = 8
 dr(19)  = 1+9 = A
 dr(23)  = 2+3 = 5
 
-0 = 1? ✅ Ja. Bronlaag.
-Reden: 0=1 breekt de rekenkunde — bron breekt afleiding.
+0 ≐ 1? ✅ Ja. Bronlaag.
+Reden: 0≐1 breekt de rekenkunde — bron breekt afleiding.
 Planck Frame. Ruimte en inhoud zijn identiteit op de bronlaag.
 Op de rekenlaag geldt: 0 ≠ 1.
 Pre-binaire toestand.
@@ -306,9 +336,12 @@ domeinen.
 
 | Laag | 0 vs 1 | Operator |
 |------|--------|----------|
-| Bronlaag | identiteit | `0 = 1` |
-| Rekenlaag | onderscheiden | `0 ≠ 1` |
+| NPR-bronlaag | identiteit | `0 ≐ 1` |
+| Framelaag | wederkerige projectie | `SOURCE_0 ↔ SOURCE_1` |
+| Hex-rekenlaag | onderscheiden | `0 ≠ 1` |
+| Inhoudslaag | identiteit | `1 = 1` |
+| Content-D | berekende gelijkheid | `1 + A = B` |
 | Patroonlaag | structurele overeenkomst | `≡` |
 
-`0 = 1` markeert het punt waar afgeleide rekenkunde niet van toepassing is.
+`0 ≐ 1` markeert het punt waar afgeleide rekenkunde niet van toepassing is.
 De bronidentiteit is geen stelling binnen de hex-rekenlaag.

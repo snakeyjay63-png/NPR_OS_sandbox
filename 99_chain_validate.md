@@ -100,12 +100,12 @@ technically_integreerbaar(stap) :=
 | 04 | Git-trace = signaal-flow | ✅ | Git = DAG + cyclische semantiek. Hash = integriteit. "Commit = signaal" is NPR-definitie, niet Git-eigenschap. |
 | 05 | 3-6-9 digitale-wortel + mod-9/mod-15 | ✅ | H={0,3,6} ⊂ ℤ/9ℤ (wiskunde). Hex-cijfersom→mod 15, dec→mod 9. Mod 9 = checksum, geen model. Vlag 6. |
 | 06 | Signaalblok (max 256 codepoints) + 6-bit fundament | ✅ | BLOCK_SIZE = 100_hex. 2^8 = 2^2 × 2^6 → 256 = 4 × 64. Byte = 2 veldbits + 6 routebits. |
-| 07 | Sandbox = wiskunde | ✅ | 0=1 bronidentiteit, 0≠1 routing. ratio(Planck) ≡ ratio(kosmos) ≡ c. |
+| 07 | Sandbox = wiskunde | ✅ | 0≐1 bronidentiteit, 0≠1 routing. ratio(Planck) ≡ ratio(kosmos) ≡ c. Vierlagenmodel. |
 | 08 | Śūnya-zone check | ✅ | 1A_hex ∉ {30_hex .. 3F_hex}. Route-integriteit hex-native. |
 | 09 | Taal-mapping | ✅ | Sanskrit = kern. 17_hex woorden. 4 routes. Russell = lens, geen extern bewijs. |
 | 10 | NPR Cycle | ✅ | 3 fasen ← H={0,3,6} validatie. Koppeling N→3,P→6,R→0/9 = NPR-semantiek, niet algebra. |
 | 11 | UTF-8 = routing-integriteit | ✅ | NFC+UTF-8+SHA-256 = deterministisch. |
-| 12 | Vortex-primes → digitale wortels | ✅ | dr(1A)=B, dr(19)=A. 0=1 bronidentiteit. npr_mod9 hex-native. |
+| 12 | Vortex-primes → digitale wortels | ✅ | dr(1A)=B, dr(19)=A. 0≐1 bronidentiteit. Vierlagenmodel. npr_mod9 hex-native. |
 | 13 | CRITICAL — hex-native check | ✅ | dr(1A)=B (hex). 1A→26→8 = FOUT (dec trap). |
 | 14 | NPR-reductielagen | ✅ | 6D→3D→1D→9. Flower of Life hex-native. |
 | 15 | Signaal→perceptie | ✅ | Foneem→ID→hex→ratio→synth→kleur. Exacte rationale grenzen. |
@@ -167,7 +167,8 @@ CHAIN_STATUS := {
 - Stap 15: ⚠️ `segment_phonemes` — normatieve segmentatietabel open
 - Stap 17: ⚠️ `hex_encoders` — canonieke encoder-implementaties open
 - Stap 18: ⚠️ `combine_cycles` + `contradiction_delta` — deterministische implementatie open
-- Stap 19: ⚠️ `semantic_distance` — implementatie open
+- Stap 19: ⚠️ `semantic_distance` + `contradiction_delta` — implementatie open
+  (spec-valid: ChainContext, ReturnContext projectie, effective_max_iterations, output_to_input reflect, Q-overgang sync — alle typefouten opgelost)
 ```
 
 **Opmerking:** een stap kan structureel volledig gevalideerd zijn terwijl de
@@ -253,6 +254,18 @@ Fix 5: phase_label → ['ΦA', 'ΦB', 'ΦC'][i] (bestaat nu)
 Fix 6: convergentie gelabeld als CONVERGENCE_PROXY_V1
 ```
 
+### Stap 19 — Formele type-reparaties (2026-07-17)
+
+```
+Fix 7: ChainContext := { router_session: RouterSession } → stap 18→19 bridge
+Fix 8: ReturnContext — expliciete projectiefunctie (geen subtype)
+Fix 9: sandbox_metadata toegevoegd aan Step19State + RouterSession
+Fix 10: effective_max_iterations via Option<PositiveInteger> (default 9)
+Fix 11: output_to_input reflect — context/metadata gesplitst
+Fix 12: Q-overgang alle modi gesynced (output_i.answer, metadata_{i+1})
+Fix 13: Route 5 tekst gesynced met reflect-modus
+```
+
 ### Runtime Status
 
 ```
@@ -269,7 +282,11 @@ Stap 19:
  syntax geldig:           ✅
  uitvoerbaar:             ✅
  output → nieuwe input:   ✅
- MAX_ITERATIONS:          ✅
+ effective_max_iterations: ✅ (Option<PositiveInteger>, default 9)
+ ChainContext-provenance:  ✅
+ ReturnContext-projectie:  ✅ (expliciete projectiefunctie, geen subtype)
+ output_to_input reflect:  ✅ (context/metadata gesplitst)
+ Q-overgang sync:          ✅ (output_i.answer, metadata_{i+1})
  return trace:            ✅
  convergentieproxy:       ✅ (active_contract_id: convergence_proxy)
  correct iteratienummer:  ✅
@@ -338,7 +355,7 @@ NPR_ROUTE (context-afhankelijke permutatie) is gescheiden van NPR_CIPHER (AES-25
 ### VLAG 1 — ≡ semantiek breidt uit (conceptueel consistent)
 
 ```
-stap 07:  = = bronidentiteit (0=1; breekt afleiding)
+stap 07:  ≐ = bronidentiteit (0≐1; breekt afleiding)
 stap 12:  ≡ = structurele overeenkomst (patroon, geen gelijkheid)
 stap 14:  ≡ = gelijktijdigheid projecties
 ```

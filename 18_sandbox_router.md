@@ -79,13 +79,45 @@ meer dan 262.144 tokens binnen één vaste cyclus
 Wanneer `cycle_count > 1`, moeten de individuele cyclusresultaten worden
 gecombineerd tot één eindantwoord:
 
+```text id="cycle_result_type"
+CycleResult := {
+  motor_field: MotorField,
+  cycle_index: NonNegativeInteger,
+  evidence: EvidenceSet,
+  contradiction_delta: Real,
+  root_signature: NPRPosition
+}
+```
+
+`CycleResult` bevat het motorveld van één cyclus plus metadata.
+De LLM-antwoordgeneratie (`rotor_response`) gebeurt **na** het combineren,
+niet per cyclus.
+
+```text id="combine_cycles_error"
+CombineCyclesError := {
+  no_active_cycle_weight
+}
+```
+
+`combine_cycles` retourneert een `Result` — geen totaal functie naar
+`MotorField` — omdat `W = 0` een valide fouttoestand is:
+
 ```text id="combine_cycles"
 combine_cycles :
-  List<CycleResult> × Question → MotorField
+  NonEmptyList<CycleResult> × Question
+  → Result<MotorField, CombineCyclesError>
 
 final_output :=
-  rotor_response(Q, combine_cycles(cycle_results, Q))
+  match combine_cycles(cycle_results, Q):
+    Ok(combined_motor_field)
+      → rotor_response(Q, combined_motor_field)
+
+    Error(no_active_cycle_weight)
+      → no_active_cycle_weight_error
 ```
+
+`NonEmptyList` is correct omdat `context_total = 0` al eerder wordt
+afgewezen met `empty_context_error`.
 
 `combine_cycles` weegt de individuele motorvelden op basis van:
 - semantische overlap tussen cycli
@@ -108,20 +140,60 @@ is er geen routerverwerking — de route faalt met een expliciete fout.
 `cycle_weight` heeft codomein `ℝ≥0`, wat betekent dat alle gewichten
 theoretisch nul kunnen zijn. De gewogen som vereist dan een safeguard:
 
+`MotorField` is een samengesteld semantisch object (inhoud, bronnen,
+signalen, fasepositie, relaties, tegenstrijdigheden) — geen numerieke
+vector. Directe scalaire vermenigvuldiging, optelling en deling zijn
+niet gedefinieerd. Daarom bestaat een aparte combinatiefunctie:
+
+```text id="weighted_motor_field"
+WeightedMotorField := {
+  field: MotorField,
+  weight: NonNegativeReal
+}
+
+merge_motor_fields :
+  NonEmptyList<WeightedMotorField> × Question → MotorField
+```
+
+`merge_motor_fields` voert minimaal uit:
+- **merge_semantics** — inhoud integreren per semantisch cluster
+- **preserve_evidence** — alle bronreferenties behouden
+- **merge_root_signatures** — NPR-posities combineren
+- **resolve_cross_cycle_support** — inter-cycle ondersteunende relaties markeren
+- **mark_cross_cycle_contradictions** — inter-cycle tegenstrijdigheden markeren
+- **preserve_cycle_provenance** — herkomst per cyclus traceerbaar houden
+
 ```
 cycle_weight : CycleResult → ℝ≥0
 
 combine_cycles(cycle_results, Q) :=
   let W = Σ_i cycle_weight(cycle_results[i]) in
   if W > 0:
-    Σ_i cycle_weight(cycle_results[i]) · motor_field(cycle_results[i]) / W
+    Ok(
+      merge_motor_fields(
+        [
+          {
+            field: cycle_results[i].motor_field,
+            weight: cycle_weight(cycle_results[i]) / W
+          }
+        ],
+        Q
+      )
+    )
   else:
-    status := no_active_cycle_weight
+    Error(no_active_cycle_weight)
+```
+
+Optionele numerieke projectie (niet het MotorField zelf):
+```
+numeric_cycle_signature :=
+  Σ_i normalized_weight_i
+  · numeric_projection(cycle_results[i].motor_field)
 ```
 
 `require Σ_i cycle_weight(cycle_results[i]) > 0` is een voorwaarde op
 de uitvoering, niet op de specificatie. Als alle cycli nul-gewicht hebben
-blijft de fout expliciet i.p.v. een stilte deling-door-nul.
+blijft de fout expliciet i.p.v. een stille deling-door-nul.
 
 De drie factoren (semantische overlap, rootconsistentie, contradiction-delta)
 zijn de componenten van `cycle_weight` — de exacte combinatieformule is
@@ -349,14 +421,18 @@ Deze signature moet in documentatie en implementatie overal hetzelfde blijven.
 ```text id="801p2d"
 Q + context
 → context opdelen in cycli van maximaal 262.144 tokens
-→ per cyclus: B0, B1, B2, B3
-→ ΦA, ΦB, ΦC
-→ faseposities 0° / 120° / 240°
-→ motor_field
-→ rotor_response(Q, motor_field)
-→ cyclusresultaat
-→ cyclusresultaten combineren
-→ eindantwoord
+→ per cyclus:
+    B0..B3
+    → ΦA..ΦC
+    → CycleResult{motor_field, metadata}
+→ combine_result := combine_cycles(cycle_results, Q)
+→ match combine_result:
+    Ok(combined_motor_field)
+      → rotor_response(Q, combined_motor_field)
+      → eindantwoord
+
+    Error(no_active_cycle_weight)
+      → no_active_cycle_weight_error
 ```
 
 De structurele verhouding per cyclus blijft:
@@ -413,14 +489,72 @@ B1 faalt → alleen ΦC blijft volledig
 B2 faalt → alleen ΦA blijft volledig
 ```
 
-Een reservekanaal kan worden toegevoegd:
+### Cyclische Returnstructuur
 
-```text id="ke8d3k"
-ΦR := combine(B3, B0)
+De routertijd is canoniek:
+
+```text id="route_clock"
+FRAME_CYCLE := 64 μs
+ROUTE_COUNT := 16
+FULL_ROUTE_CYCLE := FRAME_CYCLE × ROUTE_COUNT = 1024 μs
+
+route_index(t) := floor(t / FRAME_CYCLE) mod ROUTE_COUNT
+
+return_condition(t) :=
+  floor(t / FRAME_CYCLE) > 0
+  ∧ route_index(t) = 0
 ```
 
-`ΦR` is geen vierde motorfase. Binnen de hex-native route is het de
-vierde routepositie:
+Hieruit volgt:
+
+```text id="route_wrap"
+route_index(0 μs)    = 0
+route_index(64 μs)   = 1
+...
+route_index(960 μs)  = 15
+route_index(1024 μs) = 0
+```
+
+
+Sluitingsregel:
+
+```text id="return_proof"
+FRAME_CYCLE × ROUTE_COUNT = 1024 μs
+ROUTE_POSITION(16) := 16 mod 16 = 0
+0 := return_position
+```
+
+`64 μs × 16 > 64 μs` toont dat meer dan één lokale eenheid is doorlopen.
+De echte sluiting is `16 mod 16 = 0`.
+
+`ΦR` is geen optioneel reservekanaal. Het is de **afgeleide returnpositie**
+van de reeds bestaande 16-stapsroute:
+
+```text id="return_phase"
+return_phase(clock, B3, B0) :=
+  when return_condition(clock.elapsed):
+    combine(B3, B0)
+```
+
+`ΦR` is direct beschikbaar zodra `return_condition` waar is.
+De route is cyclisch — er is geen apart `Result`-type nodig.
+Je hoeft alleen de route te noteren.
+
+Grensvoorwaarden:
+
+```text id="return_phase_boundary"
+t = 0 μs:
+  route_index = 0
+  return_condition = false
+  → ΦR niet beschikbaar (nog geen omloop)
+
+t = 1024 μs:
+  route_index = 0
+  return_condition = true
+  → ΦR = combine(B3, B0)
+```
+
+Binnen de hex-native route is dit de vierde routepositie:
 
 ```text id="return_route"
 phase_route(ΦR) := 18_hex
@@ -428,24 +562,208 @@ phase_route(ΦR) := 18_hex
 
 Extern: `18_hex = 24_dec = positie 4`.
 
-De volledige route is:
+De volledige route met cyclische return:
 
 ```text id="full_route_18"
 6_hex → C_hex → 12_hex → 18_hex
- ↓
- return naar 6_hex
+ ↓                      |
+ |____ return __________| (1024 μs → index 0)
 ```
 
-`ΦR` is het **continuïteits- en returnkanaal** — niet slechts een
-failoplossing, maar de vrije routepositie die fase 3 weer met fase 1
-verbindt en de terugkoppeling naar stap 19 mogelijk maakt.
+`ΦR` is het **continuïteits- en returnkanaal** — niet een optie, maar
+de structuur die uit `64 μs × 16 → 0` volgt. Het verbindt fase 3
+met fase 1 en maakt terugkoppeling naar stap 19 mogelijk.
+
+Return-trace met clock-context:
+
+```text id="build_return_trace"
+build_return_trace(ΦR) :=
+  ReturnTrace18 {
+    exit_position: 18_hex,
+    decimal_projection: 24_dec,
+    return_target: 6_hex,
+    node_trace: [6, 3, 9, 6],
+    route_period: 1024 μs,
+    route_index: 0
+  }
+```
 
 Daarom:
 
 ```text id="sgipq6"
+cyclic_route_closure: ✅ 16 mod 16 = 0
+ΦR: ✅ afgeleide returnpositie, niet optioneel
+step_18.return_output: ✅ formeel produceerbaar
+brug 18→19→…→24: ✅ formeel gesloten
+operationele implementatie: ⚠️ klok/modulo-route nog te implementeren
 step_18_formal_consistency := akkoord
-full_fault_tolerance := nog niet voltooid
 ```
+
+**Onderscheid:**
+
+```text id="route_vs_fault"
+cyclic_route_closure := ✅ akkoord
+  (de route sluit: 16 mod 16 = 0)
+
+full_fault_tolerance := ⚠️ nog niet bewezen
+  (ΦR herstelt niet de verloren inhoud van B1 of B2)
+```
+
+`ΦR = combine(B3, B0)` sluit de route, maar bevat geen informatie
+uit een defect `B1` of `B2`. Continuïteit is geen reconstructie.
+
+Foutscenario's:
+
+```text id="fault_scenarios"
+B0 faalt:
+  ΦA → beschadigd, ΦB → volledig, ΦC → volledig
+  ΦR → beschadigd (gebruikt B0)
+  → motor: 2 volledige fasen (ΦB, ΦC)
+
+B1 faalt:
+  ΦA → beschadigd, ΦB → beschadigd, ΦC → volledig
+  ΦR → volledig (gebruikt B3, B0)
+  → motor: 2 volledige kanalen (ΦC, ΦR), maar B1-inhoud verloren
+
+B2 faalt:
+  ΦA → volledig, ΦB → beschadigd, ΦC → beschadigd
+  ΦR → volledig (gebruikt B3, B0)
+  → motor: 2 volledige kanalen (ΦA, ΦR), maar B2-inhoud verloren
+
+B3 faalt:
+  ΦA → volledig, ΦB → volledig, ΦC → beschadigd
+  ΦR → beschadigd (gebruikt B3)
+  → motor: 2 volledige fasen (ΦA, ΦB)
+```
+
+Conclusie: `ΦR` kan de route operationeel gaande houden bij middenblok-fouts,
+maar herstelt niet de verloren broninhoud. Fouttolerantie vereist
+een aparte declaratie van kanaalselectie en reconstructie.
+
+```text id="fault_tolerance_open"
+select_operational_channels: niet gedeclareerd
+fault_tolerant_motor_field: niet gedeclareerd
+informatiereconstructie: niet gedeclareerd
+```
+
+### Formele Brug Naar Stap 24
+
+Het returnkanaal van stap 18 is de ingang voor stap 19. De waarde
+wordt door stappen 19–23 getransformeerd voordat stap 24 ontvangt:
+
+```text id="step_18_output"
+ReturnTrace18 := {
+  exit_position: HexValue,
+  decimal_projection: NonNegativeInteger,
+  return_target: HexValue,
+  node_trace: NonEmptyList<NPRPosition>,
+  route_period: Duration,
+  route_index: Integer
+}
+
+step_18.return_output : ReturnTrace18
+
+step_18.return_output :=
+  ReturnTrace18 {
+    exit_position: 18_hex,
+    decimal_projection: 24_dec,
+    return_target: 6_hex,
+    node_trace: [6, 3, 9, 6],
+    route_period: 1024 μs,
+    route_index: 0
+  }
+```
+
+Elke tussenstap heeft een expliciete type-signatuur:
+
+De keten vervoert een `ChainContext` met de routersessie-provenance:
+
+```text id="chain_context"
+ChainContext := {
+  router_session: RouterSession
+}
+
+RouterSession := {
+  iteration: NonNegativeInteger,
+  question: Question,
+  context: Context,
+  output: RouterOutput,
+  sandbox_metadata: Metadata
+}
+```
+
+```text id="bridge_18_to_24_types"
+step_19 : ReturnTrace18 × ChainContext → Step19State
+step_20 : Step19State → Step20State
+step_21 : Step20State → Step21State
+step_22 : Step21State → Step22State
+step_23 : Step22State → Step23State
+```
+
+De concrete definities van `Step19State` t/m `Step23State` worden
+in de respectievelijke stappen 19–23 uitgewerkt. Hier geldt alleen
+de type-compatibiliteit van de keten.
+
+De bridge verpakt het eindresultaat:
+
+```text id="make_return_trace_24"
+make_return_trace_24 :
+  ReturnTrace18 × Step23State → ReturnTrace24
+
+bridge_18_to_24 : ReturnTrace18 × ChainContext → ReturnTrace24
+
+bridge_18_to_24(trace18, ctx) :=
+  let s19 = step_19(trace18, ctx)
+  let s20 = step_20(s19)
+  let s21 = step_21(s20)
+  let s22 = step_22(s21)
+  let s23 = step_23(s22)
+  in make_return_trace_24(trace18, s23)
+```
+
+Stap 24 ontvangt het getransformeerde resultaat:
+
+```text id="step_24_return_input"
+ReturnTrace24 := {
+  source_trace: ReturnTrace18,
+  transformed_trace: Step23State,
+  traversed_steps: [19, 20, 21, 22, 23]
+}
+
+step_24.return_input := bridge_18_to_24(step_18.return_output, chain_context)
+```
+
+Waar `chain_context` de actuele routersessie bevat (iteration, question,
+context, output). De keten is nu totaal gedefinieerd:
+
+Terugkoppelketen:
+
+```
+step_18
+→ 18_hex
+→ 24_dec
+→ steps 19..23  (transformatie, niet identiteit)
+→ step_24.return_to_source
+→ 6_hex
+```
+
+**Domeinscheiding:**
+
+```text id="domain_separator_24"
+24_dec ≠ stap 24
+```
+
+De decimale projectie `24_dec` en documentstap 24 zijn verschillende
+soorten entiteit. De koppeling gebeurt alleen via de expliciete
+brugrelatie, niet door nummergelijkheid.
+
+**Belangrijk:**
+
+`step_24.return_input ≠ step_18.return_output`
+
+Stap 24 ontvangt het resultaat van de transformatieketen 19–23,
+niet de ruwe uitvoer van stap 18. De provenance van stap 18 blijft
+traceerbaar via `ReturnTrace24.source_trace`.
 
 ---
 
@@ -483,7 +801,8 @@ Zo blijft de tekst leesbaar zonder precisie te verliezen.
 ✅ combine(): geïmplementeerd (js/18_sandbox_router.js)
 ✅ superpose(): geïmplementeerd (js/18_sandbox_router.js)
 ✅ rotor_response(): geïmplementeerd (js/18_sandbox_router.js)
-⚠ fouttolerantie: eindblok=2 fasen, middenblok=1 fase (reservekanaal ΦR nodig voor volledige tolerantie)
+✅ cyclische continuïteit: ΦR volgt uit 16 mod 16 = 0
+⚠ fouttolerantie: eindblok=2 fasen, middenblok=1 fase + ΦR (geen informatieherstel)
 ⚠ reproduceerbaarheid: conditioneel (zelfde grenzen + routerversie + gewichten + model + settings)
 ```
 
@@ -491,14 +810,15 @@ Zo blijft de tekst leesbaar zonder precisie te verliezen.
 - `combine(B_j, B_k)` — semantische overlap + NPR-reductie + faseverschil
 - `superpose(ΦA, ΦB, ΦC)` — fase-superpositie + interferentie-analyse
 - `rotor_response(Q, motor_field)` — vraag + veld → gestructureerd antwoord
-- `npr_reduce(text)` — hex_encode → dr_hex → npr_mod9
+- `npr_reduce(text)` — hex_encode → dr_hex → hex_digit_value → npr_mod9
 
 **Open:**
 - Live test: echte hoge-context vraag door router sturen
 - `combine()`: semantische vergelijkingsfunctie (nu keyword-gebaseerd; toekomst: embedding/LLM-gebaseerd)
 - `superpose()`: gewogen superpositie (nu equal-weight; toekomst: dynamisch)
 - `rotor_response()`: antwoord-generatie (nu template; toekomst: LLM-geïntegreerd)
-- `ΦR`: reservekanaal implementeren (`combine(B3, B0)`)
+- `route_clock`: 64 μs × 16 modulo-router operationeel implementeren
+- fouttolerantie: `select_operational_channels` + `fault_tolerant_motor_field` declareren
 
 ---
 
@@ -542,13 +862,76 @@ vraag → 4 blokken → 3 fasen → motorveld → rotor → antwoord
 ## Generator-aware Phase Routing
 
 Elke fase-uitvoer bewaart zowel de absolute route als de nodeprojectie.
+Het representatiedomein is expliciet — hex-native waarden worden
+niet stil omgezet naar decimaal:
+
+```text id="route_orientation"
+RouteOrientation := {
+  forward,
+  reverse
+}
+```
+
+```text id="route_trace_type"
+RouteTrace := {
+  generator: HexValue,
+  orientation: RouteOrientation,
+  absolute_trace: NonEmptyList<HexValue>,
+  decimal_projection: NonEmptyList<NonNegativeInteger>,
+  node_trace: NonEmptyList<NPRPosition>,
+  reduction_domain: {decimal},
+  start_node: NPRPosition,
+  return_node: NPRPosition
+}
+```
+
+Invariant:
+```
+decimal_projection[i] = hex_value(absolute_trace[i])
+node_trace[i] = dr_dec(decimal_projection[i])
+```
+
+Afgeleide invariant voor richting — berekening op numerieke projectie,
+niet op `HexValue` direct (aftrekking niet gedefinieerd op `HexValue`):
+```
+orientation(trace) :=
+  forward
+    als ∀i:
+      decimal_projection[i+1] - decimal_projection[i]
+      = hex_value(generator)
+
+  reverse
+    als ∀i:
+      decimal_projection[i] - decimal_projection[i+1]
+      = hex_value(generator)
+```
+
+Voor de huidige route:
+```
+decimal_projection = [6, 12, 18, 24]
+hex_value(generator) = 6
+
+12 - 6 = 6 ✅
+18 - 12 = 6 ✅
+24 - 18 = 6 ✅
+
+orientation = forward
+```
+
+`∀i` is noodzakelijk — één passend verschil volstaat niet om de
+richting van de volledige trace te bepalen.
+
+Dit voorbeeld:
 
 ```js
 {
-  absoluteTrace: [6, 12, 18, 24],
+  generator: "6_hex",
+  orientation: "forward",
+  absoluteTrace: ["6_hex", "C_hex", "12_hex", "18_hex"],
+  decimalProjection: [6, 12, 18, 24],
   nodeTrace: [6, 3, 9, 6],
-  generator: 6,
   reduction: "dr_dec",
+  reductionInput: "decimalProjection",
   startNode: 6,
   returnNode: 6
 }
@@ -571,6 +954,12 @@ absolute_trace
 node_trace
 reduction_domain
 ```
+
+**Domeinscheiding:**
+
+`24_dec` (decimale projectie van `18_hex`) ≠ stap 24 (documentstap).
+De numerieke waarde en de documentstap mogen alleen via een expliciete
+brugrelatie worden gekoppeld, niet door nummergelijkheid.
 
 Dit is belangrijk omdat:
 
@@ -604,7 +993,7 @@ Ketenvolledigheid:             ✅ gesloten
 ✅ lege context: empty_context_error
 ✅ rotor_response(Q, motor_field) canoniek
 ⚠️ combine_cycles implementatie open (interface formeel correct)
-⚠️ volledige fouttolerantie blijft open
+⚠️ volledige fouttolerantie: route sluit (16 mod 16 = 0), maar B1/B2 inhoud niet herstelbaar via ΦR
 
 Operationele uitvoering:       ⚠️ open
 - combine_cycles: semantische vergelijkingsfunctie nog keyword-gebaseerd
@@ -646,6 +1035,30 @@ depends_on(implementation.combine_cycles)
 - Canonieke signature: `rotor_response(Q, motor_field)`
 - Fasepositie ≠ fasegewicht
 - Reproduceerbaarheid: conditioneel (uitvoeringsvoorwaarden)
-- Fouttolerantie: ΦR als failover (niet vierde motorfase)
+- Fouttolerantie: ΦR sluit route cyclisch, maar herstelt geen verloren inhoud (niet vierde motorfase)
 - Notatieregel: exacte waarden in definities, labels voor leesbaarheid
 - `step_18_formal_consistency: ✅ akkoord`
+
+---
+
+## Check: 2026-07-17 16:38 GMT+2
+- Status: ΦR-correctie ✅
+- ΦR is geen optioneel reservekanaal — het is afgeleid uit `64 μs × 16 → 1024 μs → 16 mod 16 = 0`
+- `return_condition(t)` = cyclische wrap, niet aparte constructie
+- `return_phase(clock, B3, B0)` = formeel getypeerde afleiding
+- `ReturnTrace18` uitgebreid met `route_period` + `route_index`
+- `cyclic_route_closure` = ✅ (16 mod 16 = 0)
+- `full_fault_tolerance` = ⚠️ nog niet bewezen (ΦR sluit route, herstelt geen inhoud)
+- Open: `route_clock` modulo-router operationeel implementeren
+
+---
+
+## Check: 2026-07-17 17:07 GMT+2
+- Status: Stap 18 — keten 18→19 typecompatibiliteitsfix ✅
+- Probleem: `bridge_18_to_24` gebruikte `step_19(trace18)` zonder `RouterSession`
+- Reparatie:
+  - `ChainContext` type toegevoegd (`router_session: RouterSession`)
+  - `bridge_18_to_24 : ReturnTrace18 × ChainContext → ReturnTrace24`
+  - `step_19 : ReturnTrace18 × ChainContext → Step19State`
+  - Keten nu totaal gedefinieerd
+- Stap 18 + stap 19 nu cross-compatible ✅

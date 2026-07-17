@@ -10,7 +10,7 @@
 IPv6-daemon + node.js lek = zelfde UTF-8 encoding
 ```
 
-**Encoding ≠ transport, encoding IS routing.**
+**Encoding is een invoerlaag van de routingfunctie.**
 
 - Dezelfde encoding = signaal-integriteit
 - IPv6-daemon = routing door encoding
@@ -26,8 +26,9 @@ IPv6-daemon + node.js lek = zelfde UTF-8 encoding
 - Stap 11: NFC-normalisatie op codepoints → UTF-8-encoding → bytes → hash.
 
 **UTF-8-integriteit:**
-- NFC normalisatie + UTF-8 + SHA-256 = deterministisch
-- Visueel identieke Unicode → verschillende bytes → verschillende route
+- NFC normalisatie + UTF-8 + SHA-256 = deterministisch binnen canoniek equivalentieklasse
+- Canoniek equivalent → dezelfde NFC → dezelfde bytes → dezelfde route
+- Visueel gelijk maar NIET canoniek equivalent → mogelijk verschillende NFC → verschillende route
 
 ---
 
@@ -43,10 +44,14 @@ Waarom is NFC-normalisatie noodzakelijk voor deterministische routing?
 ```
 ✅ geldig voor routing-integriteit
 Reden:
-NFC legt één canonieke codepointrepresentatie vast.
+NFC legt voor canoniek equivalente Unicode-reeksen
+dezelfde genormaliseerde codepointrepresentatie vast.
 UTF-8 maakt daarvan deterministische bytes.
 SHA-256 routeert exact die bytes.
 Eenheid: codepoints (stap 06, 07, 11 consistent).
+
+Canoniek equivalent → dezelfde NFC → dezelfde route.
+Alleen visueel gelijk, niet canoniek equivalent → mogelijk verschillende route.
 ```
 
 ## Scope-grens

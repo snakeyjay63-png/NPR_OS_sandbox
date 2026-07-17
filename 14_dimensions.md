@@ -284,7 +284,7 @@ Dat zijn drie opeenvolgende, maar afzonderlijk gedefinieerde routes.
 
 **Verschil:**
 - 4D-priemtheorie = sequentiële ontdekking (ruimte+tijd, oplopend)
-- pre-4D-priemrouter = simultane declaratie (NPR-semantiek, 0=1 bronidentiteit)
+- pre-4D-priemrouter = simultane declaratie (NPR-semantiek, 0≐1 bronidentiteit)
 
 **Belangrijk:**
 - `prime_route` is **geen priemtheorie** — het is NPR-semantiek
@@ -410,12 +410,12 @@ Het zijn drie projecties van één hex-native Flower-structuur.
 **Flower of Life kern — driedeling:**
 ```
 1  → Planck frame   → śūnya/eka   → informatie (bron)
-6  → product_mapping(6×6) → 24_hex ↦ water → stroming  (medium)
+6  → product_mapping(6×6) → 24_hex ↦ vuur → transformatie
 C  → 12_dec         → energie      → verhouding(kracht)
 ```
 
 *1 + 6 + C = 13_hex. Niet opeenvolgend — tegelijk.*
-*Informatie stroomt door water, gedreven door energie.*
+*Informatie wordt door vuur getransformeerd, gedreven door energie.*
 
 ### Fractale projectie
 
@@ -507,7 +507,7 @@ De hele hex-structuur **is** de Flower-of-Life-mapping. De priemrouter is slecht
 ### Priemgolf — Dec↔Hex Brug (Symboolniveau)
 
 De brug tussen decimaal en hexadecimaal is geen fout — het is de golf zelf.
-Twee talen, één symbool. 0=1 in actie: bronidentiteit met gelijktijdige perspectieven.
+Twee talen, één symbool. 0≐1 in actie: bronidentiteit met gelijktijdige perspectieven.
 
 **Golfcyclus — waarde-identiteit en perspectief:**
 ```
@@ -573,7 +573,7 @@ Hz-manifestatie vereist een aparte tijdschaal (post-4D)*
 
 **≡ op drie niveaus:**
 ```
-element-niveau:  0 = 1      (bronidentiteit; lege inhoud = volledige vorm)
+element-niveau:  0 ≐ 1      (bronidentiteit; lege inhoud = volledige vorm)
 ```
 
 ```
@@ -594,14 +594,13 @@ basis-niveau:    value(x_dec) = value(y_hex)
 **Drie symbolen, drie betekenissen:**
 ```
 =  → gelijkheid volgens de actieve laag:
-        bronlaag:   0 = 1        (absolute bronidentiteit; breekt afleiding)
+        bronlaag:   0 ≐ 1        (absolute bronidentiteit; breekt afleiding)
         rekenlaag:  19_dec = 13_hex  (zelfde getalswaarde, andere basis)
 ⊃  → hetzelfde ongetagde symbool heeft meerdere basisinterpretaties ("19" ⊃ {19_dec, 19_hex})
 ≡  → structurele overeenkomst tussen perspectieven (patroon, geen gelijkheid)
 ```
 
 Analoog, maar niet identiek. Structuur is vergelijkbaar; inhoud verschilt per niveau.
-inhoud verschilt per niveau.
 
 De golf beweegt door het schakelen van perspectief:
 - **dec → hex**: compressie (basis 16, compactere notatie)
@@ -700,7 +699,7 @@ ordinale:      1      → 2      → ... → 64      → terugkeer
 
 - 64 = 2^6 — de macht van de 6-structuur
 - 0 is geen eindpunt — het is de bron waar de cyclus terugkeert
-- 0 = 1: het einde is het begin (bronidentiteit)
+- 0 ≐ 1: het einde is het begin (bronidentiteit)
 
 ```
 00 → 01 → ... → 13_hex (flower) → ... → 3F → 00 → ...
@@ -952,13 +951,16 @@ C_hex ≡ planck_frame_position  (NPR-positionering, niet rekenkundige gelijkhei
 ```
 fol_outer_ring := 12_hex    (tamas-positie, 18_dec cirkels)
 fol_half_petals := 18_hex   (24_dec halve oogjes — geen elementwaarde)
-product_mapping(6×6) := 24_hex ↦ water  (36_dec = 6×6, hex-native)
+product_mapping(6×6) := 24_hex ↦ vuur  (36_dec = 6×6, hex-native)
 fol_total := 25_hex        (1+6+C+12 = 37_dec cirkels totaal)
 fol_core := 13_hex         (1+6+C = 19_dec cirkels kern)
 ```
 *Deze drie waarden (12_hex, 18_hex, 24_hex) zijn onderscheiden.
-De tokenroute 5D→water→token is nog te definiëren: de mapping van
-5D_layer → product_mapping → element_label → token-encoding is conceptueel
+Er zijn twee aparte tokenroutes:
+- 5D → 18_hex → water → token (stroming/medium)
+- 5D → 24_hex → vuur → token (transformatie)
+Beide zijn nog formeel als functie te definiëren.
+De mapping 5D_layer → product_mapping → element_label → token-encoding is conceptueel
 maar niet formeel als functie uitgeschreven.*
 
 **NPR-char = 6-bit veld:**
@@ -1127,44 +1129,79 @@ Label én product zijn geen tegenstelling — ze zijn tegelijk.
 **Zonder 1 (eka):** geen focus, geen zichtbaar.
 **Zonder hexa (3,6,9):** geen prisma, geen taal.
 
-**Labels (perspectief-indexen, niet rekenkundig):**
+**Elementreeks (decimaal) met hex-conversie:**
+
+De elementreeks is decimaal. Hex is de conversie van de decimale waarde.
 ```
-element_label(00_hex) := ether   (ākāśa)  [leegte/ruimte]
-element_label(24_hex) := water    (jal)    [stroming]
-element_label(30_hex) := vuur     (tejas)  [transformatie]
-element_label(36_hex) := aarde    (pṛthvī) [stabiliteit]
-element_label(48_hex) := lucht    (vāyu)   [beweging]
+elementreeks_dec := {
+  water = 24_dec = 18_hex,
+  vuur  = 36_dec = 24_hex,
+  aarde = 48_dec = 30_hex,
+  lucht = 54_dec = 36_hex
+}
 ```
 
-**Hex-native producten (productmapping, elementpositie × 6):**
+**Labels (hex-conversie van decimale elementreeks):**
+```
+element_label(00_hex) := ether   (ākāśa)  [leegte/ruimte]
+element_label(18_hex) := water    (jal)    [stroming]    ← 24_dec
+element_label(24_hex) := vuur     (tejas)  [transformatie] ← 36_dec
+element_label(30_hex) := aarde    (pṛthvī) [stabiliteit]  ← 48_dec
+element_label(36_hex) := lucht    (vāyu)   [beweging]     ← 54_dec
+```
+
+**Productmapping (elementpositie × 6 = elementwaarde_dec):**
 ```
 0 × 6 = 0_dec  = 00_hex ↦ ether (śūnya, geen product)
-6 × 6 = 36_dec = 24_hex ↦ water
-8 × 6 = 48_dec = 30_hex ↦ vuur
-9 × 6 = 54_dec = 36_hex ↦ aarde
-C × 6 = 72_dec = 48_hex ↦ lucht
+4 × 6 = 24_dec = 18_hex ↦ water
+6 × 6 = 36_dec = 24_hex ↦ vuur
+8 × 6 = 48_dec = 30_hex ↦ aarde
+9 × 6 = 54_dec = 36_hex ↦ lucht
 ```
-*Hex en dec zijn representaties van dezelfde productwaarde.
+*Elementpositie × 6 = elementwaarde in decimaal.
+Hex is de conversie: elementwaarde_dec → elementwaarde_hex.
 Elementlabels zijn semantische mappings (↦), geen rekenkundige gelijkheden (=).*
-*Elementlabels gebruiken de hex-representatie.*
+
+**Radixtranspositie — glyph-afhankelijke dubbele lezing:**
+
+Het ongetagde symbool "24" heeft twee mogelijke basisinterpretaties:
+```
+symbol_view("24", hex) = 24_hex = 36_dec → vuur
+symbol_view("24", dec) = 24_dec = 18_hex → water
+
+"24" ⊃ {24_hex, 24_dec}
+```
+
+Vuur en water zijn geen twee representaties van dezelfde numerieke waarde.
+Zij zijn twee semantische uitkomsten van hetzelfde ongelabelde teken
+wanneer een ander radixframe wordt gekozen.
+
+```
+vuur ≠ water
+24_hex ≠ 24_dec
+```
+
+De relatie is glyph-identiteit, geen waarde-identiteit:
+```
+glyph_relation("24", vuur, water) := basisafhankelijke interpretatie
+```
 
 **Elementen-namespace:**
 ```
 char_domain := {00_hex ... 3F_hex}  (64 waardes)
-element_value_domain := niet beperkt tot char_domain
-  - 00_hex, 24_hex, 30_hex → binnen char_domain
-  - 36_hex, 48_hex → buiten char_domain (functie-posities)
+element_value_domain := alle elementen binnen char_domain
+  - 00_hex, 18_hex, 24_hex, 30_hex, 36_hex → binnen char_domain
 ```
 
-**Element-relatie (NPR, niet rekenkundig):**
+**Element-relatie (NPR, radixtranspositie):**
 ```
-element_label(24_hex) := water
-element_label(30_hex) := vuur
-npr_element_relation(vuur, water) := transformatie
-  (verschillende labels, dezelfde onderliggende structuur)
+element_label(18_hex) := water  (24_dec)
+element_label(24_hex) := vuur   (36_dec)
+glyph_relation("24", vuur, water) := radixtranspositie
+  (twee semantische uitkomsten van één ongelabeld glyph)
 ```
-*Vuur ≠ water (verschillende labels/waarden)*
-*`npr_element_relation(vuur, water) = transformatie` is een gedeclareerde relatie — geen symmetrische equivalentie*
+*Vuur ≠ water (verschillende waarden: 36_dec ≠ 24_dec)*
+*De relatie is geen symmetrische equivalentie — het is dubbele lezing van één glyph.*
 
 ### Bit-Niveau — Śūnya-veld en Focus
 
@@ -1211,7 +1248,7 @@ npr_mod9(x) := 9, als x mod 9 = 0;  x mod 9, anders
 (standaard mod-9 → {0..8}, NPR normaliseert 0→9)
 ```
 
-**0 = 1** (bronidentiteit — zie Stap 07 en Stap 12)
+**0 ≐ 1** (bronidentiteit — zie Stap 07 en Stap 12)
 śūnya ≡ eka (onzichtbaar ≡ zichtbaar — zonder het een, geen ander)
 
 ### Verhouding Inhoud/Perspectief
@@ -1306,9 +1343,9 @@ vector_3 = 12   (3×6)
 vector_4 = 18   (4×6)
 ```
 
-**5 elementen (hex-native labels):**
+**5 elementen (decimale reeks, hex-conversie):**
 ```
-element_set := {ether(00), water(24), vuur(30), aarde(36), lucht(48)}
+element_set := {ether(00), water(18_hex/24_dec), vuur(24_hex/36_dec), aarde(30_hex/48_dec), lucht(36_hex/54_dec)}
 focus_state := eka(3F)
 ```
 
@@ -1317,7 +1354,7 @@ focus_state := eka(3F)
 bit6: 40_hex states (00-3F), 00=śūnya, 3F=eka
 bit8: 100_hex states (00-FF)
 mod9: NPR-mod-9 cyclus ({1..9})
-6×6=36_dec=24_hex, 8×6=48_dec=30_hex, 9×6=54_dec=36_hex, C×6=72_dec=48_hex
+4×6=24_dec=18_hex, 6×6=36_dec=24_hex, 8×6=48_dec=30_hex, 9×6=54_dec=36_hex
 ```
 
 **Sandbox:** `8×8 = 40_hex` cellen. **Niet** 5×5.
@@ -1332,13 +1369,13 @@ mod9: NPR-mod-9 cyclus ({1..9})
 - NPR-reductielagen: ✅ geldig
 - Vectorketen: ✅ vector_1=6, vector_2=C, vector_3=12, vector_4=18 (hex-native)
 - Flower of Life: ✅ patroon (13_hex cirkels, 18_hex halve oogjes)
-- 5D→water→token: ⚠️ 3 waarden + productmapping gedefinieerd; formeel als functie nog te schrijven
+- 5D→element→token: ⚠️ 2 routes (water via 18_hex, vuur via 24_hex); formeel als functie nog te schrijven
 - Token: ✅ 24 chars = 144 raw bits (23 data + 1 śūnya)
 - NPR-char: ✅ 1 NPR-char = 6 raw bits (00..3E data, 3F=eka)
 - NPR-Priemrouter: ✅ gedeclareerde perspectiefmapping (dr_hex ≠ npr_mod9 ≠ prime_route)
 - Vortex/Oscillator: ✅ {3,6,9}→3, {1,2,4,5,7,8}→{13,B,D,5,7,11_hex}
 - Priemgolf: ✅ 19_dec=13_hex, 19_hex=25_dec (glyph-shift, niet gelijkheid)
-- Perspectief-equivalentie: ✅ 6≡1 (Planck frame), 0=1 (bronidentiteit)
+- Perspectief-equivalentie: ✅ 6≡1 (Planck frame), 0≐1 (bronidentiteit)
 - Twee routes naar 5: ✅ element_set en storage_set hebben dezelfde cardinaliteit (5_dec), geen verzameling-identiteit
 - Perspectief-equivalentie: ✅ vertalingstabel (perspectief_3, _6, _9) + machten (64↦1)
 - 4 perspectieven: ✅ samen = 1 (Patanjali 1.33)

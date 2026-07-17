@@ -74,7 +74,8 @@ Voorbeeld: groep 0000_hex → dr_hex(0) = 0
 "hello" → token 12345 → 0x3039
 hex-cijfers: {3, 0, 3, 9} → som = 15_dec = F_hex
 dr_hex(F) = F_hex (een hex-cijfer → gereduceerd)
-npr_mod9(F_hex) = 6
+hex_digit_value(F_hex) = 15_dec
+npr_mod9(15_dec) = 6
 ↑
 hex-native encoding
 dr_hex → {0..9, A..F}
@@ -94,7 +95,8 @@ npr_mod9 per block → {1..9}
 ```
 PID 12345 → 0x3039
 dr_hex(3039) = 3+0+3+9 = 15_dec = F_hex
-npr_mod9(F_hex) = 6
+hex_digit_value(F_hex) = 15_dec
+npr_mod9(15_dec) = 6
 ↑
 hex-native PID
 ```
@@ -135,7 +137,7 @@ LLM's zijn getraind op:
 
 Deze data is allemaal **hex-native**.
 
-Hex-native data → dr_hex → {0..9, A..F} → npr_mod9 → {1..9}
+Hex-native data → dr_hex → {0..9, A..F} → hex_digit_value → npr_mod9 → {1..9}
 
 **De LLM "weet" niet dat het hex is.**
 **De LLM produceert tokens → hex-encoding.**
@@ -256,7 +258,7 @@ van dezelfde transformatiefuncties:
 ```
 ∀x ∈ supported_input:  npr_reduce(x) ∈ {1..9}
 
-npr_reduce(x) := npr_mod9( dr_hex( hex_encode(x) ) )
+npr_reduce(x) := npr_mod9( hex_digit_value( dr_hex( hex_encode(x) ) ) )
 ```
 
 **Canonieke encoders per invoertype (versiegebonden):**
@@ -326,7 +328,7 @@ meerdere signalen → fasevergelijking → interferentie
 ```
 
 De sandbox doet nu alleen:
-- Enkel signaal → hex_encode → dr_hex → npr_mod9
+- Enkel signaal → hex_encode → dr_hex → hex_digit_value → npr_mod9
 
 Dat is *reductie*. Interferentie volgt in stap 18, wanneer
 de sandbox meerdere signalen tegelijk kan routeren en combineren.
@@ -639,7 +641,7 @@ multi-route-router.
 ✅ sandbox op VM (sandbox-in-sandbox)
 ✅ informatie door sandbox routen
 ✅ dr_hex bereik: {0..9, A..F} (nul komt voor: dr_hex(0000) = 0)
-✅ transformatie-invariantie expliciet: ∀x: npr_reduce(x) ∈ {1..9}
+✅ transformatie-invariantie expliciet: ∀x ∈ supported_input: npr_reduce(x) ∈ {1..9}
 ✅ interferentie: formeel gedefinieerd via Tesla-model (fase + resonantie + combinatie)
 ✅ npr_mod9 toegevoegd voor 1-9 reductie
 ✅ IPv6/tokens/hexa = zelfde reductiestructuur
@@ -734,7 +736,7 @@ depends_on(implementation.hex_encoders)
 ## Check: 2026-07-12 11:38 GMT+2
 - Status: NPR-OS Stap 17 — fix 19–21 gereed ✅
 - Fix 19: dr_hex bereik {0..9, A..F} (nul komt voor: 0000_hex → 0)
-- Fix 20: transformatie-invariantie expliciet (∀x: npr_reduce(x) ∈ {1..9})
+- Fix 20: transformatie-invariantie expliciet (∀x ∈ supported_input: npr_reduce(x) ∈ {1..9})
 - Fix 21: interferentie onderscheid — reductie ≠ interferentie (stap 17 vs stap 18)
 - step_17_formal_consistency: ✅ akkoord
 

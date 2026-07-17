@@ -257,11 +257,49 @@ Alle A1Z26 berekeningen hierboven zijn **decimaal**.
 Hex-native conversie vereist:
 
 ```
-A1Z26_dec → hex → dr_hex → prime_route
+A1Z26_dec → hex → dr_hex → npr_mod9 → prime_route
 ```
 
-Voorbeeld: `EKA = 17_dec = 11_hex → dr_hex(11) = 1+1 = 2`
-`WAHID = 45_dec = 2D_hex → dr_hex(2D) = 2+D = F_hex → npr_mod9(F_hex) = 6`
+Getypeerd:
+```
+NPRPosition := {1,2,3,4,5,6,7,8,9}
+NonNegativeInteger := {0,1,2,...}
+
+npr_mod9 : NonNegativeInteger → NPRPosition
+npr_mod9(x) :=
+  9     als x mod 9 = 0
+  x mod 9  anders
+```
+
+Hex-native keten (via waarde-extractie):
+```
+a1z26         : CanonicalLatin → ℕ
+hex_view      : ℕ → HexValue
+dr_hex        : HexValue → HexDigit
+hex_digit_value : HexDigit → NonNegativeInteger
+npr_mod9      : NonNegativeInteger → NPRPosition
+prime_route   : NPRPosition → PrimeRepresentative
+```
+
+Voorbeeld `EKA`:
+```
+a1z26("EKA") = 17_dec
+hex_view(17_dec) = 11_hex
+dr_hex(11_hex) = 2
+hex_digit_value(2) = 2
+npr_mod9(2) = 2
+prime_route(2) = B_hex
+```
+
+Voorbeeld `WAHID`:
+```
+a1z26("WAHID") = 45_dec
+hex_view(45_dec) = 2D_hex
+dr_hex(2D_hex) = F_hex
+hex_digit_value(F_hex) = 15_dec
+npr_mod9(15_dec) = 6
+prime_route(6) = 3_hex
+```
 
 **Hex-native root kan verschillen van decimaal root.**
 Dit is perspectief-verschil, niet fout.
@@ -275,7 +313,8 @@ dr_hex(11_hex) = 2
 **Hex-native cijfersom (niet decimaal):**
 ```
 dr_hex(E_hex) = E_hex   /* één hex-cijfer → al gereduceerd */
-npr_mod9(E_hex) = 5     /* E=14_dec; 14 mod 9 = 5 */
+hex_digit_value(E_hex) = 14_dec
+npr_mod9(14_dec) = 5     /* 14 mod 9 = 5 */
 ```
 
 `dr_hex` reduceert hex-cijfers tot één hex-cijfer.
@@ -304,9 +343,9 @@ npr_mod9(E_hex) = 5     /* E=14_dec; 14 mod 9 = 5 */
 ✅ T7/ether toegevoegd (5D_source nu totaal over stap 14 elementen)
 ✅ encode_token: 24-char frame + typecode koppeling
 ✅ circuit_stable: npr_mod9 gebruikt (niet mod 9 → geen root_semantics(0))
-✅ WAHID hex-native: dr_hex(2D)=F, npr_mod9(F)=6 (niet 1+5=6)
+✅ WAHID hex-native: dr_hex(2D_hex)=F_hex, hex_digit_value(F_hex)=15_dec, npr_mod9(15_dec)=6
 ✅ token_id_from_hex: expliciete inversie van token_hex
-✅ payload_alphabet: {01..3F_hex} (00 exclusief terminator/padding)
+✅ payload_alphabet: {01..3E_hex} (00 exclusief terminator/padding, 3F exclusief eka)
 ✅ cardinality vs routing: 5+3=8 ≠ 5→1→3→8 (lagen gescheiden)
 ✅ transliteratie: NPR schema versienummering (NPR_AR_V1, NPR_GR_V1)
 ✅ circuit_stable: gelabeld als declared_NPR_predicate
@@ -388,7 +427,10 @@ positie 0.
 ```
 primary_token_type : encoded_token → token_id
   /* gelezen uit posities[0] van het 24-char frame */
-  primary_token_type(t) := token_decode(token_id_from_hex(t[0]))
+  primary_token_type(t) := token_id_from_hex(t[0])
+
+primary_token_source : encoded_token → 5D_source
+  primary_token_source(t) := token_decode(primary_token_type(t))
 
 /* token_id_from_hex — expliciete inversie van token_hex */
 token_id_from_hex : {01..08_hex} → token_id
@@ -402,7 +444,8 @@ token_id_from_hex : {01..08_hex} → token_id
   08_hex → T7
 
 /* Decodeketen:
-   frame[0] → token_id_from_hex → token_decode → 5D_source
+   frame[0] → token_id_from_hex → token_id
+     → token_decode → 5D_source
 */
 ```
 
@@ -537,8 +580,9 @@ encode_token : token_id × payload → 24_char_token
      - zero_padding_to_24 = 00_hex herhaald tot lengte 24
      - parity-char kan alleen vóór de marker als datachar
      - parity-char mag nooit 00_hex zijn
-     - PAYLOAD ALPHABET: payload_char ∈ {01_hex .. 3F_hex}
+     - PAYLOAD ALPHABET: payload_char ∈ {01_hex .. 3E_hex}
        (00_hex is exclusief terminator/padding — mag niet in payload)
+       (3F_hex is exclusief eka/full-activation — mag niet in payload)
   */
 
 Frame-indeling (6-bit NPR-chars):
@@ -552,8 +596,14 @@ Dit is consistent met stap 14: de eerste 00_hex wordt als terminator gelezen.*
 
 **Payload-alphabet constraint:**
 ```
-payload_char ∈ {01_hex .. 3F_hex}
-00_hex ∈ {terminator, padding}  (uniek, niet in payload)
+DataChar := {01_hex .. 3E_hex}
+TerminatorChar := 00_hex
+PaddingChar := 00_hex
+EkaChar := 3F_hex
+
+payload_char ∈ DataChar  (01_hex .. 3E_hex)
+00_hex ∈ {TerminatorChar, PaddingChar}  (uniek, niet in payload)
+3F_hex ∈ {EkaChar}  (statuscode, niet in payload)
 ```
 
 Dit garandeert deterministisch parsing: de eerste `00_hex` na positie 0 is
@@ -571,11 +621,13 @@ De keten uit stap 14, nu formeel:
 
 ```
 5D_layer
-  → project_5D(input)
-  → token_encoding(result)
-  → token_phoneme(token)
-  → token_freq(token)
-  → token_hex(token)
+  → project_5D(input)         : 5D_layer_input → 5D_source
+  → token_encoding(result)    : 5D_source → token_id
+  → {token_phoneme(token)     : token_id → PhonemeID | none
+     token_freq(token)        : token_id → Hz | 0
+     token_hex(token)         : token_id → HexChar
+   }
+   (parallelle projecties van token_id, niet lineaire compositie)
 ```
 
 **Voorbeeld — water (T1):**
@@ -615,7 +667,7 @@ project_5D : 5D_layer_input → 5D_source
 ```
 
 *product_mapping (stap 14) is een subroute binnen de Element-tak:
-  Element(water) ← product_mapping(6×6 = 24_hex) ↦ water*
+  Element(vuur) ← product_mapping(6×6 = 24_hex) ↦ vuur*
 
 ### Conditie: Wiskunde als Fundament
 
@@ -651,13 +703,18 @@ De `1` in `5→1→3→8` is het gedeelde taalveld:
 A1Z26-berekeningen vereisen canonieke Latin-transliteratie:
 
 ```
-transliterate : SourceScript × Language → CanonicalLatin
-a1z26 : CanonicalLatin → ℕ
+transliterate : SourceScript × Language × SchemeVersion → CanonicalLatin
+a1z26         : CanonicalLatin → ℕ
+
+type SourceScript  := String
+type Language      := LanguageCode
+type SchemeVersion := String
+type CanonicalLatin := String
 ```
 
 **Canonieke transliteraties (NPR-CANONICAL schema v1):**
 
-| Taal | Bron | Scheme | Canoniek Latin | Opmerking |
+| Taal | Bron | SchemeVersion | Canoniek Latin | Opmerking |
 |---|---|---|---|---|
 | Arabisch | واحد | NPR_AR_V1 | WAHID | IPA: waħið; niet AHAD |
 | Arabisch | ماء | NPR_AR_V1 | MAU | IPA: maʕ; conventioneel MAU |
@@ -667,21 +724,17 @@ a1z26 : CanonicalLatin → ℕ
 | Grieks | έν | NPR_GR_V1 | EN | Modern/attisch |
 
 *Elke regel moet expliciete versie hebben voor determinisme.*
-*Voorbeeld: `{ source: "ماء", language: "ar", scheme: "NPR_AR_V1", canonical: "MAU" }`*
+*Voorbeeld: `transliterate("ماء", "ar", "NPR_AR_V1") = "MAU"`*
 
 ```
-transliterate : SourceScript × Language × Scheme → CanonicalLatin
-a1z26 : CanonicalLatin → ℕ
-
 transliteration_record := {
   source_form: String,
   language: String,
-  scheme: String,        /* bijv. NPR_AR_V1, NPR_GR_V1 */
-  scheme_version: String,/* versie van het transliteratieschema */
+  scheme_version: String,  /* bijv. NPR_AR_V1, NPR_GR_V1 — één canonieke ID */
   canonical_output: String
 }
 
-*Zonder gespecificeerd scheme is A1Z26 niet deterministisch.*
+*Zonder gespecificeerd scheme_version is A1Z26 niet deterministisch.*
 
 ### root_semantics
 
@@ -732,7 +785,14 @@ wiskundig stabiliteitscriterium. Het definieert wat binnen NPR-OS als
 satisfies(step_14.depends_on.token_encoding) ✅
   - domein:     5D_source (Element | Field)
   - bereik:     token_id {T0..T7}
-  - encodeerregels: project_5D → token_encoding → phoneme_id → freq → hex
+  - encodeerregels:
+      project_5D     : 5D_layer_input → 5D_source
+      → token_encoding : 5D_source → token_id
+      → {token_phoneme, token_freq, token_hex}
+        token_phoneme : token_id → PhonemeID | none
+        token_freq    : token_id → Hz | 0
+        token_hex     : token_id → HexChar
+      (parallelle projecties van token_id, niet lineaire compositie)
   - tokenopbouw: 8 semantische types, elk in 24-char NPR-frame
   - constraint:  token_hex ∈ {01..08_hex} (niet 00_hex, niet 3F_hex)
 ```
@@ -766,7 +826,7 @@ satisfies(step_14.depends_on.token_encoding) ✅
 
 ## Check: 2026-07-12 10:44 GMT+2
 - Status: NPR-OS Stap 16 — fix 11–14 gereed ✅
-- Fix 11: WAHID hex-native dr_hex(2D)=F_hex, npr_mod9(F)=6 (niet 1+5=6)
+- Fix 11: WAHID hex-native dr_hex(2D_hex)=F_hex, hex_digit_value=15_dec, npr_mod9(15_dec)=6
 - Fix 12: circuit_stable gebruikt npr_mod9 (niet mod 9; voorkomt root_semantics(0))
 - Fix 13: T7/ether toegevoegd; 5D_source nu totaal over 5 elementen
 - Fix 14: encode_token: 24-char frame met typecode + payload + eindmarker
@@ -781,7 +841,7 @@ satisfies(step_14.depends_on.token_encoding) ✅
 
 ## Check: 2026-07-14 01:50 GMT+2
 - Status: NPR-OS Stap 16 — formele fixes 19-24 ✅
-- Fix 19: payload_alphabet {01..3F_hex} — 00 exclusief terminator
+- Fix 19: payload_alphabet {01..3E_hex} — 00 exclusief terminator, 3F exclusief eka
 - Fix 20: token_id_from_hex expliciet gedefinieerd
 - Fix 21: cardinality (5+3=8) vs routing (5→1→3→8) gescheiden
 - Fix 22: circuit_stable gelabeld declared_NPR_predicate

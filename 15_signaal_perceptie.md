@@ -17,19 +17,26 @@ frequentieratio → kleurindex 00–07 → kleurwaarde
 **Fix 10: Inputpipeline** — keten begint met drie gestageerde functies:
 ```
 normalize_nfc      : UnicodeText → NormalizedText
-segment_phonemes   : NormalizedText → List<CanonicalPhoneme>
-phoneme_id         : CanonicalPhoneme → PhonemeID
+segment_phonemes   : NormalizedText → List<AtomicPhoneme>
+canonicalize_matra : Consonant × DependentVowel → List<AtomicPhoneme>
+phoneme_id         : AtomicPhoneme → PhonemeID
 ```
 NFC-normalisatie garandeert deterministische Unicode-weergave.
-`segment_phonemes` ontledt de tekst tot canonieke fonemen (lettergrepen, afhankelijke klinkertekens, etc.).
-`phoneme_id` kiest het stabiele getypeerde paar.
+`segment_phonemes` ontledt de tekst tot atomische fonemen.
+Afhankelijke klinkertekens (matra's) worden uitgeschreven naar hun zelfstandige vorm:
+```
+canonicalize_matra(क, ा) = [क, आ]
+canonicalize_matra(त, ी) = [त, ई]
+```
+`segment_phonemes("का")` produceert `[क, आ]`, niet `[(क, ा)]`.
+`phoneme_id` kiest het stabiele getypeerde paar van elk atomisch foneem.
 
 **Foutroutes:**
 ```
-unsupported_phoneme          : CanonicalPhoneme → error
+unsupported_phoneme          : AtomicPhoneme → error
 invalid_cluster             : NormalizedText → error
 empty_input                 : UnicodeText → error
-multiple_phonemes_in_single : List<CanonicalPhoneme> → error
+multiple_phonemes_in_single : List<AtomicPhoneme> → error
 ```
 
 **Scope:**
@@ -538,10 +545,11 @@ npr_signal(φ) :=
 
 **Volledige keten (getypeerde pipeline):**
 ```
-normalize_nfc       : UnicodeText → NormalizedText
-segment_phonemes    : NormalizedText → List<CanonicalPhoneme>
-phoneme_id          : CanonicalPhoneme → PhonemeID
-npr_signal          : PhonemeID → signal_output
+normalize_nfc        : UnicodeText → NormalizedText
+segment_phonemes     : NormalizedText → List<AtomicPhoneme>
+canonicalize_matra   : Consonant × DependentVowel → List<AtomicPhoneme>
+phoneme_id           : AtomicPhoneme → PhonemeID
+npr_signal           : AtomicPhoneme → signal_output
 ```
 
 **Voor één foneem:**
@@ -550,7 +558,7 @@ npr_signal_single(raw_input) :=
   let text     = normalize_nfc(raw_input)
   let phonemes = segment_phonemes(text)
   require length(phonemes) = 1
-  npr_signal(phoneme_id(phonemes[0]))
+  npr_signal(phonemes[0])
 ```
 
 **Voor een tekst:**
@@ -559,7 +567,7 @@ npr_signal_sequence(raw_input) :=
   let text     = normalize_nfc(raw_input)
   let phonemes = segment_phonemes(text)
   require length(phonemes) >= 1
-  map(npr_signal ∘ phoneme_id, phonemes)
+  map(npr_signal, phonemes)
 ```
 
 **Foutroutes:**
