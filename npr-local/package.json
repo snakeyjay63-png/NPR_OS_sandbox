@@ -15,5 +15,7 @@
     "tmux": "bash scripts/npr-tmux.sh",
     "tmux:detach": "bash scripts/npr-tmux.sh detach"
   },
-  "dependencies": {}
+  "dependencies": {
+    "epoll": "^4.0.2"
+  }
 }
