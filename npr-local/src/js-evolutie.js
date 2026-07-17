@@ -20,6 +20,7 @@
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import * as ExploitTimeline from "./exploit-timeline.js";
 
 // ─── Fase 0: Browser-primitieven (1995-2004) ───
 // Evaluatie, timer, DOM-toegang — de oerfuncties
@@ -415,6 +416,23 @@ const CapabilityRegistry = Object.freeze({
   observe,
   reflect,
   returnOutput,
+  // Exploit Timeline
+  listExploitTimeline: () => ExploitTimeline.ExploitTimeline,
+  getExploitRecord: (id) =>
+    ExploitTimeline.ExploitTimeline.find((r) => r.id === id) ?? null,
+  filterExploitTimeline: (filters) =>
+    ExploitTimeline.filterExploitTimeline(filters),
+  analyzeExploit: (id) => {
+    const record = ExploitTimeline.ExploitTimeline.find(
+      (r) => r.id === id,
+    );
+    return record ? ExploitTimeline.analyzeExploit(record) : null;
+  },
+  summarizeExploitTimeline: () =>
+    ExploitTimeline.summarizeExploitTimeline(),
+  validateExploitTimeline: () =>
+    ExploitTimeline.validateExploitTimeline(),
+  listHardwareGenerations: () => ExploitTimeline.HardwareGenerations,
 });
 
 // ─── Autorisatie ───
@@ -425,6 +443,14 @@ const PUBLIC_CAPABILITIES = new Set([
   "observe",
   "transform",
   "route",
+  // Exploit Timeline (read-only)
+  "listExploitTimeline",
+  "getExploitRecord",
+  "filterExploitTimeline",
+  "analyzeExploit",
+  "summarizeExploitTimeline",
+  "validateExploitTimeline",
+  "listHardwareGenerations",
 ]);
 
 const TRUSTED_ONLY = new Set([
@@ -502,6 +528,14 @@ async function invoke(capabilityName, args = [], context = {}) {
 // ─── HTTP Server — 0.0.0.0 Listener ───
 
 const HOST = "0.0.0.0";
+
+function parseOptionalInteger(value) {
+  if (value === null || value === "") {
+    return undefined;
+  }
+  const parsed = Number(value);
+  return Number.isInteger(parsed) ? parsed : undefined;
+}
 const PORT = 3000;
 
 function readJsonBody(request) {
@@ -537,6 +571,45 @@ const server = http.createServer(async (request, response) => {
       `http://${request.headers.host ?? "localhost"}`,
     );
 
+    // ── Exploit Timeline API routes (GET) ──
+    if (request.method === "GET" && url.pathname === "/api/exploits") {
+      const filters = {
+        fromYear: parseOptionalInteger(url.searchParams.get("from")),
+        toYear: parseOptionalInteger(url.searchParams.get("to")),
+        dr: parseOptionalInteger(url.searchParams.get("dr")),
+        category: url.searchParams.get("category") ?? undefined,
+        search: url.searchParams.get("search") ?? undefined,
+      };
+
+      response.statusCode = 200;
+      response.end(JSON.stringify(ExploitTimeline.filterExploitTimeline(filters)));
+      return;
+    }
+
+    const exploitMatch = url.pathname.match(/^\/api\/exploits\/([a-z0-9-]+)$/);
+    if (request.method === "GET" && exploitMatch) {
+      const record = ExploitTimeline.ExploitTimeline.find(
+        (r) => r.id === exploitMatch[1],
+      );
+
+      if (!record) {
+        response.statusCode = 404;
+        response.end(JSON.stringify({ error: "Exploit record not found" }));
+        return;
+      }
+
+      response.statusCode = 200;
+      response.end(JSON.stringify(ExploitTimeline.analyzeExploit(record)));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/exploits-summary") {
+      response.statusCode = 200;
+      response.end(JSON.stringify(ExploitTimeline.summarizeExploitTimeline()));
+      return;
+    }
+
+    // ── Capability routes (POST) ──
     const [, namespace, capabilityName] = url.pathname.split("/");
 
     if (namespace !== "capability" || !capabilityName) {
