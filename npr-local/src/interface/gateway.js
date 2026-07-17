@@ -81,11 +81,18 @@ function handleNprTrace(req, res) {
 // ─── Server ───
 
 // @addr 10.02.1.3 | fd00:npr:0002:001::3 — server factory
-function createServer(routes) {
+function createServer(routes, opts = {}) {
+  const { routeController, contextMeter } = opts;
+
   // Register built-in routes (slot 0x00: Noise phase)
   routes.register(0x00, '/health', handleHealth);
   routes.register(0x01, '/status', handleStatus);
   routes.register(0x02, '/npr/trace', handleNprTrace);
+
+  // NPR route control endpoints
+  const { handleNprRouteStop, handleNprRouteStatus } = require('../routes/core');
+  routes.register(0x03, '/npr/route/stop', handleNprRouteStop);
+  routes.register(0x04, '/npr/route/status', handleNprRouteStatus);
 
   const server = http.createServer((req, res) => {
     // ─── Global tick tracking ───
@@ -178,7 +185,7 @@ function createServer(routes) {
 
       // Route after body is parsed
       try {
-        dispatch(req, res);
+        dispatch(req, res, { app: { routeController, contextMeter } });
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({

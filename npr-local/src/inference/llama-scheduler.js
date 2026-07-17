@@ -5,6 +5,8 @@
 // ═══════════════════════════════════════════════════
 
 const { QueueError } = require('./inference-queue');
+const { ContextMeter } = require('./context-meter');
+const { RouteController } = require('./route-controller');
 
 function toHex(n) {
   if (typeof n !== 'number') return '0x0000';
@@ -14,9 +16,9 @@ function toHex(n) {
 // @addr 10.05.5.1 | fd00:npr:0005:005::1 — LlamaScheduler
 class LlamaScheduler {
   /**
-   * @param {{client: object, slotMonitor: object, queue: object, eventSink: object}} opts
+   * @param {{client: object, slotMonitor: object, queue: object, eventSink: object, routeController?: object, contextMeter?: object}} opts
    */
-  constructor({ client, slotMonitor, queue, eventSink }) {
+  constructor({ client, slotMonitor, queue, eventSink, routeController, contextMeter }) {
     this.client = client;
     this.slotMonitor = slotMonitor;
     this.queue = queue;
@@ -24,6 +26,9 @@ class LlamaScheduler {
     this.draining = false;
     // per-session active tracking — prevent monopoly
     this.activeSessions = new Set();
+    // optional integrations
+    this.routeController = routeController ?? null;
+    this.contextMeter = contextMeter ?? null;
   }
 
   // @addr 10.05.5.2 | fd00:npr:0005:005::2 — enqueue request
@@ -92,6 +97,16 @@ class LlamaScheduler {
         signal: request.signal,
       });
 
+      // Track tokens via ContextMeter
+      if (this.contextMeter && result?.token_usage) {
+        const { prompt_tokens = 0, completion_tokens = 0 } = result.token_usage;
+        this.contextMeter.track(request.sessionId, prompt_tokens + completion_tokens);
+        this.contextMeter.trackSlot(slot.id, prompt_tokens + completion_tokens);
+      } else if (this.contextMeter && result?.tokens) {
+        this.contextMeter.track(request.sessionId, result.tokens);
+        this.contextMeter.trackSlot(slot.id, result.tokens);
+      }
+
       const elapsed = Date.now() - start;
 
       this.eventSink?.emit?.('inference_completed', {
@@ -130,6 +145,8 @@ class LlamaScheduler {
       },
       slots: this.slotMonitor.getStatus(),
       active_sessions: this.activeSessions.size,
+      context_meter: this.contextMeter?.getOverview() ?? null,
+      active_routes: this.routeController?.getActiveRoutes() ?? null,
     };
   }
 }

@@ -91,7 +91,8 @@ function registerPrefix(prefix, handler) {
 // ─── Dispatch ───
 
 // @addr 10.05.2.3 | fd00:npr:0005:002::3 — request dispatch
-function dispatch(req, res) {
+// opts.app merges into ctx so handlers can access routeController, contextMeter, etc.
+function dispatch(req, res, opts = {}) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
@@ -127,9 +128,11 @@ function dispatch(req, res) {
     console.log('DISPATCH DEBUG:', pathname, 'PATH_EXACT.has=', PATH_EXACT.has(pathname), 'PATH_EXACT.keys=', [...PATH_EXACT.keys()].filter(k => k.startsWith('/llama') || k.startsWith('/hex')));
   }
 
+  const ctxBase = { url, pathname, app: opts.app || null };
+
   // 1. Exact match (priority)
   if (PATH_EXACT.has(pathname)) {
-    return safeHandler(PATH_EXACT.get(pathname), { url, pathname });
+    return safeHandler(PATH_EXACT.get(pathname), ctxBase);
   }
 
   // 2. Parameterized match
@@ -139,14 +142,14 @@ function dispatch(req, res) {
       const params = {};
       const paramNames = path.match(/:(\w+)/g) || [];
       paramNames.forEach((name, i) => { params[name.slice(1)] = match[i + 1]; });
-      return safeHandler(handler, { url, pathname, params });
+      return safeHandler(handler, { ...ctxBase, params });
     }
   }
 
   // 3. Prefix match
   for (const [key] of PATH_EXACT) {
     if (key.endsWith('*') && pathname.startsWith(key.slice(0, -1))) {
-      return safeHandler(PATH_EXACT.get(key), { url, pathname });
+      return safeHandler(PATH_EXACT.get(key), ctxBase);
     }
   }
 
@@ -155,7 +158,7 @@ function dispatch(req, res) {
   const slot = hash.readUInt32BE(0) % SLOT_COUNT;
   const handlers = SLOT_HANDLERS.get(slot);
   if (handlers && handlers.has('__default__')) {
-    return safeHandler(handlers.get('__default__'), { url, pathname, slot });
+    return safeHandler(handlers.get('__default__'), { ...ctxBase, slot });
   }
 
   // 5. Not found
@@ -194,4 +197,77 @@ function manifest() {
   return result;
 }
 
-module.exports = { register, registerPrefix, dispatch, phaseInfo, manifest, PATH_TO_SLOT, toHex, parseSlot, SLOT_COUNT, PHASE_SIZE };
+// @addr 10.05.3.0 — NPR route stop handler
+function handleNprRouteStop(req, res, ctx) {
+  if (req.method !== 'POST') {
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'method not allowed', method: 'POST' }));
+  }
+
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    try {
+      const { session_id, sessionId } = body ? JSON.parse(body) : {};
+      const sid = session_id || sessionId;
+      if (!sid) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'missing session_id' }));
+      }
+
+      // Resolve route controller from app context
+      const routeController = ctx.app?.routeController;
+      if (!routeController) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'route_controller not available' }));
+      }
+
+      const stopped = routeController.stop(sid);
+      if (!stopped) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'no active route for session', session_id: sid }));
+      }
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'stopped', session_id: sid }));
+    } catch (err) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'bad request', message: err.message }));
+    }
+  });
+}
+
+// @addr 10.05.3.1 — NPR route status handler
+function handleNprRouteStatus(req, res, ctx) {
+  if (req.method !== 'GET') {
+    res.writeHead(405, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'method not allowed', method: 'GET' }));
+  }
+
+  const routeController = ctx.app?.routeController;
+  if (!routeController) {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ error: 'route_controller not available' }));
+  }
+
+  const url = ctx.url;
+  const sessionId = url.searchParams.get('session_id') || url.searchParams.get('sessionId');
+
+  if (sessionId) {
+    const status = routeController.getStatus(sessionId);
+    if (!status) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ error: 'no route for session', session_id: sessionId }));
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(status));
+  }
+
+  // No session_id — return all active routes
+  const activeRoutes = routeController.getActiveRoutes();
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ active_routes: activeRoutes, count: activeRoutes.length }));
+}
+
+module.exports = { register, registerPrefix, dispatch, phaseInfo, manifest, PATH_TO_SLOT, toHex, parseSlot, SLOT_COUNT, PHASE_SIZE, handleNprRouteStop, handleNprRouteStatus };
+
