@@ -1,248 +1,177 @@
-// @addr 10.02.0.0
-// NPR Loop — Noise → Pattern → Return
-// The iterative agent core. Each cycle:
-//   1. Gather noise (runtime evidence)
-//   2. Submit to Llama for candidate generation
-//   3. Validate candidate via Patañjali 1.7
-//   4. If valid → Return. If not → iterate with feedback.
-//
-// Contract: one input → one canonical return. No loops forever.
+// @addr 10.06.0.0 | fd00:npr:0006:000::0 — NPR Loop
+// ═══════════════════════════════════════════════════
+// Noise → Pattern → Return
+// Full cycle with scheduler, pattern validation, and correction.
+// ═══════════════════════════════════════════════════
 
-"use strict";
+const EventEmitter = require('events');
 
-const { nprRoute } = require('../field/npr');
-const { validatePattern } = require('../field/patanjali-17');
-const { createReturn, createFailedReturn } = require('../field/return-structure');
-const { gatherNoise } = require('./noise-gatherer');
-const llamaClient = require('../inference/llama-client');
+// @addr 10.06.0.1 | fd00:npr:0006:000::1 — default toHex
+function toHex(n) {
+  if (typeof n !== 'number') return '0x0000';
+  return '0x' + Math.abs(Math.floor(n)).toString(16).toUpperCase();
+}
 
-// ─── Config ────────────────────────────────────────────────────────────
-
-// @addr 10.02.0.1
-const DEFAULT_MAX_ITERATIONS = 0x0A; // 10
-const DEFAULT_TIMEOUT_MS = 0x2710;   // 10000
-
-// ─── Core Loop ─────────────────────────────────────────────────────────
-
-// @addr 10.02.1.0
-/**
- * Run the NPR cycle until validation passes or iterations exhausted.
- *
- * @param {object} opts
- * @param {string} opts.input       - Raw input (question, task, signal).
- * @param {object} [opts.contracts] - Formal contracts for validation.
- * @param {number} [opts.maxIterations] - Hard cap on cycles.
- * @param {number} [opts.timeoutMs]     - Total timeout.
- * @param {string} [opts.sessionId]
- *
- * @returns {Promise<object>} Canonical return envelope.
- */
-async function nprLoop({
-  input,
-  contracts,
-  maxIterations = DEFAULT_MAX_ITERATIONS,
-  timeoutMs = DEFAULT_TIMEOUT_MS,
-  sessionId,
-} = {}) {
-  const start = Date.now();
-  const route = nprRoute(input);
-  const baseNoise = { input, route, session_id: sessionId };
-
-  // ─── Phase 0: Initial noise gathering ───────────────────────────────
-
-  // @addr 10.02.1.1
-  let noise = await gatherNoise(baseNoise);
-
-  // Lightweight Llama health check
-  const client = llamaClient.createLlamaClient();
-  try {
-    // Quick probe: try a tiny completion to verify llama is alive
-    await client.complete(
-      [{ role: 'user', content: '.' }],
-      { maxTokens: 2, timeout: 0x07D0 },
-    );
-    noise.llama = { available: true };
-  } catch (err) {
-    noise.llama = { available: false, reason: err.message };
+// @addr 10.06.1.0 | fd00:npr:0006:001::0 — NPRLoop
+class NPRLoop extends EventEmitter {
+  /**
+   * @param {{
+   *   scheduler: object,
+   *   patternValidator: object,
+   *   returnBuilder: object,
+   *   noiseCollectors?: object[],
+   *   maxIterationsHex?: number,
+   * }} opts
+   */
+  constructor({
+    scheduler,
+    patternValidator,
+    returnBuilder,
+    noiseCollectors = [],
+    maxIterationsHex = 0x05,
+  } = {}) {
+    super();
+    this.scheduler = scheduler;
+    this.patternValidator = patternValidator;
+    this.returnBuilder = returnBuilder;
+    this.noiseCollectors = noiseCollectors;
+    this.maxIterationsHex = maxIterationsHex;
   }
-  noise._client = client;
 
-  // ─── Phase 1: Iterative refinement ──────────────────────────────────
-
-  // @addr 10.02.1.2
-  const cycles = [];
-
-  for (let i = 0; i < maxIterations; i++) {
-    // Timeout check
-    if (Date.now() - start > timeoutMs) {
-      return createFailedReturn({
-        cycles,
-        reason: 'TIMEOUT',
-        noise,
-      });
-    }
-
-    // Generate candidate from Llama
-    const candidate = await generateCandidate({
+  // @addr 10.06.1.1 | fd00:npr:0006:001::1 — collect noise evidence
+  async collectNoise(input, sessionId) {
+    const noise = {
+      session_id: sessionId,
       input,
-      noise,
-      feedback: i > 0 ? cycles[i - 1].feedback : null,
-      contracts,
-    });
+      context_blocks: [],
+      timestamp: Date.now(),
+    };
 
-    // Validate via Patañjali 1.7
-    const pattern = validatePattern({
-      candidate,
-      noise,
-      contracts,
-    });
-
-    const iterationHex = '0x' + (i + 1).toString(16).toUpperCase().padStart(4, '0');
-
-    cycles.push({
-      iteration_hex: iterationHex,
-      pattern,
-      candidate,
-      feedback: null,
-    });
-
-    // ─── Valid return? ────────────────────────────────────────────────
-
-    if (pattern.valid) {
-      return createReturn({
-        noise,
-        pattern,
-        candidate,
-        iterations: i + 1,
-      });
-    }
-
-    // ─── Prepare feedback for next iteration ──────────────────────────
-
-    // @addr 10.02.1.3
-    cycles[i].feedback = buildFeedback(pattern, candidate);
-
-    // Refresh noise with latest state (ports, VM, etc.)
-    noise = await gatherNoise({
-      ...baseNoise,
-      previousAttempt: candidate,
-      iteration: i + 1,
-    });
-  }
-
-  // ─── Exhausted ──────────────────────────────────────────────────────
-
-  return createFailedReturn({
-    cycles,
-    reason: 'ITERATION_LIMIT',
-    noise,
-  });
-}
-
-// ─── Candidate Generation ──────────────────────────────────────────────
-
-// @addr 10.02.2.0
-/**
- * Submit to Llama for candidate generation.
- * Builds a system prompt from noise + contracts + optional feedback.
- */
-async function generateCandidate({ input, noise, feedback, contracts }) {
-  const client = noise._client || llamaClient.createLlamaClient();
-
-  const attempt = feedback ? 'refinement' : '1st';
-  const systemPrompt = [
-    'NPR agent. Respond with structured JSON.',
-    `Route: ${noise.route}`,
-    `Attempt: ${attempt}`,
-  ];
-
-  if (contracts) {
-    systemPrompt.push(`Contracts: ${JSON.stringify(contracts)}`);
-  }
-
-  if (feedback) {
-    systemPrompt.push(`Previous validation feedback: ${feedback}`);
-  }
-
-  // Gather noise context for the model
-  const noiseContext = {
-    vm: noise.vm ?? null,
-    workspace: noise.workspace ?? null,
-    ports: noise.ports ?? null,
-    tools: noise.tools ?? null,
-    openclaw: noise.openclaw ?? null,
-  };
-
-  const userPrompt = [
-    `Input: ${input}`,
-    `Runtime context: ${JSON.stringify(noiseContext)}`,
-    'Return a JSON object with: { result, derivation, source }',
-  ].join('\n');
-
-  try {
-    const content = await client.complete(
-      [
-        { role: 'system', content: systemPrompt.join('\n') },
-        { role: 'user', content: userPrompt },
-      ],
-      { maxTokens: 0x03E8 }, // 1000
+    // parallel, non-blocking collector calls
+    const results = await Promise.allSettled(
+      this.noiseCollectors.map(c => c.collect(noise)),
     );
 
-    // Parse candidate — if Llama returns invalid JSON, wrap as string
-    try {
-      return JSON.parse(content);
-    } catch {
-      return { result: content, derivation: 'raw', source: 'llama' };
-    }
-  } catch (err) {
-    // Llama unavailable — return noise-only candidate
-    return {
-      result: null,
-      derivation: 'no-model',
-      source: 'local',
-      error: err.message,
-    };
-  }
-}
-
-// ─── Feedback Builder ──────────────────────────────────────────────────
-
-// @addr 10.02.2.1
-/**
- * Convert validation failures into actionable feedback for the next iteration.
- */
-function buildFeedback(pattern, candidate) {
-  const issues = [];
-
-  const report = (section, checks) => {
-    for (const check of checks) {
-      if (!check.pass) {
-        issues.push(`${section}: ${check.detail}`);
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        Object.assign(noise, r.value);
       }
     }
-  };
 
-  report('Pratyaksha', pattern.pratyaksha.checks);
-  report('Anumana', pattern.anumana.checks);
-  report('Agama', pattern.agama.checks);
-
-  if (issues.length === 0) {
-    return null; // Shouldn't happen — pattern.valid would be true
+    return noise;
   }
 
-  return `Validation failed (${issues.length} issues):\n` + issues.map((i, n) => `  ${n + 1}. ${i}`).join('\n');
+  // @addr 10.06.1.2 | fd00:npr:0006:001::2 — build prompt from noise
+  buildMessages(noise) {
+    const blocks = (noise.context_blocks ?? []).map(b => b.text).join('\n\n');
+
+    return [
+      { role: 'system', content: 'NPR inference context.' },
+      { role: 'user', content: noise.input },
+      ...(blocks ? [{ role: 'user', content: `Context:\n${blocks}` }] : []),
+    ];
+  }
+
+  // @addr 10.06.1.3 | fd00:npr:0006:001::3 — validate candidate pattern
+  validatePattern(candidate) {
+    if (this.patternValidator?.validate) {
+      return this.patternValidator.validate(candidate);
+    }
+
+    // fallback: non-empty string = valid
+    return {
+      valid: typeof candidate === 'string' && candidate.length > 0,
+      sutra_hex: '0x0107',
+    };
+  }
+
+  // @addr 10.06.1.4 | fd00:npr:0006:001::4 — main cycle
+  async run(input, sessionId, signal) {
+    const events = [];
+    const cycles = [];
+
+    // 0. Collect noise
+    const noise = await this.collectNoise(input, sessionId);
+    events.push({ type: 'noise_collected', ts: Date.now() });
+
+    // 1. Iterate: inference → validate → correct if needed
+    for (let i = 0; i < this.maxIterationsHex; i++) {
+      const iterationHex = toHex(i);
+
+      events.push({
+        type: 'iteration_start',
+        iteration_hex: iterationHex,
+        ts: Date.now(),
+      });
+
+      // 1a. Build messages (add previous failed attempts for correction)
+      const correctionContext = cycles.length > 0
+        ? `\nPrevious attempts failed validation. Context so far:\n${cycles.map(c => c.content).join('\n---\n')}`
+        : '';
+
+      const messages = this.buildMessages({
+        ...noise,
+        input: noise.input + correctionContext,
+      });
+
+      // 1b. Inference via scheduler (queued, not direct)
+      let candidate;
+      try {
+        const result = await this.scheduler.enqueue({
+          sessionId,
+          messages,
+          priorityHex: 0x40,
+          signal,
+        });
+
+        candidate = result.content ?? result ?? '';
+      } catch (err) {
+        // inference failed — return with error
+        return this.returnBuilder.createFailedReturn({
+          cycles,
+          reason: 'INFERENCE_FAILED',
+          noise,
+        });
+      }
+
+      // 1c. Pattern validation
+      const pattern = this.validatePattern(candidate);
+
+      cycles.push({
+        iteration_hex: iterationHex,
+        content: candidate,
+        pattern,
+      });
+
+      events.push({
+        type: 'pattern_result',
+        iteration_hex: iterationHex,
+        valid: pattern.valid,
+        ts: Date.now(),
+      });
+
+      // 1d. Valid? Return immediately
+      if (pattern.valid) {
+        return this.returnBuilder.createReturn({
+          noise,
+          pattern,
+          candidate,
+          iterations: i + 1,
+          events,
+        });
+      }
+
+      // 1e. Invalid → next iteration (correction goes to back of queue)
+      this.emit('correction_cycle', { iteration: i, session_id: sessionId });
+    }
+
+    // Exhausted iteration budget
+    return this.returnBuilder.createFailedReturn({
+      cycles,
+      reason: 'ITERATION_LIMIT',
+      noise,
+    });
+  }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────
-
-// (removed: cyclesCount was inlined into generateCandidate)
-
-// ─── Exports ───────────────────────────────────────────────────────────
-
-module.exports = {
-  nprLoop,
-  generateCandidate,
-  buildFeedback,
-  DEFAULT_MAX_ITERATIONS,
-  DEFAULT_TIMEOUT_MS,
-};
+module.exports = { NPRLoop };
