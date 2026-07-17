@@ -56,7 +56,7 @@ class ManagedSlotPool {
   constructor({ slotIds }) {
     this.slots = slotIds.map(id => ({
       id,
-      idHex: parseInt(id, 10).toString(16).toUpperCase(),
+      idHex: parseInt(id, 16).toString(16).toUpperCase(),
       busy: false,
     }));
     this.waiters = [];
@@ -115,7 +115,7 @@ class SlotMonitor {
       this.semaphore = new InferenceSemaphore(config.concurrencyHex ?? 0x04);
     } else {
       this.pool = new ManagedSlotPool({
-        slotIds: config.slotIds ?? ['0', '1', '2', '3'],
+        slotIds: config.slotIds ?? ['0x00', '0x01', '0x02', '0x03'],
       });
     }
   }
