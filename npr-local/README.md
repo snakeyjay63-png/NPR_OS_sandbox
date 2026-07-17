@@ -14,7 +14,8 @@ src/
 ├── log.js                 # Unified logger
 │
 ├── agent/
-│   ├── loop.js            # Single agent loop (model placeholder)
+│   ├── loop.js            # Legacy agent loop (SSE streaming, session mgmt)
+│   ├── npr-loop.js        # NPR Loop: Noise → Pattern → Return (via inference scheduler)
 │   └── context-breathe.js # Context compression
 ├── field/
 │   ├── npr.js             # NPR cycle (Noise → Pattern → Return)
@@ -33,9 +34,16 @@ src/
 │   ├── browser-bridge.js  # Browser bridge config
 │   ├── registry.js        # Service registry
 │   └── service.js         # Service discovery
+├── inference/
+│   ├── inference-queue.js # FIFO request queue with per-item timeout
+│   ├── slot-monitor.js    # InferenceSemaphore + ManagedSlotPool + SlotMonitor
+│   ├── llama-client.js    # Pure HTTP transport to llama.cpp :8765
+│   └── llama-scheduler.js # Couples queue + slot-monitor + client
+│
 ├── sources/
 │   ├── system-scan/       # Local system scan (tool-00)
-│   └── echo/              # Echo source
+│   ├── echo/              # Echo source
+│   └── openclaw-client.js # Noise collector (OpenClaw port 18789, 2s timeout)
 ├── routes/                # HTTP route handlers (see Routes table below)
 │
 ├── events/                # Event bus (dispatcher, registry, schema)
@@ -78,71 +86,93 @@ Alle routes worden gerouteerd via 64-slot NPR routing (zie onder). Live routes p
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/agent/chat` | POST | 0,16 | 6N,12P | Agent turn with NPR routing |
-| `/agent/chat-stream` | POST | 17 | 12P | Streaming agent turns (SSE) |
-| `/agent/workspace` | GET | 18 | 12P | Workspace context |
-| `/agent/context` | GET | 19 | 12P | Agent context |
-| `/agent/logs` | GET | 20 | 12P | Agent logs |
-| `/tty/agent` | GET | 24 | 12P | TTY agent interface |
+| `/agent/chat` | POST | 0x00,0x10 | 6N,12P | Agent turn with NPR routing |
+| `/agent/chat-stream` | POST | 0x11 | 12P | Streaming agent turns (SSE) |
+| `/agent/workspace` | GET | 0x12 | 12P | Workspace context |
+| `/agent/context` | GET | 0x13 | 12P | Agent context |
+| `/agent/logs` | GET | 0x14 | 12P | Agent logs |
+| `/tty/agent` | GET | 0x18 | 12P | TTY agent interface |
 
 ### Memory
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/memory/search?q=` | GET | 22 | 12P | Memory search (workspace scan) |
-| `/memory/context` | GET/POST | 53 | 24H | Context management |
-| `/api/memory/surface` | GET | 53 | 24H | Surface memory |
-| `/api/memory/deep` | GET | 53 | 24H | Deep memory |
-| `/api/memory/bedrock` | GET | 53 | 24H | Bedrock memory |
-| `/api/memory/file` | GET | 53 | 24H | File memory |
+| `/memory/search?q=` | GET | 0x16 | 12P | Memory search (workspace scan) |
+| `/memory/context` | GET/POST | 0x35 | 24H | Context management |
+| `/api/memory/surface` | GET | 0x35 | 24H | Surface memory |
+| `/api/memory/deep` | GET | 0x35 | 24H | Deep memory |
+| `/api/memory/bedrock` | GET | 0x35 | 24H | Bedrock memory |
+| `/api/memory/file` | GET | 0x35 | 24H | File memory |
 
 ### Tools
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/tool/:name` | POST | 25 | 12P | Tool execution (exec, system-scan, echo) |
-| `/tool/exec` | POST | 25 | 12P | Shell exec |
-| `/tool/system-scan` | POST | 25 | 12P | System scan |
-| `/tool/echo` | POST | 22 | 12P | Echo tool |
+| `/tool/:name` | POST | 0x19 | 12P | Tool execution (exec, system-scan, echo) |
+| `/tool/exec` | POST | 0x19 | 12P | Shell exec |
+| `/tool/system-scan` | POST | 0x19 | 12P | System scan |
+| `/tool/echo` | POST | 0x16 | 12P | Echo tool |
 
 ### Capabilities & Routing
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/capabilities` | GET | 58 | 24H | Available capabilities |
-| `/select?goal=` | GET | 62 | 24H | Dynamic capability selection |
-| `/npr/trace?path=` | GET | 0 | 6N | NPR routing trace |
-| `/introspect` | GET | 62 | 24H | Gateway introspection |
+| `/capabilities` | GET | 0x3A | 24H | Available capabilities |
+| `/select?goal=` | GET | 0x3E | 24H | Dynamic capability selection |
+| `/npr/trace?path=` | GET | 0x00 | 6N | NPR routing trace |
+| `/introspect` | GET | 0x3E | 24H | Gateway introspection |
 
 ### Context & Warehouse
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/context` | GET | 48 | 24H | Session context |
-| `/context/64k` | GET | 54 | 24H | 64K block context |
-| `/warehouse` | GET | 52 | 24H | Workspace warehouse (files + phases) |
+| `/context` | GET | 0x30 | 24H | Session context |
+| `/context/64k` | GET | 0x36 | 24H | 64K block context |
+| `/warehouse` | GET | 0x34 | 24H | Workspace warehouse (files + phases) |
 
 ### Maps & Bridge
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/maps` | GET | 60 | 24H | NPR URI maps |
-| `/bridge` | GET | 59 | 24H | Browser bridge (HTML) |
-| `/bridge/api` | GET | 59 | 24H | Bridge API |
+| `/maps` | GET | 0x3C | 24H | NPR URI maps |
+| `/bridge` | GET | 0x3B | 24H | Browser bridge (HTML) |
+| `/bridge/api` | GET | 0x3B | 24H | Bridge API |
 
 ### Diagnostics
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/doctor` | GET | 23 | 12P | System doctor / diagnostics |
+| `/doctor` | GET | 0x17 | 12P | System doctor / diagnostics |
 
 ### Sessions
 
 | Endpoint | Method | Slot | Phase | Description |
 |----------|--------|------|-------|-------------|
-| `/sessions` | GET | 10 | 6N | Active sessions |
-| `/sessions/:id` | GET | 11 | 6N | Session details |
-| `/sessions/:id/merge` | POST | 12 | 6N | Session merge |
+| `/sessions` | GET | 0x0A | 6N | Active sessions |
+| `/sessions/:id` | GET | 0x0B | 6N | Session details |
+| `/sessions/:id/merge` | POST | 0x0C | 6N | Session merge |
+
+### Inference
+
+| Endpoint | Method | Slot | Phase | Description |
+|----------|--------|------|-------|-------------|
+| `/hex-vm/status` | GET | 0x3F | 24H | NPR-Hex VM status |
+| `/hex-vm/assemble` | POST | 0x3F | 24H | Assemble program |
+| `/hex-vm/run` | POST | 0x3F | 24H | Execute program |
+| `/hex-vm/execute` | POST | 0x3F | 24H | Full assemble+run |
+
+### Llama Control
+
+| Endpoint | Method | Slot | Phase | Description |
+|----------|--------|------|-------|-------------|
+| `/llama/status` | GET | 0x3D | 24H | Llama-server runtime status |
+| `/llama/start` | POST | 0x3D | 24H | Start llama-server |
+| `/llama/stop` | POST | 0x3D | 24H | Stop llama-server |
+| `/llama/restart` | POST | 0x3D | 24H | Restart llama-server |
+| `/llama/logs` | GET | 0x3D | 24H | Llama-server logs |
+| `/llama/config` | GET/POST | 0x3D | 24H | Llama configuration |
+| `/llama/stream` | GET | 0x3D | 24H | SSE log stream |
+| `/llama/probe` | GET | 0x3D | 24H | Health probe |
 
 ## Run
 
@@ -161,14 +191,14 @@ node src/server-config.js  # config-llama only (:17010)
 
 ## NPR Routing
 
-64-slot routing with 4 phases:
+64-slot routing with 4 phases (hex addressing):
 
 | Phase | Slots | Range | Name |
 |-------|-------|-------|------|
-| 6N | 16 | 0-15 | Noise |
-| 12P | 16 | 16-31 | Pattern |
-| 18R | 16 | 32-47 | Return |
-| 24H | 16 | 48-63 | Hexa |
+| 6N | 16 | 0x00–0x0F | Noise |
+| 12P | 16 | 0x10–0x1F | Pattern |
+| 18R | 16 | 0x20–0x2F | Return |
+| 24H | 16 | 0x30–0x3F | Hexa |
 
 ## Event Bus
 
@@ -241,10 +271,15 @@ node test-event-pipeline.mjs   # 12/12 pass
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Route engine | ✅ | 64-slot, O(1) hash, 17 active slots |
+| Route engine | ✅ | 64-slot, O(1) hash, hex addressing |
 | HTTP gateway | ✅ | 30+ endpoints across 3 services |
 | Agent loop | ✅ | Live chat via llama-server (:8765) |
+| NPR Loop | ✅ | Noise → scheduler.enqueue → Pattern → Return |
+| Inference layer | ✅ | Queue + semaphore + scheduler (no direct llama calls) |
+| Llama client | ✅ | Pure HTTP to :8765 (isolated from queue/slot logic) |
+| Slot monitor | ✅ | Capacity-only (semaphore) + managed-slots (pool) |
 | NPR field | ✅ | Noise→Pattern→Return→Hexa pipeline |
+| Return structure | ✅ | Canonical envelope (createReturn, createFailedReturn, envelope) |
 | Event bus | ✅ | dispatcher + registry + schema + policy |
 | Input pipeline | ✅ | evdev + normalize (scaffold) |
 | Actions | ✅ | registry + execute |
@@ -254,8 +289,9 @@ node test-event-pipeline.mjs   # 12/12 pass
 | Geowon memory | ✅ | session storage + search (:17004) |
 | Config-llama UI | ✅ | Web UI (:17010) |
 | Dashboard | ✅ | Gateway monitor HTML |
-| Security P0 | ✅ | injection, traversal, CORS, auth |
-| Local model | ✅ | llama-server op :8765 |
+| Llama supervisor | ✅ | Runtime control + auto-recovery (:17000 slot 0x3D) |
+| NPR-Hex VM | ✅ | 25 opcodes, assembler, sandboxed executor (slot 0x3F) |
+| Security P0 | ✅ | injection, traversal, CORS, auth, localhost bind |
 
 ## Doctor Diagnostics
 
