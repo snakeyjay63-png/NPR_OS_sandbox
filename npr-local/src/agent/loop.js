@@ -120,6 +120,8 @@ ${phaseInfo?.tools ? 'Beschikbare fase-tools: ' + phaseInfo.tools.join(', ') : '
 - tool:select <doel> — wiskundige selectie via digitale root
 - tool:workspace — workspace info (optioneel: --scan, --full)
 - tool:read <pad> — bestand inhoud ophalen (injecteert in context)
+- tool:web-fetch <url> — webpagina ophalen (GET/POST)
+- tool:web-fetch --url=<url> --method=POST --body=... --raw
 
 ## Capabilities (digitale root 1-9)
 1=Identiteit | 2=Communicatie | 3=Analyse | 4=Structuur
@@ -803,8 +805,85 @@ async function executeTool(toolName, args, sessionId) {
         return { error: `read failed: ${e.message}`, path: filePath };
       }
     }
+    case 'web-fetch': {
+      const http = require('http');
+      const https = require('https');
+      const argList = args.split(' ').filter(Boolean);
+      let targetUrl = null;
+      let method = 'GET';
+      let body = '';
+      let timeout = 15000;
+      let raw = false;
+      let headers = {};
+
+      for (const arg of argList) {
+        if (arg.startsWith('--url=')) targetUrl = arg.slice(6);
+        else if (arg.startsWith('--method=')) method = arg.slice(9).toUpperCase();
+        else if (arg.startsWith('--body=')) body = arg.slice(7);
+        else if (arg.startsWith('--timeout=')) timeout = parseInt(arg.slice(10));
+        else if (arg.startsWith('--raw')) raw = true;
+        else if (arg.startsWith('--headers=')) {
+          try { headers = JSON.parse(arg.slice(10)); } catch {}
+        }
+        else if (!targetUrl) targetUrl = arg;
+      }
+
+      if (!targetUrl) {
+        return { error: 'web-fetch: url parameter is vereist', usage: 'tool:web-fetch <url> [--method=GET|POST] [--body=...] [--timeout=15000] [--raw]' };
+      }
+
+      let parsedUrl;
+      try { parsedUrl = new URL(targetUrl); } catch (e) {
+        return { error: `Ongeldige URL: ${e.message}` };
+      }
+
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        return { error: `Protocol niet toegestaan: ${parsedUrl.protocol}` };
+      }
+
+      const transport = parsedUrl.protocol === 'https:' ? https : http;
+      let hostname = parsedUrl.hostname;
+      if (hostname.startsWith('[') && hostname.endsWith(']')) {
+        hostname = hostname.slice(1, -1);
+      }
+      const opts = {
+        method, hostname,
+        port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+        path: parsedUrl.pathname + parsedUrl.search,
+        headers: { ...headers }, timeout,
+        family: hostname.includes(':') ? 6 : undefined,
+      };
+
+      return new Promise((resolve) => {
+        const start = Date.now();
+        const req = transport.request(opts, (res) => {
+          let data = '';
+          res.on('data', c => { data += c; });
+          res.on('end', () => {
+            const elapsed = Date.now() - start;
+            const result = { tool: 'web-fetch', url: targetUrl, method, status: res.statusCode, elapsed, slot: 'web' };
+            if (raw) {
+              result.raw = data;
+            } else {
+              try {
+                result.json = JSON.parse(data);
+                result.type = 'json';
+              } catch {
+                result.text = data.length > 2000 ? data.slice(0, 2000) + '\n\n... [geknipt, ' + Buffer.byteLength(data, 'utf8') + ' bytes]' : data;
+                result.type = 'text';
+              }
+            }
+            resolve(result);
+          });
+        });
+        req.on('error', e => resolve({ tool: 'web-fetch', error: e.message, code: e.code, url: targetUrl }));
+        req.on('timeout', () => { req.destroy(); resolve({ tool: 'web-fetch', error: `Timeout na ${timeout}ms`, url: targetUrl }); });
+        if (body) req.write(body);
+        req.end();
+      });
+    }
     default:
-      return { error: `unknown tool: ${toolName}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read'] };
+      return { error: `unknown tool: ${toolName}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read', 'web-fetch'] };
   }
 }
 

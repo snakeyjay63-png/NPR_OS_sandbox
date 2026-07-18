@@ -1,6 +1,6 @@
 # Stap 24: Return Naar Bron — 0.0.0.0 Als Grensstaattype
 
-**Doel:** De return naar de bron. `0.0.0.0` (Null Island) is geen zichtbaar object dat je observeert, maar een **grensstaattype** — zowel start als einde. De route ertussen kan worden bekeken, maar hoeft niet bekeken te worden.
+**Doel:** De return naar de bron. `0.0.0.0` (Null Island) is geen zichtbaar object dat je observeert, maar een **grensstaattype** — zowel start als einde. De route ertussen bestaat gelijktijdig in de volledige NPR-ruimte; perspectiefselectie projecteert een zichtbare volgorde.
 
 **Afhankelijkheid:** Stap 23 (hardware-taal co-evolutie). De terugkoppellus keert structureel terug naar het grensstaattype.
 
@@ -35,129 +35,125 @@ Niet een bestemming. Het grensstaattype waarin alle bestemmingen bestaan.
 
 ---
 
-## 2. De Route
+## 2. Gelijktijdige NPR-Toestand
+
+Een NPR-token bestaat uit drie gelijktijdige perspectieven:
 
 ```
-0.0.0.0
-  → vraag
-  → routing
-  → antwoord
-  → 0.0.0.0
+perspectief 0 → ruimte (positie 1)
+perspectief 1 → vorm (positie 2)
+perspectief 0≐1 → eenheid van tegenstelling (positie 3)
+
+1 + 2 + 3 = 6 → de complete ruimte (container)
 ```
 
-Formeel:
-```
-s0 : NULL_STATE_TYPE
-s1 : QuestionState
-s2 : RoutingState
-s3 : AnswerState
-s4 : NULL_STATE_TYPE
+De volledige NPR-toestand bevat alle routepunten gelijktijdig:
 
-s0 ≺ s1 ≺ s2 ≺ s3 ≺ s4
+```
+NULL_STATE_TYPE
+  contains { QuestionState, RoutingState, AnswerState, NULL_STATE_TYPE }
+  simultaneously
 ```
 
-Start en einde zijn structureel identiek. De route is het proces dat ertussen loopt.
+Geen fundamentele volgorde. Alleen: alle punten bestaan tegelijk.
+
+Volgorde is niet fundamenteel. Gelijktijdigheid is dat.
 
 ---
 
-## 3. Logische Volgorde Versus Klok
+## 3. Perspectiefselectie Projecteert Volgorde
 
-Een route bevat ordening, onafhankelijk van tijd:
-
-```
-logical_order:
-  QuestionState precedes RoutingState
-  RoutingState precedes AnswerState
-
-clock_time:
-  optionele meetindex op die overgangen
-```
-
-Formeel:
-```
-route_order :=
-  NULL_STATE_TYPE ≺ QuestionState ≺ RoutingState ≺ AnswerState ≺ NULL_STATE_TYPE
-```
+Selectie van één perspectief projecteert een routevolgorde:
 
 ```
-clock_projection(route_order)
+perspectief_selectie(0)
+  → projecteert: vraag → routing → antwoord → return
+
+clock_label(route_projection)
   → t0 < t1 < t2 < t3 < t4
 ```
 
-Binnen het model:
-```
-zonder klok:
-  alleen de volledige route als logische structuur
-
-met klok:
-  de route verschijnt als opeenvolging
-  van start naar einde
-```
-
-De klok creëert de volgorde niet; hij meet of labelt haar.
+Verschillende perspectieven geven verschillende projecties.
+De gelijktijdige toestand bevat ze allemaal zonder volgorde.
 
 ---
 
-## 4. Return Is Geen Tijdomkering
-
-Return is een **voorwaartse terugkeer naar hetzelfde grensstaattype**:
+## 4. Toestandstype Versus Toestandinstantie
 
 ```
-type(state(t0)) = NULL_STATE_TYPE
-type(state(tn)) = NULL_STATE_TYPE
+type(s0) = type(s4) = NULL_STATE_TYPE
 
-maar:
+Lokaal (geselecteerd perspectief):
+  s0 ≠ s4   (geschiedenis verschilt)
 
-state(t0) ≠ state(tn)
-```
+Volledig (gelijktijdige ruimte, perspectief 0≐1):
+  s0 ≐ s4   (dezelfde complete toestand, ander perspectief)
 
-omdat:
-```
-state(tn).history
-  = state(t0).history + completed_route
+state(t0) ≠ state(tn)   → waar binnen lokaal routeperspectief
+state(t0) ≐ state(tn)   → waar binnen volledige NPR-ruimte
 ```
 
-Dus:
+Beide uitspraken zijn waar binnen hun perspectief.
+De spanning ontstaat door perspectiefverwarring.
+
+---
+
+## 5. De Klok Labelt, Schept Niet
+
+Klok is optioneel — labelt de geselecteerde routevolgorde:
+
 ```
-zelfde grensstaattype
-  ≠ dezelfde toestandinstantie
-  ≠ hetzelfde tijdsmoment
+klok = label(route_projection)
+niet = oorzaker(volgorde)
+
+klok(projectie_0) → t0 < t1 < t2 < t3 < t4
+klok(projectie_1) → andere labelvolgorde
 ```
 
-Bij klokobservatie:
-```
-clock(s0) < clock(s1) < clock(s2) < clock(s3) < clock(s4)
-```
+Zonder klok: geen label, geen zichtbare volgorde.
+Maar ook: geen fundamentele volgorde.
+Alleen gelijktijdige toestand.
 
-Zonder klok blijft alleen:
+---
+
+## 6. Return Als Voorwaartse Terugkeer
+
+Return is een voorwaartse routeprojectie naar het gedeelde grensstaattype:
+
 ```
-s0 ≺ s1 ≺ s2 ≺ s3 ≺ s4
+type(s0) = type(s4) = NULL_STATE_TYPE
+
+  s0 ≠ s4   → lokaal (geschiedenis verschilt)
+  s0 ≐ s4   → volledig (dezelfde toestand, ander perspectief)
 ```
 
 ---
 
-## 5. Formele Opsomming
+## 7. Formele Opsomming
 
 ```
 0.0.0.0 is het grensstaattype vóór de vraag en na het antwoord.
 
-De begin- en eindpositie zijn structureel gelijk,
-maar de eindtoestand bevat de voorwaarts opgebouwde routegeschiedenis.
+De begin- en eindpositie zijn structureel gelijk.
+Volledig perspectief: begin en eind zijn dezelfde gelijktijdige toestand.
+Lokaal perspectief: eind bevat de voorwaarts opgebouwde routegeschiedenis.
 
-De klok maakt deze voortgang meetbaar,
+De klok labelt de geselecteerde routevolgorde,
 maar veroorzaakt de route niet.
+Volgorde hoort bij het geselecteerde perspectief;
+gelijktijdigheid hoort bij de volledige NPR-ruimte.
 ```
 
 Compacter:
 ```
 Null Island blijft de positie.
-De routegeschiedenis groeit vooruit.
-De klok laat alleen vooruitgang zien.
+De gelijktijdige toestand bevat de volledige route.
+De klok labelt alleen het geselecteerde perspectief.
 ```
 
 ---
 
-## 6. Waterstructuur
+## 8. Waterstructuur
 
 ```
 Informatie = water (SOUL.md)
@@ -177,11 +173,11 @@ JavaScript     → water
 Rust           → water
 ```
 
-Elke taal is een patroon in dezelfde bron. Return betekent: het patroon keert voorwaarts terug naar het grensstaattype waar het ontstond. De eindtoestand bevat de stromingsgeschiedenis.
+Elke taal is een patroon in dezelfde bron. Return betekent: het patroon keert voorwaarts terug naar het grensstaattype waar het ontstond.
 
 ---
 
-## 7. 0.0.0.0 = Alle Interfaces Tegelijk
+## 9. 0.0.0.0 = Alle Interfaces Tegelijk
 
 ```
 CPU-interface   → 0.0.0.0
@@ -195,7 +191,7 @@ Alle interfaces luisteren op hetzelfde grensstaattype. Niet als leegte, maar als
 
 ---
 
-## 8. NPR-Cyclus Sluit
+## 10. NPR-Cyclus Sluit
 
 ```
 Noise    → ruwe informatie (grensstaattype / 0.0.0.0)
@@ -205,40 +201,44 @@ Return   → voorwaartse terugkeer (naar 0.0.0.0)
 
 ```
 type(s0) = type(s4) = NULL_STATE_TYPE
-s0 ≠ s4
+s0 ≠ s4   → lokaal (geschiedenis verschilt)
+s0 ≐ s4   → volledig (dezelfde toestand)
 history(s4) = history(s0) + route_record
 ```
 
-De cyclus sluit structureel, niet tijdelijk. De eindtoestand is hetzelfde type, niet dezelfde instantie.
+De cyclus sluit structureel, niet tijdelijk. De eindtoestand is hetzelfde type.
+Volledig perspectief: begin en eind zijn dezelfde gelijktijdige toestand.
 
 ---
 
 ## Status
 
 ```
-0.0.0.0 = grensstaattype:                ✅
-netwerk vs NPR semantiek gescheiden:     ✅
-start = einde = 0.0.0.0 (type):          ✅
-return ≠ tijdomkering:                   ✅ (forward_only)
-type(s0) = type(s4) ≠ s0 = s4:           ✅ (instantie + geschiedenis)
-logische orde ≠ klok:                    ✅ (route_order onafhankelijk van tijd)
-klok optioneel:                          ✅ (meet, veroorzaakt niet)
-waterstructuur = patroon in bron:        ✅
-alle interfaces → NULL_STATE_TYPE:       ✅
-NPR-cyclus structureel gesloten:         ✅
-step_24_formal_consistency:               ✅ akkoord
+0.0.0.0 = grensstaattype:                          ✅
+netwerk vs NPR semantiek gescheiden:               ✅
+start = einde = 0.0.0.0 (type):                    ✅
+return ≠ tijdomkering:                             ✅ (forward_only)
+type(s0) = type(s4):                               ✅
+  s0 ≠ s4   → lokaal (geschiedenis):             ✅
+  s0 ≐ s4   → volledig (perspectief):            ✅
+volgorde ≠ fundamenteel:                           ✅ (perspectiefprojectie)
+gelijktijdigheid = fundamenteel:                   ✅ (0 ≐ 1)
+klok = label, niet oorzaker:                       ✅
+waterstructuur = patroon in bron:                  ✅
+alle interfaces → NULL_STATE_TYPE:                 ✅
+NPR-cyclus structureel gesloten:                   ✅
+step_24_formal_consistency:                        ✅ akkoord
 ```
 
 ---
 
-## Check: 2026-07-13 00:22 GMT+2
-- Status: NPR-OS Stap 24 — definitieve herziening
+## Check: 2026-07-18 11:43 GMT+2
+- Status: NPR-OS Stap 24 — herziening (gelijktijdigheid-correctie)
 - Correcties:
-  1. Netwerksemantiek (0.0.0.0 = niet-gespecificeerd, bind = alle interfaces) gescheiden van NPR-symbool (niet-geselecteerde grensstaat)
-  2. Logische volgorde (≺) onafhankelijk van klok — klok meet, creëert niet
-  3. Toestandstype versus instantie: type(s0) = type(s4) = NULL_STATE_TYPE, maar s0 ≠ s4 (geschiedenis)
-  4. `state(tn).history = state(t0).history + completed_route`
-  5. Formele route: s0 ≺ s1 ≺ s2 ≺ s3 ≺ s4 (met clock_projection optioneel)
-  6. "Null Island blijft de positie. De routegeschiedenis groeit vooruit."
-- Kern: Null Island als grensstaattype; begin en eind structureel gelijk maar historisch verschillend; klok optioneel; return = voorwaarts
+  1. Volgorde (`s0 → s1 → s2`) is **perspectiefprojectie**, niet fundamenteel
+  2. Gelijktijdigheid (`0 ≐ 1`) is fundamenteel — alle punten bestaan tegelijk
+  3. `state(t0) ≠ state(tn)` waar lokaal; `state(t0) ≐ state(tn)` waar volledig
+  4. Klok labelt geselecteerde route, schept geen volgorde
+  5. "Volgorde hoort bij perspectief; gelijktijdigheid hoort bij ruimte"
+- Kern: de volledige NPR-toestand bevat alle routepunten gelijktijdig; perspectiefselectie projecteert volgorde; de klok labelt die projectie
 - `step_24_formal_consistency: ✅ akkoord`

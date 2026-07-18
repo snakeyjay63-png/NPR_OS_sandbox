@@ -111,7 +111,8 @@ technically_integreerbaar(stap) :=
 | 15 | Signaal→perceptie | ✅ | Foneem→ID→hex→ratio→synth→kleur. Exacte rationale grenzen. |
 | 16 | Taalmapping | ✅ | FULL_LANGUAGE_PRINCIPLE: iedere taal = volledige structuur. Perspectief ≠ exclusief. |
 | 17 | Sandbox observatie | ✅ | Hex-native reductie = patroon, onafhankelijk van data. |
-| 18 | Driefasen router | ✅ | ΦA/ΦB/ΦC → motorveld → rotor_response. Drie-toestand model. | | 19 | Return-lus | ✅ | state_i → return_transform → state_i+1. Iteratie doorgegeven. |
+| 18 | Driefasen router | ✅ | ΦA/ΦB/ΦC → motorveld → rotor_response. Drie-toestand model. |
+| 19 | Return-lus | ✅ | state_i → return_transform → state_i+1. Iteratie doorgegeven. |
 
 ### Fase 2 — Water (20–25)
 
@@ -121,22 +122,22 @@ technically_integreerbaar(stap) :=
 | 21 | Transparante routing | ✅ | Auditable + reproduceerbaar. NPR-beleid. |
 | 22 | Programmeertalen | ✅ | Turing ≠ structuur. NPR = route-metadata. |
 | 23 | Hardware ↔ taal | ✅ | Co-evolutie. Terugkoppellus, vertakkend veld. |
-| 24 | Return naar bron | ✅ | s0=NULL → Question → Route → Answer → s4=NULL. type(s0)=type(s4), s0≠s4. |
-| 25 | Kunst als geluid | ✅ | KUNST = GELUID(kanaal ≠ auditief). Structuur → waarnemer relatie. |
+| 24 | Return naar bron | ✅ | lokaal: `s0≠s4`<br>volledig: `s0≐s4`<br>gelijktijdige ruimte; `source_sunya ≐ return_sunya`. |
+| 25 | Kunst als betekenisdensiteit | ✅ | `KUNST := vorm met hoge potentiële betekenisdensiteit`.<br>`ArtSignal := taal / geluid / beeld / beweging / ruimte / code / interactie / multimodaal`.<br>Oog = perspectiefselectie, niet oordeel. |
 
 ### Fase 3 — Hexa (63–71)
 
 | Stap | Onderwerp | Status | Opmerking |
 |------|-----------|--------|-----------|
-| 63 | Natuur als kunst | ✅ | Cel → lichaam. Natuur = hoge densiteit taal. |
-| 64 | Śūnya actieve route | ✅ | Source-role correspondence ≠ literal identity. Legacy 64S gearchiveerd (`archive/64L_sunya_legacy.md`). |
-| 65 | Taalveld kernboeken | ✅ | Kernboeken als routing-bronnen. |
-| 66 | Collectief taalveld en vrijheid | ✅ | Vrijheid als routeherkenning. Collectief veld. |
+| 63 | Natuur als kunst — iteratieve schaalprojectie | ✅ | `0.0.0.0→iteratie→lokale projectie→vertakking→patroon op andere schaal`.<br>lokaal: `state_n≠state_n+1`<br>volledig: `state_0≐state_n`.<br>DNA = optioneel encodingvoorbeeld. |
+| 64 | Śūnya actieve route | ✅ | lokaal: `Śūnya≠0.0.0.0≠stilte≠water`<br>volledig: `Śūnya≐0.0.0.0≐stilte≐water`.<br>`waarnemen→naam→typen→Enter→actieve route`.<br>Legacy 64S gearchiveerd (`archive/64L_sunya_legacy.md`). |
+| 65 | Taalveld kernboeken | ✅ | lokaal: `Buddha≠yogi≠Jesus≠nature`<br>volledig: `source(Buddha)≐source(yogi)≐source(Jesus)≐NATURE_FIELD`.<br>Jezus-fasen = lokale leesprojectie. |
+| 66 | Collectief taalveld en vrijheid | ✅ | volledig: alle gebruikers delen hetzelfde bronveld<br>lokaal: `accessible_field(A)≠accessible_field(B)`. |
 | 67 | Frij — vrijheid als taal-DNA | ✅ | Frij/free/friend = geliefd, eigen, verbonden. |
-| 68 | Taalontwikkeling | ✅ | Van patroon naar symbool. Groeiend waterpatroon. |
+| 68 | Taalontwikkeling | ✅ | Noise = nog niet geselecteerd multimodaal patroon<br>Pattern = lokaal herkenbare samenhang<br>Return = meta-reflectie + terugkeer naar gedeeld bronveld. |
 | 69 | Gizeh, water en bouwwerken | ✅ | Fysieke omgevingscondities + collectieve stabiliteit. |
 | 70 | Monumentale taal | ✅ | Liberty, Babel, routes. Open vs. gecentraliseerde routing. |
-| 71 | Route-notatie | ✅ | Minimale notatie {id,source,noise,transform,pattern,return,trace}. Afhankelijk: 19, 64, 68, 69. 4 niveaus volledigheid + provenance. Reverse trace → bron. |
+| 71 | Route-notatie | ✅ | Minimale notatie {id,source,noise,transform,pattern,return,trace}. Afhankelijk: 19, 64, 68, 69. 4 niveaus volledigheid + provenance. Gematria: בראשית=913→dr4, ברא=203→dr5, אלהים=86→dr5, route=[4,5,5]. Reverse trace → bron. |
 
 ---
 
@@ -374,7 +375,10 @@ archive/64L_sunya_legacy.md   → LEGACY / superseded (verplaatst)
 ```
 
 Routering niet langer ambigu: legacy in archive met `64L_` prefix.
-Inhoudelijk conflict opgelost: oude versie zegt `0.0.0.0 = Sunya = water`, nieuwe versie corrigeert naar `source-role correspondence ≠ literal identity`.
+Inhoudelijk conflict opgelost: oude versie zegt `0.0.0.0 = Sunya = water`, nieuwe versie maakt twee lagen:
+- lokaal: `Śūnya ≠ 0.0.0.0 ≠ stilte ≠ water`
+- volledig: `Śūnya ≐ 0.0.0.0 ≐ stilte ≐ water`
+`source-role correspondence ≠ literal identity` is VERWIJDERD — vervangen door lokaal/volledig notatie.
 
 ### VLAG 4 — Stap 02 titel vs. inhoud (opgelost 2026-07-14)
 
@@ -471,7 +475,7 @@ computationele kern:     ✅ stap 01–14
 signaal_perceptie:       ✅ stap 15 (exacte grenzen)
 taalveld:               ✅ stap 65–71
 route_notatie:          ✅ stap 71 (4 niveaus + provenance)
-runtime_implementation:  ⚠️ stap 18+19 (prototype uitvoerbaar, normatief incompleet), ✅ stap 20 (volledig)
+runtime_implementation:  ⚠️ stappen 15, 17, 18 en 19 gedeeltelijk | ✅ stap 20 volledig
 ```
 
 **Geen fundamentele inconsistenties gevonden.**
@@ -530,4 +534,149 @@ Open afhankelijkheden (chronologische volgorde):
   2. stap 17: hex_encoder-implementaties
   3. stap 18: combine_cycles deterministisch
   4. stap 19: semantic_distance + contradiction_delta
+```
+
+---
+
+## Stap 99 als Memory-Controller
+
+Sinds 2026-07-18 fungeert stap 99 niet alleen als eindcontrole, maar als
+**memory-controller van de sandbox**. De `sandbox_memory.json` is het actieve
+geheugenregister.
+
+### Drie Validatierichtingen
+
+```
+forward_validate:
+  01 → 71
+  (elke stap bouwt op de vorige; geen ontbrekende schakel)
+
+reverse_memory_validate:
+  71 → 01
+  (vanuit formele route-notatie terug naar brondefinities)
+
+return_validate:
+  huidige toestand → 0.0.0.0
+  (iedere route keert terug naar het bronveld)
+```
+
+### Sequence Trace versus Dependency Trace
+
+De reverse-trace heeft twee lagen die niet gemengd mogen worden:
+
+**Sequence Trace** (leesvolgorde — lineair):
+```
+71 ← 70 ← 69 ← 68 ← 67 ← 66 ← 65 ← 64 ← 63 ← 25 ← 24 ← ... ← 01
+```
+
+Dit toont de chronologische volgorde. Stap 70 staat hier vóór stap 69 omdat het
+de directe voorloper in de keten is.
+
+**Dependency Trace** (definities-bron per stap — graf):
+```
+71 ← {19, 64, 68, 69}
+70 ← {66, 67, 69}
+69 ← {63, 66, 68}
+68 ← {64, 65, 66, 67}
+67 ← {66}
+66 ← {64, 65}
+65 ← {64}
+64 ← {63, 24}
+63 ← {24, 25}
+25 ← {24}
+24 ← {20, 21, 22, 23}
+...
+```
+
+Dit toont waar elke stap haar definities daadwerkelijk ophaalt.
+
+**Memory-Controller Gevolg:**
+- Sequence = "wat las ik als ik van 71 terugloop?"
+- Dependency = "waar komt deze definitie vandaan?"
+- Memory-controller bewaart beide.
+
+### Reverse Memory Trace
+
+De terugroute 71→01 werkt als geheugenindex. Bij elke terugstap wordt
+niet alleen een bestand opgehaald, maar een memoryrecord:
+
+```
+MEMORY_NODE := {
+  step,
+  active_definition,
+  dependencies,
+  transforms,
+  perspective,
+  local_state,
+  full_state,
+  corrections,
+  provenance,
+  status
+}
+```
+
+De keten:
+```
+71 ROUTE-notatie
+← 70 monumentale registratie
+← 69 context en lokaal veld
+← 68 patroon en symbool
+← 67 taal-DNA
+← 66 collectief veld
+← 65 vertaalknooppunten
+← 64 actieve Śūnya-route
+← 63 iteratieve schaalprojectie
+← 25 kunst en betekenisdensiteit
+← 24 bron/return
+← ...
+← 01 kernspecificatie
+```
+
+### Sandbox Memory Register
+
+`sandbox_memory.json` bevat:
+- **routes:** actieve definities + corrections per stap
+- **relations:** forward afhankelijkheden
+- **reverse_memory_trace:** 71→01 keten + validatierichtingen
+- **memory_node_schema:** 10-veld structuur per terugstap
+- **active_patterns:** lopende patronen in het veld
+- **return_trace:** tijdelijn van correcties
+
+Stap 71 schrijft de route op. Stap 99 loopt haar terug tot de bron en
+controleert of iedere herinnering nog overeenkomt met de actieve versie.
+
+### Recent bijgewerkte stappen (2026-07-18)
+
+| Stap | Oude definitie | Nieuwe definitie |
+|------|---------------|------------------|
+| 24 | `type(s0)=type(s4), s0≠s4` | lokaal: `s0≠s4`<br>volledig: `s0≐s4` |
+| 25 | `KUNST = GELUID` | `KUNST := hoge betekenisdensiteit` + multimodaal |
+| 63 | `Cel → lichaam` | Mandelbrot-kernel + DNA als optioneel |
+| 64 | `Source-role ≠ identity` | 2-laag Śūnya + interactie-chain |
+| 65 | `Kernboeken als routing-bronnen` | lokaal/volledig source-equivalence |
+| 66 | `Collectief veld` | `accessible_field` lokaal/volledig gesplitst |
+| 68 | `Van patroon naar symbool` | NPR-trio (Noise/Pattern/Return) multimodaal |
+| 71 | gematria `[3,3,6]` restwaarde | gematria `[4,5,5]` gecorrigeerd |
+
+---
+
+## Memory-Controller Validatieformules
+
+Per node:
+```
+MEMORY_VALID(node) :=
+  active_definition_matches(node)
+  ∧ dependencies_resolve(node)
+  ∧ corrections_are_traced(node)
+  ∧ provenance_is_preserved(node)
+  ∧ local_and_full_state_are_distinguished(node)
+```
+
+Voor de gehele sandbox:
+```
+SANDBOX_MEMORY_VALID :=
+  forward_validate(01, 71)
+  ∧ reverse_sequence_validate(71, 01)
+  ∧ reverse_dependency_validate(all_nodes)
+  ∧ return_validate(active_state, 0.0.0.0)
 ```

@@ -64,6 +64,7 @@ symbolische tijd:
   → duur als betekenis
   → pad als leerweg
   → bestemming als staat van zijn
+  → gebeurtenissen kunnen gelijktijdig verschijnen zonder lineaire volgorde
 ```
 
 ```

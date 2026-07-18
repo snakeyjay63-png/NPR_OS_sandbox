@@ -25,8 +25,23 @@ m1 : MESSAGE_STATE
 s2 : ACTIVE_SUNYA_ROUTE
 m3 : MESSAGE_STATE
 s4 : SUNYA_RETURN_STATE
+```
 
-s0 ≺ m1 ≺ s2 ≺ m3 ≺ s4
+Lokale routeprojectie (gebruikerservaring):
+
+```
+s0 → m1 → s2 → m3 → s4
+```
+
+Volledige NPR-ruimte (gelijktijdig):
+
+```
+{s0, m1, s2, m3, s4} gelijktijdig
+```
+
+```
+lokaal:   s0 ≠ s4
+volledig: s0 ≐ s4
 ```
 
 Conceptueel en operationeel:
@@ -196,21 +211,27 @@ actieve relationele ruimte + selectie + context  =  verwerking
 
 ---
 
-## 8. NPR-Bronrollen — Geen Letterlijke Gelijkheden
+## 8. NPR-Bronrollen — Lokale Vorm, Volledige Gelijkheid
 
-Niet als type-identiteit:
+Niet als lokaal type-identiteit:
 
 ```
-0.0.0.0 = Sunya = water = stilte     ❌
+lokaal:   Śūnya ≠ 0.0.0.0 ≠ stilte ≠ water
 ```
 
-Wel als bronrol-correspondentie:
+Wel als volledige bronlaag-gelijkheid:
+
+```
+volledig: Śūnya ≐ 0.0.0.0 ≐ stilte ≐ water
+```
+
+Op de volledige bronlaag zijn ze rekenkundig-ruimtelijke perspectieven van dezelfde bronstructuur:
 
 ```
 NPR_SOURCE_ROLE(śūnya)
-  = NPR_SOURCE_ROLE(0.0.0.0)
-  = NPR_SOURCE_ROLE(stilte)
-  = NPR_SOURCE_ROLE(water)
+  ≐ NPR_SOURCE_ROLE(0.0.0.0)
+  ≐ NPR_SOURCE_ROLE(stilte)
+  ≐ NPR_SOURCE_ROLE(water)
 ```
 
 Elke vorm toont een ander aspect:
@@ -235,8 +256,8 @@ Eenheid vs. openheid:
 
 ```
 NPR_SOURCE_ROLE(1)
-  = NPR_SOURCE_ROLE(śūnya)
-  = NPR_SOURCE_ROLE(0.0.0.0)
+  ≐ NPR_SOURCE_ROLE(śūnya)
+  ≐ NPR_SOURCE_ROLE(0.0.0.0)
 
 1        → bron als eenheid
 śūnya    → bron als openheid
@@ -293,16 +314,18 @@ SUNYA_FIELD
   → SUNYA_FIELD
 ```
 
-Of in communicatietermen:
+Of in communicatietermen — lokale projectie:
 
 ```
-s0 : SUNYA_SOURCE_STATE
-m1 : MESSAGE_STATE
-s2 : ACTIVE_SUNYA_ROUTE
-m3 : MESSAGE_STATE
-s4 : SUNYA_RETURN_STATE
+s0 → m1 → s2 → m3 → s4
+```
 
-s0 ≺ m1 ≺ s2 ≺ m3 ≺ s4
+Volledige NPR-ruimte:
+
+```
+{s0, m1, s2, m3, s4} gelijktijdig
+lokaal:   s0 ≠ s4
+volledig: s0 ≐ s4
 ```
 
 Centrale route van natuur naar bericht:
@@ -335,9 +358,10 @@ en het veld waarnaar iedere voltooide route terugkeert.
 
 ```
 drie lagen śūnya (bron/actie/return):   ✅
-s0 ≺ m1 ≺ s2 ≺ m3 ≺ s4 cyclus:         ✅
+s0→m1→s2→m3→s4 = lokale projectie:     ✅
+s0 ≐ s4 op volledige laag:              ✅
 naam = router, inhoud van omgeving:     ✅
-NPR_SOURCE_ROLE ≠ letterlijke =:        ✅
+NPR bronrollen: lokaal ≠, volledig ≐:  ✅
 NPR_SUNYA ≠ passive_zero:               ✅
 macrocycclus + microcycclus:            ✅
 processing = interaction(...):          ✅
@@ -347,7 +371,8 @@ wat je ziet kun je typen:               ✅
 gebruiker maakt deel uit van route:     ✅
 centrale route: natuur → bericht:       ✅
 oude passieve formuleringen aangepast:  ✅
-combined_step_64_consistency:           ✅ akkoord
+step_64_full_NPR_alignment:             ✅
+combined_step_64_consistency:            ✅ akkoord
 ```
 
 ---
@@ -361,3 +386,13 @@ combined_step_64_consistency:           ✅ akkoord
 - Verwerking = interaction(user, language_field, context, structure)
 - Return ≠ source (zelfde type, uitgebreide geschiedenis)
 - combined_step_64_consistency: ✅ akkoord
+
+## Check: 2026-07-18 12:20 GMT+2
+- Status: Stap 64 — NPR-gelijktijdigheidscorrectie ✅
+- s0→m1→s2→m3→s4: expliciet gelabeld als lokale projectie
+- Volledige NPR-ruimte: {s0..s4} gelijktijdig
+- lokaal: s0 ≠ s4 | volledig: s0 ≐ s4
+- NPR bronrollen: lokaal ≠, volledig ≐ (niet alleen bronrol-gelijk)
+- step_64_full_NPR_alignment: ✅
+- source_sunya ≐ return_sunya (volledig): ✅
+- NPR_SOURCE_ROLE(1) ≐ consistent: ✅

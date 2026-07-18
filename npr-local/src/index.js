@@ -9,6 +9,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const path = require('path');
 
 const PKG = require('../package.json');
@@ -156,13 +157,171 @@ async function boot() {
     }
   });
 
+  // ─── Tool Registry ───
+  // GET /tools — list all available tools (for chat UI autocomplete)
+  register(0x14, '/tools', (req, res) => {
+    res.json({
+      tools: [
+        { id: 'scan', name: 'System Scan', desc: 'Systeem scannen (quick of --full)', usage: 'tool:scan [--full] [--save]' },
+        { id: 'capabilities', name: 'Capabilities', desc: 'Alle capabilities tonen', usage: 'tool:capabilities' },
+        { id: 'select', name: 'Select', desc: 'Wiskundige selectie via digitale root', usage: 'tool:select <doel>' },
+        { id: 'workspace', name: 'Workspace', desc: 'Workspace info (+ --scan, --full)', usage: 'tool:workspace [--scan] [--full]' },
+        { id: 'read', name: 'Read File', desc: 'Bestand inhoud ophalen', usage: 'tool:read <pad>' },
+        { id: 'web-fetch', name: 'Web Fetch', desc: 'Webpagina ophalen (GET/POST)', usage: 'tool:web-fetch <url> [--raw]' },
+        { id: 'echo', name: 'Echo', desc: 'Echo test / latency check', usage: 'tool:echo <message>' },
+        { id: 'memory', name: 'Memory', desc: 'Geowon memory query', usage: 'tool:memory <query>' },
+      ],
+    });
+  });
+
+  // ─── Filesystem Browse ───
+  // GET /filesystem/browse?path=<dir> — list directory contents (read-only)
+  register(0x2F, '/filesystem/browse', (req, res) => {
+    const fs = require('fs');
+    const url = new URL(req.url, 'http://localhost');
+    let targetDir = url.searchParams.get('path') || '/home/claw/.openclaw/workspace';
+
+    // Security: resolve and validate path
+    const realPath = path.resolve(targetDir);
+    const allowedRoot = path.resolve('/home/claw/.openclaw/workspace');
+    if (!realPath.startsWith(allowedRoot)) {
+      return res.writeHead(403, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: 'access denied: path outside workspace' })
+      );
+    }
+
+    try {
+      const entries = fs.readdirSync(realPath, { withFileTypes: true });
+      const items = entries.map(e => {
+        const p = path.join(realPath, e.name);
+        const stat = fs.statSync(p);
+        return {
+          name: e.name,
+          type: e.isDirectory() ? 'dir' : (e.isFile() ? 'file' : 'other'),
+          size: stat.size,
+          modified: stat.mtime.toISOString(),
+          path: p,
+        };
+      }).sort((a, b) => {
+        // dirs first, then alphabetical
+        if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      res.json({ dir: realPath, items });
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+  });
+
+  // ─── System Restart ───
+  // POST /system/restart — graceful restart (close server + restart process)
+  register(0x30, '/system/restart', (req, res) => {
+    if (req.method !== 'POST') {
+      return res.writeHead(405, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: 'method not allowed' })
+      );
+    }
+
+    const server = global.__nprServer;
+    if (!server) {
+      return res.writeHead(503, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: 'server not initialized' })
+      );
+    }
+
+    // Respond immediately before closing
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'restarting', port: PORT, host: HOST }));
+
+    // Close server and restart
+    server.close(() => {
+      log.info('Server closed, restarting...');
+      const { execPath } = process;
+      const args = process.argv.slice(1);
+      const child = require('child_process').spawn(execPath, args, {
+        cwd: process.cwd(),
+        env: process.env,
+        stdio: 'inherit',
+        detached: false,
+      });
+
+      child.on('exit', (code) => {
+        if (code !== 0) {
+          log.error(`Child exited with code ${code}`);
+          process.exit(code);
+        }
+      });
+
+      // Exit parent to release port
+      process.exit(0);
+    });
+  });
+
   // ─── Fase 1: OpenClaw CLI parity ───
 
   // GET /agent/logs — tail agent event log (openclaw logs)
-  register(0x14, '/agent/logs', require('./routes/agent-logs').handler);
+  register(0x13, '/agent/logs', require('./routes/agent-logs').handler);
 
   // GET/POST /config — config read/write (openclaw config get/set)
   register(0x15, '/config', require('./routes/config-route').handler);
+
+  // ─── Llama proxy (OpenAI-compatible API) ───
+  // Forwards /llama* → configured model endpoint (default: http://127.0.0.1:8765/v1/*)
+  // NOTE: path ending with * triggers prefix match in dispatch
+  register(0x15, '/llama*', (req, res) => {
+    const config = require('./routes/config-route').runtimeConfig;
+    const endpoint = config.model?.endpoint || 'http://127.0.0.1:8765';
+    const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const subPath = urlObj.pathname.replace(/^\/llama/, '').replace(/^\//, '') || 'v1';
+    const targetUrl = `${endpoint.replace(/\/$/, '')}/${subPath}${urlObj.search}`;
+
+    console.log(`[llama-proxy] ${req.method} ${urlObj.pathname} → ${targetUrl}`);
+
+    // For GET/HEAD, fetch immediately without waiting for body
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      (async () => {
+        try {
+          const proxyRes = await fetch(targetUrl, { method: req.method });
+          const proxyBody = await proxyRes.text();
+          res.writeHead(proxyRes.status, {
+            'Content-Type': proxyRes.headers.get('content-type') || 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          res.end(proxyBody);
+        } catch (err) {
+          console.error(`[llama-proxy] error:`, err.message);
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Llama proxy failed', detail: err.message }));
+        }
+      })();
+      return;
+    }
+
+    // POST/PUT: collect body then fetch
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks).toString();
+      (async () => {
+        try {
+          const fetchOpts = { method: req.method, headers: { 'Content-Type': 'application/json' }, body };
+          const proxyRes = await fetch(targetUrl, fetchOpts);
+          const proxyBody = await proxyRes.text();
+          res.writeHead(proxyRes.status, {
+            'Content-Type': proxyRes.headers.get('content-type') || 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          res.end(proxyBody);
+        } catch (err) {
+          console.error(`[llama-proxy] error:`, err.message);
+          res.writeHead(502, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Llama proxy failed', detail: err.message }));
+        }
+      })();
+    });
+  });
 
   // GET /memory/context?slot=&phase=&workspace= — phase-appropriate context (openclaw memory context)
   register(0x35, '/memory/context', require('./routes/memory-context').handler);
@@ -216,23 +375,20 @@ async function boot() {
 
   // ─── Gateway API proxy (for unified access) ───
   register(0x00, '/api/gateway/proxy', (req, res) => {
-    const http = require('http');
-    const proxyOpts = {
-      hostname: GW_HOST === '::1' ? '::1' : GW_HOST,
-      port: GW_PORT,
-      path: req.url.split('?')[1] ? '?' + req.url.split('?')[1] : '',
+    const urlObj = new URL(req.url, 'http://localhost');
+    const targetUrl = urlObj.searchParams.get('url') || urlObj.pathname.replace('/api/gateway/proxy', '') || '/';
+    const gwUrl = `http://[${GW_HOST === '::1' ? '::1' : GW_HOST}]:${GW_PORT}${targetUrl}`;
+    fetch(gwUrl, {
       method: req.method,
-      headers: { ...req.headers, host: `${GW_HOST}:${GW_PORT}` },
-    };
-    const proxyReq = http.request(proxyOpts, (proxyRes) => {
-      res.writeHead(proxyRes.statusCode, proxyRes.headers);
-      proxyRes.pipe(res);
-    });
-    proxyReq.on('error', () => {
+      headers: Object.fromEntries(Object.entries(req.headers).filter(([k]) => !['host','connection'].includes(k))),
+    }).then(async (r) => {
+      const body = await r.text();
+      res.writeHead(r.status, { 'Content-Type': 'application/json' });
+      res.end(body);
+    }).catch(err => {
       res.writeHead(502, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Gateway unreachable', port: GW_PORT }));
+      res.end(JSON.stringify({ error: 'Gateway unreachable', port: GW_PORT, detail: err.message }));
     });
-    req.pipe(proxyReq);
   });
 
   // ─── Chat UI (GET = HTML, POST/other = agent handler from priority 16) ───
@@ -515,6 +671,11 @@ async function boot() {
     console.log(`  Dashboard: http://[${HOST}]:${PORT}/dashboard`);
     console.log(`  Verify  : http://[${HOST}]:${PORT}/verify`);
   });
+
+  // Expose server for restart
+  if (typeof global !== 'undefined') {
+    global.__nprServer = server;
+  }
 
   return server;
 }
@@ -1130,6 +1291,7 @@ function enterHTML(req, res) {
 // ─── Uncaught exception handler (global safety net) ───
 // @addr 10.01.0.9 — process-level error boundary
 process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err.message, err.stack?.split('\n')[1]);
   log.error('Uncaught exception', { message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') });
   // Graceful shutdown — do NOT exit immediately, let pending requests finish
   const timer = setTimeout(() => {

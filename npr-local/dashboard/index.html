@@ -48,9 +48,9 @@ body{font-family:'JetBrains Mono','Fira Code',monospace;background:#050508;color
 .cr{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0a0a0f;font-size:11px}
 .cr:last-child{border:none}
 .cid{color:#444;width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-::scrollbar{width:4px}
-::scrollbar-track{background:#050508}
-::scrollbar-thumb{background:#111;border-radius:2px}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:#050508}
+::-webkit-scrollbar-thumb{background:#111;border-radius:2px}
 </style>
 </head>
 <body>
@@ -106,7 +106,7 @@ body{font-family:'JetBrains Mono','Fira Code',monospace;background:#050508;color
 </div>
 </div>
 <script>
-const API='';
+const API='http://[::1]:5017';
 let evSrc=null,sessions=[],slots=[],events=[],gwSnap={};
 const PO=['idle','receiving','routing','mounting-context','compacting','queued','prompt-processing','generating','tool-running','validating','committing','streaming','completed'];
 const SC={idle:'idle',receiving:'idle',routing:'idle','mounting-context':'active',compacting:'active',queued:'active','prompt-processing':'active',generating:'gen','tool-running':'tool',validating:'val',committing:'active',streaming:'gen',completed:'active',failed:'err',cancelled:'idle'};

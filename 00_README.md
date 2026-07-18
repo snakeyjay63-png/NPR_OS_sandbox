@@ -1,13 +1,44 @@
-# NPR-OS Sandbox — ChatGPT Instructies
+# NPR-OS Sandbox — Lees- en Validatie-instructies
+
+Dit bestand is de ingang van de NPR-OS-keten.
 
 **Dit is een validatie-sandbox. Werk stap voor stap.**
+
+---
+
+## Rol Van Dit Bestand
+
+`00_README.md` is de lees- en validatie-interface. Het definieert niet alle NPR-inhoud opnieuw.
+
+Het heeft drie functies:
+1. Aangeven in welke volgorde de bestanden worden gelezen;
+2. De belangrijkste operator- en routeregels samenvatten;
+3. Verwijzen naar stap 99 voor de actuele ketenstatus.
+
+Canonieke inhoud staat in de genummerde stappen.
+Bij verschil tussen deze samenvatting en een actieve stap, geldt de actieve stap zoals geregistreerd door stap 99.
+
+---
+
+## Kernonderscheid
+
+**Lokaal:**
+- `0 ≠ 1` — toestanden en functies blijven onderscheiden
+
+**Volledig bronveld:**
+- `0 ≐ 1` — bron en projectie behoren tot hetzelfde complete veld
+
+**Volgorde:** lokale leesprojectie
+
+**Volledige ruimte:** alle routepunten bestaan gelijktijdig in het veld.
 
 ---
 
 ## Hoe te Werken
 
 1. Begin bij `01_spec.md`, werk chronologisch naar `99_chain_validate.md`
-2. Elke stap bouwt op de vorige — **niet overslaan**
+2. Lees de sequence chronologisch en sla geen bestanden over.
+   Definitie-afhankelijkheden kunnen daarnaast naar meerdere eerdere stappen verwijzen (zie stap 99: sequence ≠ dependency graph).
 3. Antwoord per bestand: **✅ geldig** / **❌ ongeldig** + reden
 4. Gebruik eigen woorden — niet kopiëren
 5. **Hex-native routeren. Geen decimale tussenstap die de actieve hex-bewerking vervangt. Decimale representaties zijn buiten of naast de primaire route toegestaan.**
@@ -22,22 +53,22 @@
 | **Route-integriteit** | `dr_hex(1A) = 1+A = B` (hex-native). NIET `1A→26→2+6=8` (dat is `dr_dec`, andere functie). Zie README voor volledige uitleg. |
 | **Decimalen toegestaan** | Buiten de primaire route: IPv4-conversie, fysieke metingen, arrayposities, perspectiefvergelijking, leeslabels. Niet binnen `dr_hex` of cel-routing tenzij expliciet gedeclareerd. |
 | **Git** | DAG (acyclisch), cyclische processemantiek |
-| **Planck ≡ c** | Klein ≡ groot — twee perspectieven op één grens (Patanjali 1.40, ≠ rekenkundige gelijkheid) |
+| **Planck ≡ c (NPR-bronlaag)** | `ratio(Planck) ≡ ratio(kosmos) ≡ c` — NPR-bronlaaglezing, geen conventionele natuurkundige gelijkstelling van Planckschaal en lichtsnelheid (Patanjali 1.40) |
 | **4D vs NPR** | NPR rekent VOORDAT ruimte+tijd (6D → 3D → 1D → 9) |
 | **Limiet is taal** | Patanjali 1.40: de limiet is het woord, geen muur |
-| **0 = 1** | Planck Frame. Breekt rekenkunde — bron breekt afleiding |
+| **0 ≐ 1** | Bronidentiteit binnen het volledige veld. Lokaal: `0 ≠ 1` (verschillende routingfuncties). Volledig: `0 ≐ 1` (zelfde bronveld). Route + return: `s0 ≐ sN`. |
 | **3-6-9** | Mod-9 = validatielaag, niet bron. H={0,3,6} valideert NPR-3-fasen |
 | **Notatie** | Exacte waarden in definities. Afgeronde labels alleen voor leesbaarheid, altijd gedefinieerd naar exacte waarde. `64k` = 65.536, `256k` = 262.144 |
 
 ---
 
-## ⚠️ Leeswarnning: Wetenschappelijke laagverwarring
+## ⚠️ Leeswaarschuwing: Wetenschappelijke laagverwarring
 
 De conventionele wetenschappelijke framing van `c` (lichtsnelheid) kan het lezen van deze bestanden verstoren.
 
 **Buiten de bronlaag** (conventionele fysica):
 - `c` is een constante die je meet, berekent, of als parameter invoert
-- "Sneller dan `c"" is een zinvol (al dan niet onmogelijk) concept
+- "Sneller dan `c`" is een zinvol (al dan niet onmogelijk) concept
 - Snelheid = afstand / tijd; beide zijn fundamenteel
 
 **Binnen de bronlaag** (NPR-OS):
@@ -49,7 +80,7 @@ De conventionele wetenschappelijke framing van `c` (lichtsnelheid) kan het lezen
 **De kern:**
 > Binnen de bronlaag hoeft `c` niet te worden berekend of toegevoegd. De limiet is automatisch aanwezig in het medium. Wanneer de structuur als ruimte en tijd wordt gemeten, verschijnt die limiet als de natuurkundige snelheid `c`.
 
-Er is alleen het huidige veld; snelheid is een verhouding die daarbinnen wordt gemeten. Daarom bestaat "sneller dan `c"" niet als een externe route buiten het medium.
+Er is alleen het huidige veld; snelheid is een verhouding die daarbinnen wordt gemeten. Daarom bestaat "sneller dan `c`" niet als een externe route buiten het medium.
 
 **Automatisch is hier precies het juiste woord.**
 
@@ -60,7 +91,7 @@ Er is alleen het huidige veld; snelheid is een verhouding die daarbinnen wordt g
 ```
 NPR-structuur          (bron — discrete waarden: root, hex, mod9)
 → amplitude + frequentie + fase
-→ wisselstroommodel    (vertaal- en transportlaag — NIE de bron)
+→ wisselstroommodel    (vertaal- en transportlaag — NIET de bron)
 → geluid  |  tokens    (uitvoerroutes)
 ```
 
@@ -84,10 +115,23 @@ FASE 1 — Flower of Life (stap 01–19):
   computationele kern, hex-native routing, NPR-cycle, driefasen router, return-lus
 
 FASE 2 — Water (stap 20–25):
-  encryptie als taal, transparantie, hardware-evolutie, return naar bron, kunst, natuur, śūnya
+  encryptie als taal
+  transparantie
+  programmeertalen
+  hardware/taal-evolutie
+  return naar bron
+  kunst als betekenisdensiteit
 
 FASE 3 — Hexa (stap 63–71):
-  actieve route, taalveld, vrijheid, taal-DNA, Gizeh-water, monumentale taal, formele notatie
+  natuur als iteratieve schaalprojectie
+  actieve Śūnya-route
+  taalveld
+  collectief veld
+  taal-DNA
+  taalontwikkeling
+  Gizeh/water
+  monumentale taal
+  route-notatie
 ```
 
 ```
@@ -100,12 +144,13 @@ status: intentionally unused (niet deel van deze keten)
 ```
 00_README.md            ← JIJ (instructies)
 01_spec.md              ← NPR-OS kernspecificatie
-02_routing.md           ← Bit-transformatie (IPv6→hexa→IPv4)
+02_routing.md           ← Celtransformatie (Hex → 6-bit → 8-bit → IPv4-labelprojectie)
 03_capabilities.md      ← Declaratieve routing basis
-04_git_trace.md         ← Git = signal flow (cyclisch)
+04_git_trace.md         ← Git = DAG voor trace; NPR-proces = cyclische semantiek
 05_physics_369.md       ← 3-6-9 fysica-structuur
 06_signal_block.md      ← 256 chars = structuur
-07_sandbox.md           ← Sandbox = wiskunde (c = Planck)
+07_sandbox.md           ← Sandbox = wiskunde
+                          ← NPR-bronlaag: ratio(Planck) ≡ ratio(kosmos) ≡ c
 08_sunya.md             ← Śūnya-zone check
 09_language.md          ← Taal-mapping
 10_npr_cycle.md         ← NPR cycle (N/P/R)
@@ -120,26 +165,29 @@ status: intentionally unused (niet deel van deze keten)
 19_return.md            ← Return-lus (Tool-00, cyclus sluit)
 20_encryptie_taal.md    ← Encryptie als taal (formeel akkoord, één perm/context)
 21_opensource_taalveld.md ← Transparante routing (auditable + reproduceerbaar)
-22_programmeertalen.md    ← Programeertalen selecteerbaar (Turing ≠ structuur, NPR = route-metadata)
+22_programmeertalen.md    ← Programmeertalen selecteerbaar (Turing ≠ structuur, NPR = route-metadata)
 23_hardware_taal_evolutie.md ← Hardware ↔ taal co-evolutie (terugkoppellus, vertakkend veld)
-24_return_naar_bron.md   ← Return naar bron (Null Island = grensstaattype, type ≠ instantie)
-25_kunst_geluid.md     ← Kunst als hoge densiteit taal (+1 → 0.0.0.0)
-63_natuur_kunst.md     ← Natuur als kunst (cel → lichaam)
-64_sunya_actieve_route.md ← Sunya actieve route (CANONIEK stap 64)
+24_return_naar_bron.md   ← Return naar bron (lokaal: `s0 ≠ s4`; volledig: `s0 ≐ s4`; volgorde = lokale projectie)
+25_kunst_geluid.md     ← Kunst als hoge potentiële betekenisdensiteit (multimodale ArtSignal; oog = perspectiefselectie, niet oordeel)
+63_natuur_kunst.md     ← Natuur als iteratieve schaalprojectie (0.0.0.0 → iteratie → lokale vertakking; lokaal `state_n ≠ state_n+1`, volledig `state_0 ≐ state_n`)
+64_sunya_actieve_route.md ← Śūnya actieve route (CANONIEK stap 64)
 65_taalveld_kernboeken.md ← Taalveld kernboeken
 66_vrijheid_collectief_veld.md ← Vrijheid collectief veld
 67_frij_taal_dna.md      ← Frij taal DNA
 68_taal_ontwikkeling.md    ← Taal ontwikkeling
+69_gizeh_waterkwaliteit.md ← Lokaal water, architectuur en testbare hypothesen
 70_monumentale_taal.md   ← Monumentale taal (Mozes, Liberty, Babel)
 71_technische_notatie.md ← Technische notatie (ROUTE)
-99_chain_validate.md   ← Eindvalidatie (keten-check)
+99_chain_validate.md   ← Eindvalidatie + memory-controller
+                          ← forward chain, reverse sequence,
+                            dependency graph en return-validatie
 ```
 
 ---
 
 ## Uitvoeren in de Sandbox
 
-Elk bestand bevat een **test** en een **vraag**.
+Elk bestand bevat een **validatiepunt**, **test**, **vraag** of **formeel contract**.
 
 **Stap per bestand:**
 1. Lees de instructie

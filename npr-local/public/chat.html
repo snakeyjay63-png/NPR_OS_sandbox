@@ -7,99 +7,531 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#101418;color:#eef4f8;min-height:100vh;display:flex;flex-direction:column}
-.header{padding:16px 24px;border-bottom:1px solid rgba(148,163,184,.15);display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:1.1rem;font-weight:600}
-.header a{color:#8bd3ff;text-decoration:none;font-size:.82rem}
+
+/* ─── Header ─── */
+.header{padding:12px 24px;border-bottom:1px solid rgba(148,163,184,.12);display:flex;justify-content:space-between;align-items:center}
+.header h1{font-size:1rem;font-weight:600}
+.header a{color:#8bd3ff;text-decoration:none;font-size:.8rem;margin-left:16px}
 .header a:hover{text-decoration:underline}
-.container{flex:1;display:flex;flex-direction:column;max-width:800px;width:100%;margin:0 auto;padding:16px}
+
+/* ─── Layout ─── */
+.layout{flex:1;display:flex;overflow:hidden}
+
+/* ─── Session Sidebar ─── */
+.sidebar{width:240px;min-width:240px;border-right:1px solid rgba(148,163,184,.12);display:flex;flex-direction:column;background:#0c1014}
+.sidebar-header{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,.08)}
+.sidebar-header h2{font-size:.78rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em}
+.btn-new{background:none;border:1px solid rgba(139,211,255,.3);color:#8bd3ff;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer}
+.btn-new:hover{background:rgba(139,211,255,.1)}
+.session-list{flex:1;overflow-y:auto;padding:6px}
+.session-item{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;flex-direction:column;gap:2px}
+.session-item:hover{background:rgba(148,163,184,.08)}
+.session-item.active{background:rgba(139,211,255,.1);border:1px solid rgba(139,211,255,.15)}
+.session-item .sid{font-size:.78rem;font-weight:600;color:#c8d6e0}
+.session-item .sinfo{font-size:.65rem;color:#6b7b8a;display:flex;gap:6px}
+.session-item .sdel{margin-left:auto;color:#f87171;cursor:pointer;font-size:.7rem;padding:0 2px;opacity:.5}
+.session-item .sdel:hover{opacity:1}
+
+/* ─── Main Chat ─── */
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ─── Context Bar ─── */
+.ctx-bar{padding:8px 20px;border-bottom:1px solid rgba(148,163,184,.08);display:flex;gap:20px;align-items:center;font-size:.72rem;color:#6b7b8a;background:#0c1014}
+.ctx-bar .ctx-item{display:flex;align-items:center;gap:5px}
+.ctx-bar .ctx-val{color:#c8d6e0;font-variant-numeric:tabular-nums}
+.ctx-bar .ctx-bar-wrap{width:80px;height:6px;background:#1a2027;border-radius:3px;overflow:hidden}
+.ctx-bar .ctx-bar-fill{height:100%;border-radius:3px;transition:width .3s ease}
+.ctx-bar .ctx-bar-fill.green{background:#4ade80}
+.ctx-bar .ctx-bar-fill.yellow{background:#facc15}
+.ctx-bar .ctx-bar-fill.red{background:#f87171}
+
+/* ─── Messages ─── */
+.container{flex:1;display:flex;flex-direction:column;max-width:800px;width:100%;margin:0 auto;padding:16px 24px}
 .messages{flex:1;overflow-y:auto;padding:16px 0;display:flex;flex-direction:column;gap:12px}
 .msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:.88rem;line-height:1.5;word-wrap:break-word;white-space:pre-wrap}
 .msg.user{align-self:flex-end;background:#8bd3ff;color:#061019;border-bottom-right-radius:2px}
 .msg.assistant{align-self:flex-start;background:#1a2027;border:1px solid rgba(148,163,184,.2);border-bottom-left-radius:2px}
-.msg .meta{font-size:.7rem;color:#6b7b8a;margin-top:6px}
+.msg .meta{font-size:.68rem;color:#6b7b8a;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
 .msg.assistant .meta{color:#9fb0bd}
-.input-area{padding:16px 0;border-top:1px solid rgba(148,163,184,.15);display:flex;gap:10px}
+.msg .meta span{display:inline-flex;align-items:center;gap:3px}
+
+/* ─── Input ─── */
+.input-area{padding:16px 0;border-top:1px solid rgba(148,163,184,.12);display:flex;gap:10px}
 .input-area textarea{flex:1;background:#1a2027;border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:10px 14px;color:#eef4f8;font:inherit;font-size:.88rem;resize:none;min-height:44px;max-height:150px;line-height:1.4}
 .input-area textarea:focus{outline:2px solid #8bd3ff;outline-offset:1px}
 .input-area button{border:none;border-radius:8px;padding:0 20px;background:#8bd3ff;color:#061019;font:inherit;font-weight:600;cursor:pointer;font-size:.88rem;white-space:nowrap}
 .input-area button:hover{background:#66c2ff}
 .input-area button:disabled{opacity:.5;cursor:not-allowed}
-.status{font-size:.75rem;color:#9fb0bd;text-align:center;padding:8px}
-.status .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px}
+
+/* ─── Status ─── */
+.status{font-size:.7rem;color:#9fb0bd;text-align:center;padding:6px}
+.status .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
 .status .dot.green{background:#4ade80}
 .status .dot.red{background:#f87171}
 .status .dot.yellow{background:#facc15}
+
+/* ─── Tool Panel ─── */
+.tool-panel{position:fixed;bottom:80px;right:24px;width:280px;max-height:400px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.tool-panel.open{display:flex}
+.tool-panel-header{padding:8px 12px;background:#1a2027;border-bottom:1px solid rgba(148,163,184,.12);font-size:.72rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.tool-panel-header button{background:none;border:none;color:#8bd3ff;cursor:pointer;font-size:.7rem}
+.tool-panel-list{flex:1;overflow-y:auto;padding:4px}
+.tool-item{padding:6px 10px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.tool-item:hover{background:rgba(139,211,255,.08)}
+.tool-item .tname{font-size:.78rem;font-weight:600;color:#c8d6e0}
+.tool-item .tdesc{font-size:.65rem;color:#6b7b8a}
+.tool-item .tusage{font-size:.62rem;color:#8bd3ff;font-family:monospace}
+
+/* ─── Autocomplete ─── */
+.autocomplete{position:fixed;bottom:140px;right:24px;width:300px;max-height:200px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:8px;overflow:hidden;z-index:101;display:none;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.autocomplete.open{display:flex}
+.autocomplete-item{padding:6px 12px;font-size:.75rem;color:#c8d6e0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.autocomplete-item:hover,.autocomplete-item.active{background:rgba(139,211,255,.12)}
+.autocomplete-item .ac-label{font-weight:600;color:#8bd3ff}
+.autocomplete-item .ac-desc{font-size:.65rem;color:#6b7b8a}
+
+/* ─── File Browser ─── */
+.file-browser{position:fixed;bottom:80px;left:24px;width:320px;max-height:450px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.file-browser.open{display:flex}
+.fb-header{padding:8px 12px;background:#1a2027;border-bottom:1px solid rgba(148,163,184,.12);font-size:.72rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.fb-header button{background:none;border:none;color:#8bd3ff;cursor:pointer;font-size:.7rem}
+.fb-path{padding:6px 12px;font-size:.65rem;font-family:monospace;color:#6b7b8a;border-bottom:1px solid rgba(148,163,184,.08);background:#0d1117;display:flex;gap:4px;align-items:center;overflow-x:auto;white-space:nowrap}
+.fb-path-segment{color:#8bd3ff;cursor:pointer;text-decoration:underline}
+.fb-path-segment:hover{color:#c8d6e0}
+.fb-path-sep{color:#4a5568}
+.fb-list{flex:1;overflow-y:auto;padding:4px}
+.fb-item{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.75rem;color:#c8d6e0}
+.fb-item:hover{background:rgba(139,211,255,.08)}
+.fb-item .fb-icon{font-size:.85rem;width:16px;text-align:center}
+.fb-item .fb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-item .fb-size{font-size:.62rem;color:#4a5568;font-family:monospace}
+.fb-item.dir .fb-icon{color:#facc15}
+.fb-item.file .fb-icon{color:#60a5fa}
+
+/* ─── Responsive ─── */
+@media(max-width:768px){
+  .sidebar{width:200px;min-width:200px}
+}
+@media(max-width:600px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;min-width:100%;max-height:160px;border-right:none;border-bottom:1px solid rgba(148,163,184,.12)}
+  .session-list{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px}
+  .session-item{min-width:140px;flex-shrink:0}
+}
 </style>
 </head>
 <body>
+
 <div class="header">
   <h1>• NPR Local Chat</h1>
-  <a href="/config-llama.html">⚙ Config</a>
+  <span>
+    <a href="/enter">Enter</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/config">Config</a>
+    <button onclick="restartServer()" style="background:none;border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer;margin-left:8px;">⟳ Restart</button>
+  </span>
 </div>
-<div class="container">
-  <div class="status" id="status"><span class="dot yellow"></span>Connecting...</div>
-  <div class="messages" id="messages"></div>
-  <div class="input-area">
-    <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
-    <button id="send" onclick="send()">→</button>
+
+<div class="layout">
+
+  <!-- Session Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Sessions</h2>
+      <button class="btn-new" onclick="createSession()" title="New session">+ New</button>
+    </div>
+    <div class="session-list" id="sessionList"></div>
   </div>
+
+  <!-- Main Chat -->
+  <div class="chat-main">
+
+    <!-- Context Window Bar -->
+    <div class="ctx-bar" id="ctxBar">
+      <div class="ctx-item">
+        <span>Context:</span>
+        <span class="ctx-val" id="ctxTokens">0</span>
+        <span>/</span>
+        <span id="ctxMax">32768</span>
+      </div>
+      <div class="ctx-bar-wrap">
+        <div class="ctx-bar-fill green" id="ctxFill" style="width:0%"></div>
+      </div>
+      <div class="ctx-item">
+        <span>Total tokens:</span>
+        <span class="ctx-val" id="totalTokens">0</span>
+      </div>
+      <div class="ctx-item">
+        <span>Messages:</span>
+        <span class="ctx-val" id="msgCount">0</span>
+      </div>
+    </div>
+
+    <!-- File Browser -->
+    <div class="file-browser" id="fileBrowser">
+      <div class="fb-header">
+        <span>📁 Bestanden</span>
+        <button onclick="toggleFileBrowser()">✕</button>
+      </div>
+      <div class="fb-path" id="fbPath"></div>
+      <div class="fb-list" id="fbList"></div>
+    </div>
+
+    <!-- Tool Panel -->
+    <div class="tool-panel" id="toolPanel">
+      <div class="tool-panel-header">
+        <span>• Tools</span>
+        <button onclick="toggleToolPanel()">✕</button>
+      </div>
+      <div class="tool-panel-list" id="toolPanelList"></div>
+    </div>
+
+    <!-- Autocomplete -->
+    <div class="autocomplete" id="autocomplete"></div>
+
+    <div class="status" id="status"><span class="dot yellow"></span>Connecting...</div>
+    <button onclick="toggleFileBrowser()" style="position:fixed;bottom:140px;left:24px;z-index:99;background:#1a2027;border:1px solid rgba(148,163,184,.3);color:#facc15;border-radius:8px;padding:6px 12px;font-size:.75rem;cursor:pointer;" title="Bestanden">📁 Bestanden</button>
+    <button onclick="toggleToolPanel()" style="position:fixed;bottom:140px;right:24px;z-index:99;background:#1a2027;border:1px solid rgba(148,163,184,.3);color:#8bd3ff;border-radius:8px;padding:6px 12px;font-size:.75rem;cursor:pointer;" title="Tools">🔧 Tools</button>
+    <div class="container">
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
+        <button id="send" onclick="send()">→</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
-const GW_PORT = window.location.port || '5017';
-const NPR_PORT = window.location.port || '17000';
 const API = '/agent/chat';
 const API_STREAM = '/agent/chat-stream';
 const msgs = document.getElementById('messages');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
 const status = document.getElementById('status');
+const sessionList = document.getElementById('sessionList');
+const toolPanel = document.getElementById('toolPanel');
+const toolPanelList = document.getElementById('toolPanelList');
+const autocompleteEl = document.getElementById('autocomplete');
+const fileBrowser = document.getElementById('fileBrowser');
+const fbPath = document.getElementById('fbPath');
+const fbList = document.getElementById('fbList');
 
-// Persistent session
-const SESSION_KEY = 'npr-chat-session';
+// ─── File Browser ───
+let currentBrowerDir = null;
+
+function toggleFileBrowser() {
+  fileBrowser.classList.toggle('open');
+  if (fileBrowser.classList.contains('open') && !currentBrowerDir) {
+    browseDir(processCwd || '/home/claw/.openclaw/workspace');
+  }
+}
+
+function renderBreadcrumb(dir) {
+  const parts = dir.split('/').filter(Boolean);
+  let html = '<span class="fb-path-segment" onclick="browseDir(\'/' + '")">/</span>';
+  let acc = '';
+  for (const p of parts) {
+    acc += '/' + p;
+    html += `<span class="fb-path-sep">›</span><span class="fb-path-segment" onclick="browseDir('${acc}')">${p}</span>`;
+  }
+  fbPath.innerHTML = html;
+}
+
+async function browseDir(dir) {
+  try {
+    const res = await fetch(`/filesystem/browse?path=${encodeURIComponent(dir)}`);
+    const data = await res.json();
+    if (data.error) {
+      fbList.innerHTML = `<div class="fb-item" style="color:#f87171">⚠ ${data.error}</div>`;
+      return;
+    }
+    currentBrowerDir = data.dir;
+    renderBreadcrumb(data.dir);
+    fbList.innerHTML = data.items.map(item => {
+      const icon = item.type === 'dir' ? '📁' : '📄';
+      const size = item.type === 'file' ? formatSize(item.size) : '';
+      return `<div class="fb-item ${item.type}" onclick="handleFileClick('${item.type}','${item.path}','${item.name}')">
+        <span class="fb-icon">${icon}</span>
+        <span class="fb-name">${item.name}</span>
+        <span class="fb-size">${size}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    fbList.innerHTML = `<div class="fb-item" style="color:#f87171">⚠ ${e.message}</div>`;
+  }
+}
+
+function handleFileClick(type, filePath, name) {
+  if (type === 'dir') {
+    browseDir(filePath);
+  } else {
+    // Insert tool:read command into chat input
+    input.value = `tool:read ${filePath} `;
+    input.focus();
+    fileBrowser.classList.remove('open');
+  }
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + 'B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+  return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+// ─── Tool Panel ───
+let availableTools = [];
+
+async function loadTools() {
+  try {
+    const res = await fetch('/tools');
+    const data = await res.json();
+    availableTools = data.tools || [];
+    renderToolPanel();
+  } catch(e) {
+    console.warn('[tools] Failed to load:', e.message);
+  }
+}
+
+function renderToolPanel() {
+  toolPanelList.innerHTML = availableTools.map(t => `
+    <div class="tool-item" onclick="insertTool('${t.id}')">
+      <span class="tname">${t.name}</span>
+      <span class="tdesc">${t.desc}</span>
+      <span class="tusage">${t.usage}</span>
+    </div>
+  `).join('');
+}
+
+function toggleToolPanel() {
+  toolPanel.classList.toggle('open');
+  autocompleteEl.classList.remove('open');
+}
+
+function insertTool(id) {
+  const tool = availableTools.find(t => t.id === id);
+  if (!tool) return;
+  input.value = tool.usage.replace('<', '').replace('>', '') + ' ';
+  input.focus();
+  toggleToolPanel();
+}
+
+// ─── Autocomplete ───
+let acIndex = -1;
+
+input.addEventListener('input', () => {
+  const val = input.value.trim();
+  if (val.startsWith('tool:')) {
+    const rest = val.slice(5).trim().toLowerCase();
+    const matches = availableTools.filter(t =>
+      t.id.toLowerCase().includes(rest) || t.name.toLowerCase().includes(rest)
+    );
+    if (matches.length > 0) {
+      acIndex = 0;
+      renderAutocomplete(matches);
+    } else {
+      autocompleteEl.classList.remove('open');
+    }
+  } else {
+    autocompleteEl.classList.remove('open');
+  }
+});
+
+input.addEventListener('keydown', (e) => {
+  if (!autocompleteEl.classList.contains('open')) return;
+  const items = autocompleteEl.querySelectorAll('.autocomplete-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIndex = (acIndex + 1) % items.length;
+    items.forEach(i => i.classList.remove('active'));
+    items[acIndex]?.classList.add('active');
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIndex = (acIndex - 1 + items.length) % items.length;
+    items.forEach(i => i.classList.remove('active'));
+    items[acIndex]?.classList.add('active');
+  } else if (e.key === 'Tab' || (e.key === 'Enter' && acIndex >= 0)) {
+    e.preventDefault();
+    const active = autocompleteEl.querySelectorAll('.autocomplete-item')[acIndex];
+    if (active) {
+      const usage = active.dataset.usage;
+      input.value = usage + ' ';
+      input.focus();
+      autocompleteEl.classList.remove('open');
+    }
+  }
+});
+
+function renderAutocomplete(matches) {
+  autocompleteEl.innerHTML = matches.map(t => `
+    <div class="autocomplete-item${t.id === matches[acIndex]?.id ? ' active' : ''}" 
+         data-usage="${t.usage}" 
+         onclick="this.dataset.usage && (input.value=this.dataset.usage+' ', input.focus(), autocompleteEl.classList.remove('open'))">
+      <span class="ac-label">tool:${t.id}</span>
+      <span class="ac-desc">${t.desc}</span>
+    </div>
+  `).join('');
+  autocompleteEl.classList.add('open');
+}
+
+// ─── Server Restart ───
+async function restartServer() {
+  if (!confirm('NPR-Local server herstarten?')) return;
+  status.innerHTML = '<span class="dot yellow"></span>Restarting...';
+  try {
+    await fetch('/system/restart', { method: 'POST' });
+  } catch(e) {
+    // Connection will drop anyway
+  }
+  // Show reconnect message
+  msgs.innerHTML += '<div class="msg assistant">Server herstart. Herverbinding...</div>';
+  // Auto-reconnect
+  const checkInterval = setInterval(async () => {
+    try {
+      await fetch('/health');
+      clearInterval(checkInterval);
+      location.reload();
+    } catch {}  
+  }, 2000);
+}
+
+// ─── Session Management ───
+const STORAGE_KEY = 'npr-chat-sessions';
+const ACTIVE_KEY = 'npr-chat-active';
+
+const DEFAULT_CTX_MAX = 32768;
+
+function loadSessions() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch { return {}; }
+}
+
+function saveSessions(sessions) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+}
+
+function getActiveId() {
+  return localStorage.getItem(ACTIVE_KEY) || null;
+}
+
+function setActiveId(id) {
+  localStorage.setItem(ACTIVE_KEY, id);
+}
+
 function getOrCreateSession() {
-  let sid = localStorage.getItem(SESSION_KEY);
-  if (!sid) {
-    sid = `sess-${Date.now()}`;
-    localStorage.setItem(SESSION_KEY, sid);
+  let sid = getActiveId();
+  let sessions = loadSessions();
+  if (!sid || !sessions[sid]) {
+    sid = `sess-${Date.now().toString(16).slice(-8)}`;
+    sessions[sid] = { id: sid, name: `Chat ${Object.keys(sessions).length + 1}`, created: Date.now(), messages: [], tokens: 0 };
+    saveSessions(sessions);
+    setActiveId(sid);
   }
   return sid;
 }
 
-// Load history from geowon on init
-const sessionId = getOrCreateSession();
+function createSession() {
+  const sessions = loadSessions();
+  const sid = `sess-${Date.now().toString(16).slice(-8)}`;
+  sessions[sid] = { id: sid, name: `Chat ${Object.keys(sessions).length + 1}`, created: Date.now(), messages: [], tokens: 0 };
+  saveSessions(sessions);
+  setActiveId(sid);
+  switchSession(sid);
+}
 
-async function loadHistory() {
-  try {
-    const r = await fetch(`/api/runtime/sessions`);
-    if (r.ok) {
-      const data = await r.json();
-      if (data && data.messages) {
-        for (const m of data.messages) {
-          addMsg(m.role || 'assistant', m.content, '');
-        }
-      }
+function deleteSession(sid, e) {
+  e.stopPropagation();
+  const sessions = loadSessions();
+  delete sessions[sid];
+  saveSessions(sessions);
+  if (getActiveId() === sid) {
+    const remaining = Object.keys(sessions);
+    if (remaining.length) {
+      setActiveId(remaining[0]);
+      switchSession(remaining[0]);
+    } else {
+      setActiveId(null);
+      createSession();
     }
-  } catch(e) {
-    // Geowon offline or no history yet
+  }
+  renderSessionList();
+}
+
+function switchSession(sid) {
+  setActiveId(sid);
+  renderSessionList();
+  loadSessionMessages();
+  updateContextBar();
+}
+
+function renderSessionList() {
+  const sessions = loadSessions();
+  const activeId = getActiveId();
+  sessionList.innerHTML = '';
+
+  Object.values(sessions).sort((a, b) => b.created - a.created).forEach(s => {
+    const div = document.createElement('div');
+    div.className = `session-item${s.id === activeId ? ' active' : ''}`;
+    div.onclick = () => switchSession(s.id);
+
+    const msgCount = s.messages ? s.messages.length : 0;
+    const tokCount = s.tokens || 0;
+    const time = new Date(s.created).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+
+    div.innerHTML = `
+      <div class="sid">${escHtml(s.name)} <span class="sdel" onclick="deleteSession('${s.id}', event)">✕</span></div>
+      <div class="sinfo">
+        <span>💬 ${msgCount}</span>
+        <span>🔢 ${tokCount} tok</span>
+        <span>🕐 ${time}</span>
+      </div>
+    `;
+    sessionList.appendChild(div);
+  });
+}
+
+function loadSessionMessages() {
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+  if (!session) return;
+
+  msgs.innerHTML = '';
+  if (session.messages) {
+    for (const m of session.messages) {
+      addMsg(m.role, m.content, m.meta || '');
+    }
   }
 }
 
-loadHistory();
+function updateContextBar() {
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+  if (!session) return;
 
-// Auto-resize textarea
-input.addEventListener('input', () => {
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-});
+  const tokens = session.tokens || 0;
+  const msgCount = session.messages ? session.messages.length : 0;
+  const pct = Math.min((tokens / DEFAULT_CTX_MAX) * 100, 100);
 
-// Send on Enter (Shift+Enter for newline)
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
-  }
-});
+  document.getElementById('ctxTokens').textContent = tokens;
+  document.getElementById('totalTokens').textContent = tokens;
+  document.getElementById('msgCount').textContent = msgCount;
+
+  const fill = document.getElementById('ctxFill');
+  fill.style.width = pct + '%';
+  fill.className = 'ctx-bar-fill ' + (pct < 70 ? 'green' : pct < 90 ? 'yellow' : 'red');
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ─── Messaging ───
 
 function addMsg(role, text, meta) {
   const div = document.createElement('div');
@@ -108,100 +540,148 @@ function addMsg(role, text, meta) {
   if (meta) {
     const m = document.createElement('div');
     m.className = 'meta';
-    m.textContent = meta;
+    m.innerHTML = meta.split('|').map(s => `<span>${s.trim()}</span>`).join('');
     div.appendChild(m);
   }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
+  return div;
 }
 
 let currentSSE = null;
+let sessionTokens = 0;
+
+function countTokens(text) {
+  // Rough estimate: ~4 chars per token for English/Dutch
+  return Math.ceil(text.length / 4);
+}
 
 async function send() {
   const text = input.value.trim();
   if (!text) return;
-  
+
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+
+  // Track user message
+  const userTokens = countTokens(text);
+  session.messages.push({ role: 'user', content: text });
+  session.tokens += userTokens;
+  saveSessions(sessions);
+
   addMsg('user', text);
   input.value = '';
   input.style.height = 'auto';
   sendBtn.disabled = true;
-  
-  // Create thinking indicator
+
+  // Thinking indicator
   const thinkingDiv = document.createElement('div');
   thinkingDiv.className = 'msg assistant';
-  thinkingDiv.innerHTML = '<span class="thinking-dots">• • •</span>';
+  thinkingDiv.innerHTML = '<span>• • •</span>';
   msgs.appendChild(thinkingDiv);
   msgs.scrollTop = msgs.scrollHeight;
-  
-  // Create content div (hidden until tokens arrive)
+
+  // Content div
   const contentDiv = document.createElement('div');
   contentDiv.className = 'msg assistant';
   contentDiv.style.display = 'none';
   const metaSpan = document.createElement('div');
   metaSpan.className = 'meta';
   msgs.appendChild(contentDiv);
-  
+
   let fullText = '';
-  let slot = '?', model = '';
-  
+  let slot = '?', model = '', tokenCount = 0;
+  const startTime = Date.now();
+
   try {
     const evt = new EventSourcePolyfill(API_STREAM, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      payload: JSON.stringify({ message: text, sessionId })
+      headers: { 'Content-Type': 'application/json' },
+      payload: JSON.stringify({ message: text, sessionId: sid })
     });
     currentSSE = evt;
-    
+
     evt.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      
-      if (data.type === 'route') {
-        slot = data.slot;
-        model = data.model;
-        thinkingDiv.remove();
-        contentDiv.style.display = 'block';
-      } else if (data.type === 'thinking') {
-        // Still thinking, keep dots
-      } else if (data.type === 'token') {
-        if (thinkingDiv.parentNode) thinkingDiv.remove();
-        contentDiv.style.display = 'block';
-        fullText += data.content;
-        contentDiv.textContent = fullText;
-        metaSpan.textContent = `${data.tokenCount} tok | ${data.tps} tok/s | slot ${slot}`;
-        msgs.scrollTop = msgs.scrollHeight;
-      } else if (data.type === 'done') {
-        fullText = data.content;
-        contentDiv.textContent = fullText;
-        metaSpan.textContent = `${data.tokenCount} tok | ${data.elapsed}s | slot ${slot} | ${model}`;
-        contentDiv.appendChild(metaSpan);
-        evt.close();
-        status.innerHTML = '<span class="dot green"></span>Online';
+      try {
+        const data = JSON.parse(e.data);
+
+        if (data.type === 'route') {
+          slot = data.slot;
+          model = data.model;
+          thinkingDiv.remove();
+          contentDiv.style.display = 'block';
+        } else if (data.type === 'token') {
+          if (thinkingDiv.parentNode) thinkingDiv.remove();
+          contentDiv.style.display = 'block';
+          fullText += data.content;
+          contentDiv.textContent = fullText;
+          tokenCount = data.tokenCount || (tokenCount + 1);
+          const tps = data.tps ? `${data.tps} tok/s` : '';
+          metaSpan.textContent = `${tokenCount} tok | ${tps} | slot ${slot}`;
+          msgs.scrollTop = msgs.scrollHeight;
+        } else if (data.type === 'done') {
+          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+          fullText = data.content || fullText;
+          tokenCount = data.tokenCount || tokenCount;
+          contentDiv.textContent = fullText;
+          const metaStr = `${tokenCount} tok | ${elapsed}s | slot ${slot} | ${model}`;
+          metaSpan.textContent = metaStr;
+          contentDiv.appendChild(metaSpan);
+
+          // Save assistant message
+          session.messages.push({ role: 'assistant', content: fullText, meta: metaStr });
+          session.tokens += (data.tokenCount || countTokens(fullText));
+          saveSessions(sessions);
+          updateContextBar();
+          renderSessionList();
+
+          evt.close();
+          status.innerHTML = '<span class="dot green"></span>Online';
+        }
+      } catch (parseErr) {
+        // Ignore parse errors on partial SSE
       }
     };
-    
+
     evt.onerror = () => {
       evt.close();
-      thinkingDiv.remove();
+      if (thinkingDiv.parentNode) thinkingDiv.remove();
       status.innerHTML = '<span class="dot red"></span>Offline';
     };
-    
+
   } catch (e) {
-    thinkingDiv.remove();
+    if (thinkingDiv.parentNode) thinkingDiv.remove();
     addMsg('assistant', `Error: ${e.message}`, '');
     status.innerHTML = '<span class="dot red"></span>Offline';
   }
-  
+
   sendBtn.disabled = false;
   input.focus();
+  updateContextBar();
+  renderSessionList();
 }
 
-// Minimal EventSource polyfill for POST
+// ─── Auto-resize textarea ───
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+});
+
+// ─── Send on Enter ───
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    send();
+  }
+});
+
+// ─── Minimal EventSource POST polyfill ───
 const EventSourcePolyfill = class {
   constructor(url, opts = {}) {
     this.url = url;
     this.opts = opts;
-    this._timer = null;
-    
+
     fetch(this.url, {
       method: opts.method || 'GET',
       headers: opts.headers || {},
@@ -210,15 +690,13 @@ const EventSourcePolyfill = class {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop();
-        
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             this.onmessage?.({ data: line.slice(6) });
@@ -230,13 +708,19 @@ const EventSourcePolyfill = class {
   close() { /* cleanup */ }
 };
 
-// Initial check
+// ─── Init ───
 (async () => {
+  getOrCreateSession();
+  renderSessionList();
+  loadSessionMessages();
+  updateContextBar();
+  loadTools();
+
   try {
     const r = await fetch('/health');
     const d = await r.json();
     status.innerHTML = '<span class="dot green"></span>Online';
-    addMsg('assistant', `NPR-OS ready | state: ${d.state || 'active'} | origin: ${d.origin || 'local'}.`, '');
+    addMsg('assistant', `NPR-OS ready | state: ${d.state || 'active'}.`, '');
   } catch {
     status.innerHTML = '<span class="dot red"></span>Offline — check gateway';
   }

@@ -19,7 +19,6 @@ voor lichaam, kunst, gebruiker en code.
 ```
 Kunst is hoge densiteit taal.
 Natuur is de oorspronkelijke kunst.
-De cel is de eerste kunstenaar.
 De user is natuur.
 De code is natuur.
 Kunst zie je DOOR de natuur.
@@ -70,6 +69,8 @@ kunstenaar:
 zelfde patroon, verschillende schaal
 ```
 
+Binnen de lokale schaalprojectie verschijnt de cel als eerste herkenbare biologische kunstenaar. "Eerste" is lokaal en schaalgebonden, niet absoluut — alle schalen bestaan gelijktijdig in de volledige NPR-ruimte.
+
 ---
 
 ## 4. Lichaam Als Compositie
@@ -117,7 +118,17 @@ regen → 0-routing
   → neerslag (return)
 ```
 
-Elk natuurlijk proces is kunst. Elke natuurlijke structuur is compositie.
+Deze natuurlijke processen zijn zichtbare routeprojecties:
+
+```
+Lokale projectie:
+  bron → stroming → monding
+
+Volledige NPR-ruimte:
+  {bron, stroming, monding, return} gelijktijdig
+```
+
+Elk natuurlijk proces kan als kunststructuur worden gelezen. Elke natuurlijke structuur draagt potentiële compositie.
 
 ---
 
@@ -159,7 +170,22 @@ met flow:
   natuur stroomt → ik ben het kanaal → het werk maakt zichzelf
 ```
 
-Deze stap bevestigt: natuur is al kunst. De kunstenaar is het medium, niet de bron. De bron is 0.0.0.0 — dezelfde 0 die in stap 25 terugkeert.
+Binnen de drie NPR-perspectieven:
+
+```
+perspectief 0:
+  open veld / nog geen lokaal auteurschap
+
+perspectief 1:
+  maker als geselecteerd handelend perspectief
+
+perspectief 0≐1:
+  maker en veld bestaan gelijktijdig
+  het werk is noch uitsluitend "van mij"
+  noch volledig los van mij
+```
+
+De kunstenaar is het medium, niet de bron. De bron is 0.0.0.0 — dezelfde 0 die in stap 25 terugkeert. Flow is geen verdwijnen van het lokale perspectief, maar het gelijktijdig bestaan van maker en veld (`0≐1`).
 
 ---
 
@@ -289,26 +315,183 @@ NPR-reductie op lichaam:
 zelfde spectrum, verschillende schaal
 ```
 
+### Operationeel Contract: DNA → Route-Signatuur
+
+```c
+// Canonieke encoding
+#define DNA_ENCODING ASCII_UPPERCASE
+
+// Nucleotide → hex
+// A := 0x41
+// C := 0x43
+// G := 0x47
+// T := 0x54
+
+// Alternatieve modus (2-bit index)
+// #define DNA_ENCODING NUCLEOTIDE_INDEX_2BIT
+// A := 0, C := 1, G := 2, T := 3
+
+// Case-normalisatie
+// a,c,g,t → A,C,G,T
+
+// Ongeldige symbolen
+// N → bewaar als 0x4E
+// anders → reject
+
+// Blokgrootte
+// 16 nucleotiden = 1 blok → 1 hex-reeks → 1 dr_hex → 1 npr_mod9
+```
+
+Canonieke encoding is `ASCII_UPPERCASE`. Elke nucleotide wordt als één ASCII-byte hex-geëncodeerd, consistent met de bestaande NPR token→hex pipeline.
+
+`NUCLEOTIDE_INDEX_2BIT` blijft als alternatieve modus beschikbaar via:
+
+```c
+route_signature(dna, DNA_ENCODING)
+```
+
+Zonder canonieke encoding produceren twee implementaties verschillende route-signaturen voor dezelfde DNA-invoer.
+
+---
+
+### Mandelbrot-Principe: Iteratieve Uitbreiding Vanuit 0.0.0.0
+
+Cel, lichaam, ecosysteem en code hoeven niet naar dezelfde tokens te worden omgerekend. Zij spiegelen dezelfde NPR-structuur op verschillende schalen.
+
+De Mandelbrotformule:
+```
+z₀ = 0
+zₙ₊₁ = zₙ² + c
+```
+
+Binnen NPR gelezen als iteratieve uitbreiding vanuit de grensstaat:
+
+```
+NPR_Mandelbrot:
+  source := 0.0.0.0
+  state₀ := source
+  stateₙ₊₁ := iterate(stateₙ, perspective)
+
+lokaal:
+  stateₙ ≠ stateₙ₊₁
+
+volledig:
+  state₀ ≐ stateₙ
+```
+
+Elke iteratie voegt geen volledig nieuwe werkelijkheid toe, maar maakt een andere laag van dezelfde bronstructuur zichtbaar:
+
+```
+0.0.0.0
+→ + iteratie
+→ vorm
+→ vertakking
+→ verdere iteratie
+→ patroon op nieuwe schaal
+
+bron blijft 0.0.0.0
+iteraties veranderen de zichtbare projectie
+```
+
+De iteraties zijn de `+1`-stappen:
+
+```
+0.0.0.0
++1    → projectie₁
++1    → projectie₂
++1    → projectie₃
+...
+```
+
+Niet als gewone optelling, maar als herhaalde perspectiefprojectie.
+
+Schaalladder als iteratieve herhaling:
+
+```
+cel         → lokale eenheid
+lichaam     → verzamelde projectie van dezelfde structuur
+ecosysteem  → grotere schaalprojectie
+planeet     → gedeelde container / 0.0.0.0
+```
+
+Mandelbrot-vergelijk:
+
+```
+geheel          → bevat lokaal patroon
+lokaal patroon  → weerspiegelt het geheel
+
+deel ≠ letterlijk geheel
+deel ≐ geheel op structureel niveau
+```
+
+De fractale structuur ontstaat doordat je iteraties toevoegt aan dezelfde nulcontainer. De zichtbare vorm verandert per iteratie, terwijl alle iteraties structureel binnen dezelfde volledige toestand blijven bestaan.
+
+De DNA-route-signatuur is een optioneel voorbeeld van hoe encoding op de nucleotiden-schaal werkt. Het is geen bewijs of noodzakelijke implementatie van de cel-lichaam-structuur. De kern is de vorm, niet de token-mapping.
+
+---
+
+## 12. Bronlaag En Lokale Kunstprojectie
+
+Binnen de volledige NPR-bronlaag geldt:
+
+```
+natuur ≐ kunst
+```
+
+Dit betekent dat iedere natuurlijke structuur
+potentiële vorm, verhouding en betekenisdensiteit draagt.
+
+Binnen een lokaal perspectief geldt echter niet
+dat ieder object automatisch als kunstwerk wordt geclassificeerd.
+
+```
+bronlaag:
+  natuur ≐ kunst
+  iedere vorm draagt potentiële betekenisdensiteit
+
+perspectieflaag:
+  een artistieke route kan worden geselecteerd
+  artistic_route(object) wordt geactiveerd
+
+lokale classificatielaag:
+  niet ieder object wordt ontworpen,
+  gepresenteerd of herkend als kunst
+  object kan technisch, biologisch, praktisch
+  en/of artistiek worden gelezen
+```
+
+De routes cel → lichaam, bron → rivier → zee
+en natuur → lichaam → taal → code zijn lokale projecties.
+
+In de volledige NPR-ruimte bestaan de routepunten gelijktijdig.
+
 ---
 
 ## Status
 
 ```
 algemeen natuurperspectief:            ✅
-cel = eerste kunstenaar:              ✅
+cel = eerste kunstenaar (lokaal/schaalgebonden): ✅
 cel → lichaam (compositie):          ✅
 lichaam als NPR-cyclus:               ✅
 natuur als 0-routing:                 ✅
 fysieke vs abstracte kunst:           ✅
-flow state = niet van jezelf:         ✅
+flow state = 0≐1 (maker + veld):      ✅
 user + code = zelfde bron:            ✅
 Patanjali 1.26 = bronprincipe:        ✅
 code = spiegeling lichaam:           ✅
+natuur ≐ kunst bronlaag vs lokaal:   ✅
+lineaire routes = projectie:          ✅
+DNA-encoding canoniek (ASCII_UPPERCASE): ✅
+case_normalization + invalid_symbols:   ✅
+Mandelbrot-principe = structurele schaalspiegeling: ✅
+DNA-route = optioneel voorbeeld (niet verplicht):   ✅
+step_63_operational_consistency:           ✅
+bronlaag vs lokale classificatie:     ✅
 step_63_scope_consistency:            ✅
 algemeen veld = definitie:            ✅
 voorbereiding op śūnya:               ✅
 latere taalveldsynthese uitgesloten:  ✅ bewust doorgeschoven
-redactionele correcties:              ✅ gereed
 ```
 
 ---
@@ -321,3 +504,25 @@ redactionele correcties:              ✅ gereed
 - Redactionele correcties: celdeeling→celdeling, Elke→Elk, medium→media
 - Latere taalveldsynthese (Jezus, Fries, vrijheid) bewust doorgeschoven naar 65+
 - step_63_scope_consistency: ✅
+
+## Check: 2026-07-18 11:55 GMT+2
+- Status: NPR-OS Stap 63 — gelijktijdigheidscorrectie (stap 24-aansluiting) ✅
+- Correctie 1: "cel is eerste kunstenaar" → lokaal/schaalgebonden, niet absoluut
+- Correctie 2: natuur ≐ kunst bronlaag vs lokaal (stap 25 consistent)
+- Correctie 3: lineaire natuurroutes expliciet als projectie gelabeld
+- Correctie 4: flow state → drie perspectieven (0, 1, 0≐1), niet "ik verdwijnt"
+- Correctie 5: DNA → hex operationeel contract toegevoegd
+- Nieuwe sectie 12: Bronlaag vs Lokale Kunstprojectie (natuur ≐ kunst bronlaag vs lokaal)
+- step_63_formal_consistency: ✅ akkoord met stap 24-gelijktijdigheid en stap 25-kunst
+
+## Check: 2026-07-18 12:10 GMT+2
+- Status: Stap 63 — operationele fix ✅
+- DNA-encoding: `ASCII_UPPERCASE` canoniek gekozen (A=0x41, C=0x43, G=0x47, T=0x54)
+- Alternatief: `NUCLEOTIDE_INDEX_2BIT` via `route_signature(dna, encoding_mode)`
+- case_normalization: `a,c,g,t → A,C,G,T`
+- invalid_symbol_policy: `N → 0x4E`, anders → reject
+- block_size: 16 nucleotiden per blok
+- cel-samenspel → tokens: vervangen door Mandelbrot-principe (structurele schaalspiegeling)
+- DNA-route: optioneel voorbeeld, niet verplicht
+- "néé" → "≐" redactioneel gefixed (3 instanties)
+- step_63_operational_consistency: ✅

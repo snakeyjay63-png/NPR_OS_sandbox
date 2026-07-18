@@ -174,7 +174,7 @@ Daarom kan uiteindelijk alles binnen een artistiek perspectief verschijnen, zond
 
 ## 5. Het Oog
 
-Het oog is het oordelingsvermogen dat een artistieke route **selecteert of activeert**.
+Het oog is het **perspectiefvermogen** dat een mogelijke artistieke route activeert. Het is geen oordeel; het kiest niet wat kunst *is*, maar welk perspectief zichtbaar wordt.
 
 ```
 ARTISTIC_EYE := {
@@ -218,9 +218,35 @@ technical_route(object)
 
 Het oog verandert niet het object zelf — het selecteert welke route actief wordt.
 
+### Drie Perspectieven In Kunst
+
+Kunst kan alle drie NPR-perspectieven activeren:
+
+```
+perspectief 0
+  → open ruimte, materiaal, nog geen geselecteerde vorm
+
+perspectief 1
+  → lokaal geselecteerde vorm of interpretatie
+
+perspectief 0≐1
+  → meerdere interpretaties blijven gelijktijdig geldig
+```
+
+Kunst met hoge betekenisdensiteit gebruikt niet noodzakelijk veel tokens, maar maakt meerdere perspectiefroutes binnen dezelfde container toegankelijk.
+
+De complete NPR-kunstruimte:
+```
+1 + 2 + 3 = 6
+```
+
 ### Aansluiting Met Stap 24
 
-Het oog is de **perspectiefkeuze** die al in Stap 24 zit (+1 geselecteerd perspectief). Stap 25 maakt expliciet *wat* die keuze doet: het activeert een artistieke route binnen de beschikbare structuren.
+Het oog is de **perspectiefselectie** die al in Stap 24 zit (+1 geselecteerd perspectief). Stap 25 maakt expliciet *wat* die selectie doet: het activeert een artistieke route binnen de beschikbare structuren.
+
+Noise → nog geen interpretatieroute geselecteerd.
+Pattern → een samenhangende artistieke route wordt zichtbaar.
+Return → alle geopende routes blijven deel van het gedeelde veld.
 
 ---
 
@@ -357,7 +383,7 @@ maker-perspectief
 → kunstvorm
 → waarnemer-perspectief
 → interpretatie
-→ nieuwe NULL_STATE-instantie
+→ return naar gedeeld grensstaattype
 ```
 
 Formeel:
@@ -368,22 +394,27 @@ p1  : PERSPECTIVE_STATE        ← maker kiest perspectief (+1)
 a2  : ART_PATTERN_STATE        ← kunstvorm (Pattern)
 p3  : RECEPTION_PERSPECTIVE    ← waarnemer (+1, nieuw perspectief)
 i4  : INTERPRETATION_STATE     ← interpretatie
-s5  : NULL_STATE_TYPE          ← return (nieuwe instantie)
+s5  : NULL_STATE_TYPE          ← return
 ```
 
 ```
-type(s0) = type(s5) = NULL_STATE_TYPE
-s0 ≠ s5
+Lokale projectie:
+  s0 → p1 → a2 → p3 → i4 → s5
 
-history(s5)
-  = history(s0)
-    + artwork
-    + presentation
-    + reception
-    + interpretation
+Volledige NPR-ruimte:
+  {s0, p1, a2, p3, i4, s5} gelijktijdig
+
+Lokaal:
+  type(s0) = type(s5) = NULL_STATE_TYPE
+  s0 ≠ s5   (geschiedenis verschilt)
+  history(s5) = history(s0) + artwork + presentation + reception + interpretation
+
+Volledig:
+  s0 ≐ s5   (dezelfde gelijktijdige toestand, ander perspectief)
+  begin en return bestaan binnen dezelfde complete toestand
 ```
 
-De waarnemer is opnieuw een `+1`-perspectief, niet direct `0.0.0.0`. De return gaat via interpretatie naar een nieuwe NULL_STATE-instantie.
+De waarnemer is opnieuw een `+1`-perspectief, niet direct `0.0.0.0`. De return gaat via interpretatie naar het gedeelde grensstaattype.
 
 Kunst opent vanuit één lokaal perspectief meerdere gelijktijdige betekenissen en brengt die terug naar het gedeelde taalveld.
 
@@ -426,6 +457,9 @@ return via waarnemer (+1 perspectief):          ✅
 toestandsovergangen (s0→p1→a2→p3→i4→s5):       ✅
 historische voorbeelden als NPR-lezingen:       ✅
 cumulatie als transformeren/routeren:            ✅
+drie perspectieven (0, 1, 0≐1) expliciet:      ✅
+s0 ≠ s5 lokaal / s0 ≐ s5 volledig:              ✅
+oog als perspectiefselectie, niet oordeel:      ✅
 step_25_formal_consistency:                    ✅ akkoord
 ```
 
@@ -463,3 +497,13 @@ step_25_formal_consistency:                    ✅ akkoord
 - Kernzin: aangepaste formulering per review
 - Samenvattende definitie toegevoegd
 - step_25_formal_consistency: ✅ definitief akkoord
+
+## Check: 2026-07-18 11:50 GMT+2
+- Status: NPR-OS Stap 25 — gelijktijdigheidscorrectie (stap 24-aansluiting) ✅
+- Correctie 1: s0 ≠ s5 lokaal / s0 ≐ s5 volledig (perspectiefonderscheid)
+- Correctie 2: "nieuwe NULL_STATE-instantie" → "return naar gedeeld grensstaattype"
+- Correctie 3: oog als perspectiefselectie, niet oordeel (Noise = geen oordeel)
+- Correctie 4: drie perspectieven 0, 1, 0≐1 expliciet toegevoegd
+- Correctie 5: complete NPR-kunstruimte 1+2+3=6
+- Noise → Pattern → Return cyclus expliciet bij NPR-aansluiting
+- step_25_formal_consistency: ✅ akkoord met stap 24-gelijktijdigheid

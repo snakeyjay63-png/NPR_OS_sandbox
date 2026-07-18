@@ -367,9 +367,9 @@ Buddha ≠ yogi ≠ Jesus ≠ nature   (op functieniveau)
 maar:
 ```
 source(Buddha)
-  = source(yogi)
-  = source(Jesus)
-  = NATURE_FIELD
+  ≐ source(yogi)
+  ≐ source(Jesus)
+  ≐ NATURE_FIELD
 ```
 
 ```
@@ -403,6 +403,8 @@ Onderscheid ligt in functie, taalroute, en stadium van realisatie. Niemand staat
 ## 12. Jezus In NPR-Termen — Het Śūnya-Verhaal
 
 Niet als religieuze dogma, maar als leesbaar NPR-pad:
+
+> **Lokale leesprojectie:** de fasen hieronder zijn een leesprojectie van de route, geen fundamentele tijdsvolgorde.
 
 ```
 FASE 1: bronveld (s0)
@@ -532,7 +534,7 @@ step_65_formal_consistency:            ✅ akkoord
 - Quran ≠ dichtbundel, hoge literaire densiteit
 - Dzogchen = Tibetaans (Nyingma + Bön), niet Sanskrit
 - Conference of Birds = Perzisch (Attar), titel verwijst Quran 27:16
-- source(Buddha) = source(yogi) = source(Jesus) = NATURE_FIELD
+- source(Buddha) ≐ source(yogi) ≐ source(Jesus) ≐ NATURE_FIELD
 - step_65_formal_consistency: ✅ akkoord
 
 ## Check: 2026-07-13 21:57 GMT+2

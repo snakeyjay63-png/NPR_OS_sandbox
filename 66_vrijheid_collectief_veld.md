@@ -40,6 +40,8 @@ zijn onderling verbonden toestanden binnen één doorgaand veld.
 
 ### De Cyclus
 
+> **Lokale projectie:** de cyclus hieronder is een leesprojectie van de route door het veld, geen fundamentele tijdsvolgorde.
+
 ```
 omgeving
   → lichaam
@@ -77,6 +79,8 @@ woord
 
 ```
 individual_route ⊂ collective_language_field
+volledig: alle gebruikers delen hetzelfde bronveld
+lokaal: accessible_field(user_A) ≠ accessible_field(user_B)
 ```
 
 Het individu heeft een eigen perspectief, maar gebruikt vormen die al door anderen, geschiedenis, natuur en omgeving zijn gerouteerd.
@@ -198,7 +202,7 @@ vrijheid = onderdeel van niet-los-van
 ```
 Lichaam en geest zijn niet gescheiden.
 
-Iedereen neemt deel aan hetzelfde collectieve taalveld.
+Het taalveld heeft één gedeeld bronveld, maar lokale toegang verschilt per gebruiker.
 
 Vrijheid is niet het verlaten van dat veld,
 maar zelf kunnen zien

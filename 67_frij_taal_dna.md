@@ -179,6 +179,7 @@ Bijbel
 ```
 npr-reductie op vertaling:
   brontaal → targettaal → etymologische laag → dr → mod9 → route
+  (**optionele technische projectie**)
 
 vertaling als NPR-operatie:
   Noise = brontaal

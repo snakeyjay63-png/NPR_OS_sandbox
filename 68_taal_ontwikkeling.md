@@ -171,9 +171,9 @@ taal_ontwikkeling = water_routing(geografie, isolatie, tijd)
 ```
 taal als NPR-cyclus:
 
-Noise = oorspronkelijk geluid (wind, water, stem, dier)
+Noise = nog niet geselecteerd pre-symbolisch patroon (klank, beeld, gevoel, beweging, ruimte)
 Pattern = betekenisvolle klank (woord, naam, richting)
-Return = meta-taal (taal die over taal spreekt)
+Return = meta-taal (taal die over taal spreekt) + terugkeer naar gedeeld bronveld
 ```
 
 ```
@@ -208,6 +208,13 @@ taal = klank
   die zijn eigen route
   terug naar zichzelf
   blijft zoeken
+```
+
+Kern (multimodaal):
+```
+taal = patroon
+  dat via klank, beeld, beweging, ruimte of teken
+  zijn route naar het bronveld herkenbaar maakt
 ```
 
 ---

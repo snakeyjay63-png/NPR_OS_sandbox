@@ -27,11 +27,22 @@ ROUTE := {
   transform,
   pattern,
   return,
-  trace
+  trace,
+  perspective,
+  state_relation
 }
+
+perspective:
+  → local    (lokale leesprojectie)
+  → full     (volledig bronveld)
+  → combined (combinatie)
+
+state_relation:
+  → projection_order  (volgorde als leesprojectie)
+  → simultaneous_field (gelijktijdig in het bronveld)
 ```
 
-Voor een volledige reproduceerbare route zijn alle zeven top-level velden verplicht.
+Voor een volledige reproduceerbare route zijn de top-level velden `id` t/m `trace` verplicht; `perspective` en `state_relation` zijn optioneel.
 Voor minder complete routes gebruikt het systeem een volledigheidstatus:
 
 ```
@@ -44,7 +55,7 @@ route_completeness := descriptive | traceable | reproducible | verifiable
 - **verifiable**: reproducible + `source.provenance` — oorsprong identificeerbaar en onafhankelijk controleerbaar
 
 Cruciaal onderscheid:
-```n
+```
 reproducible(route) ≠ verified_origin(route)
 ```
 Een route kan perfect reproduceerbaar zijn terwijl de bron onzeker blijft.
@@ -245,27 +256,27 @@ ROUTE {
     intermediate_values: [
       {
         token: "בראשית",
-        numeric_value: 2701,
-        digital_root: 3
+        numeric_value: 913,
+        digital_root: 4
       },
       {
         token: "ברא",
-        numeric_value: 230,
-        digital_root: 3
+        numeric_value: 203,
+        digital_root: 5
       },
       {
         token: "אלוהים",
         numeric_value: 86,
-        digital_root: 6
+        digital_root: 5
       }
     ],
-    digital_roots: [3, 3, 6]
-    mod9_values: [3, 3, 6]
-    cycle: "3-3-6 symmetrie"
+    digital_roots: [4, 5, 5]
+    mod9_values: [4, 5, 5]
+    cycle: "4-5-5 route"
   }
   
   return: {
-    address: "taal://npr/dr[3,3,6]:mod9[3,3,6]:he:genesis_1_1"
+    address: "taal://npr/dr[4,5,5]:mod9[4,5,5]:he:genesis_1_1"
     address_rule: "sequence"
     interpretation: "Schepping als cyclisch patroon, niet lineair"
   }
@@ -274,10 +285,30 @@ ROUTE {
     steps: [1, 18, 19, 64, 65, 67]
     consistency: true
   }
+
+  perspective: combined
+
+  state_relation: {
+    projection_order: [
+      "source",
+      "tokenization",
+      "mapping",
+      "reduction",
+      "return"
+    ],
+    simultaneous_field: {
+      "source",
+      "noise",
+      "transform",
+      "pattern",
+      "return",
+      "trace"
+    }
+  }
 }
 ```
 
-Zonder `transform` en `intermediate_values` was het resultaat `[3, 3, 6]` niet controleerbaar.
+Zonder `transform` en `intermediate_values` was het resultaat `[4, 5, 5]` niet controleerbaar.
 Met deze velden is de route reproduceerbaar: een ander kan dezelfde invoer
 met dezelfde regels verwerken en hetzelfde resultaat verifiëren.
 
@@ -292,15 +323,15 @@ npr:route:genesis_he_nld
   source: Genesis 1:1 [he]
   transform: gematria_std_v1 + dr_base10
   noise: ["בראשית", "ברא", "אלוהים"]
-  pattern: dr[3,3,6] mod9[3,3,6]
-  return: taal://npr/dr[3,3,6]:mod9[3,3,6]:he:genesis_1_1
+  pattern: dr[4,5,5] mod9[4,5,5]
+  return: taal://npr/dr[4,5,5]:mod9[4,5,5]:he:genesis_1_1
   trace: [1,18,19,64,65,67]
 ```
 
 Of de meest compacte variant:
 
 ```
-Genesis 1:1[he] → gematria_std → dr[3,3,6] → taal://npr/dr[3,3,6]:mod9[3,3,6]:he:genesis_1_1
+Genesis 1:1[he] → gematria_std_v1 → dr[4,5,5] → taal://npr/dr[4,5,5]:mod9[4,5,5]:he:genesis_1_1
 ```
 
 De compacte notatie is afkorting. De volledige notatie is referentie.
@@ -465,3 +496,15 @@ step_71_formal_consistency:                          ✅ definitief reproduceerb
 - `raw_pattern` gecorrigeerd: three-token Hebrew sequence
 - Vier niveaus gesynchroniseerd met volledigheidstatus
 - Keten 69→70→71 voltooid: water→architectuur→monument→formele notatie
+
+## Check: 2026-07-18 14:50 GMT+2
+- Status: Stap 71 — gematria-rekenfout gecorrigeerd ✅
+- בראשית: 2701→dr3 → 913→dr4 ✅
+- ברא: 230→dr3 → 203→dr5 ✅
+- אלהים: 86→dr6 → 86→dr5 ✅
+- Volledige route: dr[4,5,5] mod9[4,5,5] ✅
+- Address: taal://npr/dr[4,5,5]:mod9[4,5,5]:he:genesis_1_1 ✅
+- Code fence ` ```n ` → ` ``` ` ✅
+- perspective: combined + state_relation toegevoegd ✅
+- step_71_example_consistency: ✅
+- step_71_formal_consistency: ✅ definitief
