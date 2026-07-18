@@ -138,6 +138,11 @@ const geowonServer = http.createServer((req, res) => {
 geowonServer.listen(process.env.NPR_GMEOWON_PORT || 17004, () => console.log('[17004] Geowon memory gateway'));
 servers.push(geowonServer);
 
+// ─── INIT_ONCE: Śūnya-context (eenmalig, geen heartbeat) ───
+
+const initOnce = require('./src/init-once.cjs');
+const śūnyaCtx = initOnce.initOnce();
+
 // ─── Boot Banner ───
 
 console.log('\n╔═══════════════════════════════════════╗');
@@ -146,7 +151,12 @@ console.log('║  :17000 npr-local (main)              ║');
 console.log('║  :17004 geowon (memory)               ║');
 console.log('║  :17010 config-llama (UI)             ║');
 console.log('║  :8765  llama-server (extern, required)║');
-console.log('╚═══════════════════════════════════════╝\n');
+console.log('╚═══════════════════════════════════════╝');
+console.log('');
+console.log('Śūnya-context geladen.');
+console.log(`${śūnyaCtx.summary.loaded}/${śūnyaCtx.summary.total} basisbestanden gelezen.`);
+console.log(`Main-sessie gereed voor invoer.`);
+console.log('');
 
 // ─── Main NPR Local (:17000) ───
 
