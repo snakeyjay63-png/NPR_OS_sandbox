@@ -992,17 +992,28 @@ Ketenvolledigheid:             ✅ gesloten
 ✅ combine_cycles: deling-door-nul safeguard + no_active_cycle_weight
 ✅ lege context: empty_context_error
 ✅ rotor_response(Q, motor_field) canoniek
-⚠️ combine_cycles implementatie open (interface formeel correct)
+✅ combine_cycles geïmplementeerd (multi-cycle gewogen combinatie)
+✅ cycle_weight geïmplementeerd (40% overlap + 30% root-consistency + 30% contradiction)
+✅ ΦR / reserve_phase geïmplementeerd (route 0x18, combine(B3, B0))
 ⚠️ volledige fouttolerantie: route sluit (16 mod 16 = 0), maar B1/B2 inhoud niet herstelbaar via ΦR
 
-Operationele uitvoering:       ⚠️ open
-- combine_cycles: semantische vergelijkingsfunctie nog keyword-gebaseerd
-- superpose: gewogen superpositie nog equal-weight
+Operationele uitvoering:       ✅ compleet (enkelscyclus + multi-cycle)
 
-Open afhankelijkheden:
-- combine_cycles moet deterministische cycle_weight-implementatie krijgen.
+**Al geïmplementeerd:**
+- combine(): ✅ semantische vergelijkingsfunctie (keyword-gebaseerd)
+- superpose(): ✅ gewogen superpositie (equal-weight)
+- rotor_response(): ✅ antwoord-generatie (template)
+- combine_cycles(): ✅ multi-cycle gewogen combinatie
+- cycle_weight(): ✅ formule: overlap×0.4 + root_consistency×0.3 + contradiction_penalty×0.3
+- reserve_phase() / ΦR: ✅ route 0x18, combine(B3, B0)
+- contradiction_delta(): ✅ antoniem-gebaseerde tegenspraak-detectie
 
-depends_on(implementation.combine_cycles)
+**Kwaliteitsverbeteringen (niet noodzakelijk voor formele route):**
+- combine() semantiek: ⚠️ keyword → TODO embedding/LLM
+- superpose() gewichten: ⚠️ equal → TODO dynamisch
+- rotor_response(): ⚠️ template → TODO LLM-generatie
+
+depends_on(implementation.combine)
 ```
 
 ---
