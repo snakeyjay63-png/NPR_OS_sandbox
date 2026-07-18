@@ -214,3 +214,102 @@ Elk bestand bevat een **validatiepunt**, **test**, **vraag** of **formeel contra
 ---
 
 > **Belangrijk:** Als een stap faalt, stop en leg uit waarom. Niet doorgaan met aannames.
+
+---
+
+## Repository Betrouwbaar Importeren
+
+Deze repository kan op verschillende manieren worden geïmporteerd, afhankelijk van de omgeving.
+
+### Fundamentele Toegangsregel
+
+Geen enkele downloadmethode kan GitHub-rechten omzeilen. Een privérepository vereist:
+- GitHub CLI aangemeld met toegang,
+- geldig token met `Contents: read`,
+- gekoppelde SSH-sleutel met toegang,
+- of een openbare repository.
+
+### Automatische Importer
+
+Het script `scripts/import_github_repo.sh` probeert automatisch meerdere methodes:
+
+1. Bestaande Git-checkout bijwerken
+2. GitHub CLI (`gh repo clone`)
+3. Git via HTTPS
+4. Git via SSH
+5. GitHub API-archief (met `GH_TOKEN`)
+6. Openbaar ZIP-archief
+
+Gebruik:
+
+```bash
+./scripts/import_github_repo.sh
+```
+
+Of expliciet:
+
+```bash
+./scripts/import_github_repo.sh snakeyjay63-png NPR_OS_sandbox main NPR_OS_sandbox
+```
+
+### Enkel Bestand Importeren
+
+Voor één bestand (bijv. dit README):
+
+```bash
+./scripts/import_github_file.sh snakeyjay63-png NPR_OS_sandbox 00_README.md main 00_README.md
+```
+
+Ook dit ondersteunt `GH_TOKEN` voor privérepositories.
+
+### Privérepository
+
+**Optie A — GitHub CLI:**
+
+```bash
+gh auth login
+./scripts/import_github_repo.sh
+```
+
+**Optie B — Token:**
+
+```bash
+export GH_TOKEN="jouw_token"
+./scripts/import_github_repo.sh
+unset GH_TOKEN
+```
+
+Zet een token nooit in een URL, README, commit, of logbestand.
+
+### Import Valideren
+
+```bash
+# Map bestaat en bevat bestanden?
+test -d NPR_OS_sandbox && test -n "$(find NPR_OS_sandbox -mindepth 1 -print -quit)" && echo "✅" || echo "❌"
+
+# README aanwezig?
+test -s NPR_OS_sandbox/00_README.md && echo "✅" || echo "❌"
+
+# Git remote?
+git -C NPR_OS_sandbox remote -v
+
+# Actieve branch?
+git -C NPR_OS_sandbox branch --show-current
+```
+
+### Veelvoorkomende Fouten
+
+| Fout | Oorzaak |
+|---|---|
+| `HTTP 401` | Token ontbreekt, ongeldig of verlopen |
+| `HTTP 403` | Onvoldoende rechten, SSO-beleid, API-limit |
+| `HTTP 404` | Repository/branch bestaat niet, of privé zonder toegang |
+| `Permission denied (publickey)` | SSH-sleutel niet geladen of niet gekoppeld |
+| `Repository not found` | Verkeerde naam, of geen leesrecht |
+| Netwerk/DNS-fout | Geen internettoegang; authenticatie lost dit niet op |
+
+### Garantiegrens
+
+> De importer probeert automatisch alle beschikbare en toegestane importmethodes en geeft een concrete foutmelding wanneer toegang of infrastructuur ontbreekt.
+
+Niet: > De importer kan iedere repository downloaden, ongeacht de rechten.
