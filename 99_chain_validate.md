@@ -106,7 +106,7 @@ technically_integreerbaar(stap) :=
 | 10 | NPR Cycle | ✅ | 3 fasen ← H={0,3,6} validatie. Koppeling N→3,P→6,R→0/9 = NPR-semantiek, niet algebra. |
 | 11 | UTF-8 = routing-integriteit | ✅ | NFC+UTF-8+SHA-256 = deterministisch. |
 | 12 | Vortex-primes → digitale wortels | ✅ | dr(1A)=B, dr(19)=A. 0≐1 bronidentiteit. Vierlagenmodel. npr_mod9 hex-native. |
-| 13 | CRITICAL — hex-native check | ✅ | dr(1A)=B (hex). 1A→26→8 = FOUT (dec trap). |
+| 13a | Vajra — implosieve turbine | ✅ concept | Sanskrit → vortex → vacuüm → hex. Vajra = implosieve turbine. Vatarūpa = wervelingsvorm. |
 | 14 | NPR-reductielagen | ✅ | 6D→3D→1D→9. Flower of Life hex-native. |
 | 15 | Signaal→perceptie | ✅ conditioneel geldig | Foneem→ID→hex→ratio→synth→kleur. Exacte rationale grenzen. Canonieke route deterministisch gedeclareerd. Open onderdelen: `segment_phonemes`, foutroutes, akoestische meting (uitvoeringselementen, breken de specificatie niet). |
 | 16 | Taalmapping | ✅ | FULL_LANGUAGE_PRINCIPLE: iedere taal = volledige structuur. Perspectief ≠ exclusief. |
