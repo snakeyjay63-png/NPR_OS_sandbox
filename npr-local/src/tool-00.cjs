@@ -1,314 +1,362 @@
 /**
- * tool-00.cjs — NPR Validation Tool (Tool-00)
+ * tool-00.cjs — NPR Router (Tool-00)
  *
- * Validates programs against NPR-OS capability constraints.
- * Checks: authorities, traceability, capability boundaries, NPR cycles.
+ * Stap 17: Centrale encoder-runtime + NPR-reductiepijp.
+ *
+ * Canonieke encoders per invoertype:
+ *   hex_encode_text(x)       := UTF8(NFC(x)) → hex
+ *   hex_encode_token(x, ver) := token_id → fixed-width hex
+ *   hex_encode_integer(x)    := canonical_unsigned_hex(x)
+ *   hex_encode_ipv6(x)       := expanded_8x4_hex(x)
+ *   hex_encode_git_hash(x)   := lowercase_hex(x)
+ *
+ * NPR-reductie:
+ *   npr_reduce(x) := npr_mod9( hex_digit_value( dr_hex( hex_encode(x) ) ) )
  *
  * Philosophy:
- *   A correct program has every capability activation backed by authority.
- *   Authority flows through explicit traces.
- *   No capability exists without a return path.
+ *   De router reduceert signalen naar hun NPR-wortel (1-9).
+ *   Reductie ≠ interferentie (stap 18 combineert cycli).
+ *   Stap 17 = observatie + reductie. Stap 18 = interferentie + routing.
  */
 
 "use strict";
 
-const { getByField, routeCapability } = require("./sec-registry.cjs");
-
-// ─── Authority System ───
+// ─── Canonieke Encoders ───
 
 /**
- * Authority = explicit permission to activate a capability.
- * Each operation requires at least one matching authority.
+ * hex_encode_text(x) — UTF-8 NFC → hex string
+ * @param {string} x — invoer
+ * @returns {string} hex representatie
  */
-const AUTHORITY_CLASSES = {
-  // Data operations
-  "DataRead": { capabilities: ["memory-read", "file-read", "token-eval"], risk: "low" },
-  "DataWrite": { capabilities: ["memory-write", "file-write"], risk: "medium" },
-  "DataTransform": { capabilities: ["token-eval"], risk: "low" },
-
-  // Process operations
-  "ProcessExecution": { capabilities: ["process-spawn", "process-execution", "child-process"], risk: "critical" },
-  "ProcessControl": { capabilities: ["control-flow", "stack-manipulation"], risk: "critical" },
-
-  // Network operations
-  "NetworkRequest": { capabilities: ["network-request", "dns-resolution"], risk: "high" },
-  "NetworkBind": { capabilities: ["network-request"], risk: "medium" },
-
-  // DOM/Browser operations
-  "DOMManipulation": { capabilities: ["dom-manipulation", "html-render"], risk: "medium" },
-  "BrowserAPI": { capabilities: ["browser-api", "url-redirect"], risk: "low" },
-
-  // System operations
-  "SystemAccess": { capabilities: ["native-addon", "event-loop"], risk: "critical" },
-  "PackageManagement": { capabilities: ["package-install", "module-require"], risk: "high" },
-};
+function hex_encode_text(x) {
+  if (typeof x !== "string") {
+    throw new TypeError("hex_encode_text expects string");
+  }
+  // NFC normalisatie
+  const nfc = x.normalize("NFC");
+  // UTF-8 → hex
+  const buf = Buffer.from(nfc, "utf8");
+  return buf.toString("hex");
+}
 
 /**
- * Validate a single trace entry against authority requirements.
+ * hex_encode_token(x, ver) — token_id → fixed-width hex
+ * @param {number} x — token id
+ * @param {string} [ver="v1"] — tokenizer versie (voor toekomstige compat)
+ * @returns {string} 8-char hex (v1 default)
  */
-const validateTraceEntry = (entry) => {
-  const violations = [];
-  const { operation, inputType, authorities, source } = entry;
-
-  // Check: operation must exist
-  if (!operation) {
-    violations.push({ type: "missing-operation", severity: "error", message: "Trace entry has no operation" });
-    return { valid: false, violations };
+function hex_encode_token(x, ver = "v1") {
+  if (typeof x !== "number" || x < 0) {
+    throw new TypeError("hex_encode_token expects non-negative integer");
   }
-
-  // Check: authority required for high-risk operations
-  const authClass = AUTHORITY_CLASSES[operation];
-  if (authClass && authClass.risk !== "low") {
-    if (!authorities || authorities.length === 0) {
-      violations.push({
-        type: "missing-authority",
-        severity: authClass.risk === "critical" ? "critical" : "high",
-        operation,
-        requiredRisk: authClass.risk,
-        message: `Operation "${operation}" (${authClass.risk} risk) requires explicit authority`,
-      });
-    }
-  }
-
-  // Check: input type safety
-  if (inputType === "string" && authClass) {
-    const dangerousCaps = ["process-execution", "memory-write", "token-eval"];
-    if (authClass.capabilities.some((c) => dangerousCaps.includes(c))) {
-      violations.push({
-        type: "unsafe-input-type",
-        severity: "warning",
-        operation,
-        inputType,
-        message: `String input to ${operation} — consider typed/sanitized input`,
-      });
-    }
-  }
-
-  return { valid: violations.length === 0, violations };
-};
-
-// ─── Source Analysis ───
+  const width = ver === "v1" ? 8 : 8; // v1 = 32-bit fixed
+  return x.toString(16).padStart(width, "0");
+}
 
 /**
- * Pattern-based source analysis for capability violations.
- * Detects dangerous patterns in JavaScript/Node.js source.
+ * hex_encode_integer(x) — canonical unsigned hex
+ * @param {number} x — integer
+ * @returns {string} lowercase hex zonder 0x prefix
  */
-const DANGEROUS_PATTERNS = [
-  { pattern: /\beval\s*\(/, type: "unsafe-eval", severity: "critical", capability: "token-eval", field: "javascript", message: "eval() — arbitrary code execution" },
-  { pattern: /new\s+Function\s*\(/, type: "function-constructor", severity: "critical", capability: "token-eval", field: "javascript", message: "new Function() — dynamic code generation" },
-  { pattern: /\.innerHTML\s*=/, type: "dom-injection", severity: "high", capability: "dom-manipulation", field: "javascript", message: "innerHTML assignment — potential XSS" },
-  { pattern: /\.outerHTML\s*=/, type: "dom-injection", severity: "high", capability: "dom-manipulation", field: "javascript", message: "outerHTML assignment — potential XSS" },
-  { pattern: /document\.write\s*\(/, type: "dom-write", severity: "high", capability: "html-render", field: "javascript", message: "document.write() — DOM injection" },
-  { pattern: /child_process\.exec\s*\(/, type: "shell-exec", severity: "critical", capability: "process-spawn", field: "node", message: "child_process.exec() — shell command execution" },
-  { pattern: /require\s*\(\s*[^"'`]/, type: "dynamic-require", severity: "high", capability: "module-require", field: "node", message: "Dynamic require() — module path injection" },
-  { pattern: /fs\.readFileSync\s*\(/, type: "sync-io", severity: "warning", capability: "event-loop", field: "node", message: "Synchronous file read — event loop blocking" },
-  { pattern: /fs\.writeFileSync\s*\(/, type: "sync-io", severity: "warning", capability: "event-loop", field: "node", message: "Synchronous file write — event loop blocking" },
-  { pattern: /setTimeout\s*\(\s*['"`]/, type: "timeout-string", severity: "high", capability: "token-eval", field: "javascript", message: "setTimeout with string — eval equivalent" },
-  { pattern: /setInterval\s*\(\s*['"`]/, type: "interval-string", severity: "high", capability: "token-eval", field: "javascript", message: "setInterval with string — eval equivalent" },
-  { pattern: /\.__proto__\s*=/, type: "prototype-write", severity: "critical", capability: "object-prototype", field: "javascript", message: "__proto__ assignment — prototype pollution" },
-  { pattern: /Object\.assign\s*\([^,]+,\s*\w+\.body/, type: "merge-pollution", severity: "high", capability: "object-prototype", field: "javascript", message: "Object.assign with request body — prototype pollution risk" },
-];
-
-const analyzeSource = (source) => {
-  if (!source || typeof source !== "string") {
-    return { findings: [], findingCount: 0, clean: true, npr: { noise: "empty source", pattern: "no analysis", return: "nothing to validate" } };
+function hex_encode_integer(x) {
+  if (!Number.isInteger(x) || x < 0) {
+    throw new TypeError("hex_encode_integer expects non-negative integer");
   }
+  return x.toString(16);
+}
 
-  const findings = [];
+/**
+ * hex_encode_ipv6(x) — expanded 8x4 hex
+ * @param {string} x — IPv6 adres (kort of lang)
+ * @returns {string} expanded 8-group hex (lowercase)
+ */
+function hex_encode_ipv6(x) {
+  if (typeof x !== "string") {
+    throw new TypeError("hex_encode_ipv6 expects string");
+  }
+  // Simpele expansie: split op ":" en pad elk deel naar 4 chars
+  // (Volledige IPv6 expansie vereist :: expansie — vereenvoudigd hier)
+  const parts = x.split(":").filter(Boolean);
+  const padded = parts.map(p => p.padStart(4, "0"));
+  // :: expansie: vul aan tot 8 groups
+  while (padded.length < 8) {
+    padded.splice(padded.length - 1, 0, "0000");
+  }
+  return padded.slice(0, 8).join(":");
+}
 
-  for (const { pattern, type, severity, capability, field, message } of DANGEROUS_PATTERNS) {
-    const matches = source.match(pattern);
-    if (matches) {
-      const route = routeCapability(capability);
-      findings.push({
-        type,
-        severity,
-        capability,
-        field,
-        route: route?.route || `/sec/${field}`,
-        match: matches[0],
-        message,
-        suggestion: getSuggestion(type),
-      });
+/**
+ * hex_encode_git_hash(x) — lowercase hex
+ * @param {string} x — git hash
+ * @returns {string} lowercase hex (kort of volledig)
+ */
+function hex_encode_git_hash(x) {
+  if (typeof x !== "string") {
+    throw new TypeError("hex_encode_git_hash expects string");
+  }
+  // Verwijder eventuele prefixen en lowercase
+  return x.replace(/^[~^]*/, "").toLowerCase();
+}
+
+// ─── NPR Reductiepijp ───
+
+/**
+ * dr_hex(hex) — digitale wortel van hex string
+ * Sommeer hex cijfers → digitale wortel
+ * @param {string} hex — hex string
+ * @returns {number} digitale wortel [1..9] of 0 als hex leeg
+ */
+function dr_hex(hex) {
+  if (!hex || typeof hex !== "string") return 0;
+  let sum = 0;
+  for (const ch of hex.toLowerCase()) {
+    const v = parseInt(ch, 16);
+    if (!isNaN(v)) {
+      sum += v;
     }
   }
+  if (sum === 0) return 0;
+  return ((sum - 1) % 9) + 1;
+}
 
-  const criticalCount = findings.filter((f) => f.severity === "critical").length;
-  const highCount = findings.filter((f) => f.severity === "high").length;
+/**
+ * npr_mod9(n) — NPR mod-9 (resultaat [1..9] of 0)
+ * @param {number} n — integer
+ * @returns {number} NPR waarde
+ */
+function npr_mod9(n) {
+  n = Math.abs(parseInt(n) || 0);
+  if (n === 0) return 0;
+  return ((n - 1) % 9) + 1;
+}
 
+/**
+ * hex_digit_value(hex) — som van hex cijferwaarden
+ * @param {string} hex — hex string
+ * @returns {number} som
+ */
+function hex_digit_value(hex) {
+  let sum = 0;
+  for (const ch of hex.toLowerCase()) {
+    const v = parseInt(ch, 16);
+    if (!isNaN(v)) {
+      sum += v;
+    }
+  }
+  return sum;
+}
+
+/**
+ * npr_reduce(x, encoder) — volledige NPR-reductie
+ * 
+ * Pipe: x → hex_encode → dr_hex → hex_digit_value → npr_mod9
+ * 
+ * @param {*} x — input
+ * @param {Function} [encoder=hex_encode_text] — encoder functie
+ * @returns {{ hex: string, dr: number, npr: number, value: number }}
+ */
+function npr_reduce(x, encoder = hex_encode_text) {
+  const hex = encoder(x);
+  const dr = dr_hex(hex);
+  const value = hex_digit_value(hex);
+  const npr = npr_mod9(value);
+  return { hex, dr, npr, value };
+}
+
+// ─── Input Type Detectie ───
+
+/**
+ * detect_input_type(x) — detecteert invoertype
+ * @param {*} x — input
+ * @returns {string} type identifier
+ */
+function detect_input_type(x) {
+  if (typeof x === "number") return "integer";
+  if (typeof x !== "string") return "unknown";
+  
+  // Git hash pattern (40 hex chars of shorter abbreviations)
+  if (/^[0-9a-fA-F]{7,40}$/.test(x)) return "git_hash";
+  
+  // IPv6 pattern (simple detection)
+  if (/:/.test(x) && /[0-9a-fA-F]/.test(x)) return "ipv6";
+  
+  // Token-like (pure number string)
+  if (/^\d+$/.test(x)) return "integer";
+  
+  return "text";
+}
+
+/**
+ * auto_reduce(x) — automatische encoder selectie + reductie
+ * @param {*} x — input
+ * @returns {{ type: string, result: object }}
+ */
+function auto_reduce(x) {
+  let type = detect_input_type(x);
+  let encoder;
+  let input = x;
+  
+  switch (type) {
+    case "integer":
+      encoder = hex_encode_integer;
+      if (typeof x === "string") {
+        input = parseInt(x, 10);
+      }
+      break;
+    case "ipv6":
+      encoder = hex_encode_ipv6;
+      break;
+    case "git_hash":
+      encoder = hex_encode_git_hash;
+      break;
+    default:
+      encoder = hex_encode_text;
+      type = "text";
+  }
+  
+  return { type, result: npr_reduce(input, encoder) };
+}
+
+// ─── Tool-00 Interface ───
+
+/**
+ * validate — valideert input en retourneert NPR-analyse
+ * @param {{ source: string, type: string }} params
+ * @returns {object} validatie resultaat
+ */
+function validate(params) {
+  const { source, type } = params || {};
+  
+  if (!source) {
+    return { valid: false, error: "missing source" };
+  }
+  
+  try {
+    const detected = type || detect_input_type(source);
+    let input = source;
+    
+    // Convert string numbers to actual numbers for integer encoder
+    if (detected === "integer" && typeof source === "string") {
+      input = parseInt(source, 10);
+    }
+    
+    const result = npr_reduce(input, getEncoder(detected));
+    
+    return {
+      valid: true,
+      type: detected,
+      npr: result.npr,
+      digitalRoot: result.dr,
+      hexLength: result.hex.length,
+      hex: result.hex,
+      phase: getPhase(result.npr),
+    };
+  } catch (e) {
+    return { valid: false, error: e.message };
+  }
+}
+
+/**
+ * route — routeert input naar NPR slot
+ * @param {{ source: string, type: string }} params
+ * @returns {object} route resultaat
+ */
+function route(params) {
+  const analysis = validate(params);
+  
+  if (!analysis.valid) {
+    return { routed: false, error: analysis.error };
+  }
+  
+  const slot = (analysis.npr * 0x07) % 0x40;
+  
   return {
-    findings,
-    findingCount: findings.length,
-    clean: criticalCount === 0 && highCount === 0,
-    severity: criticalCount > 0 ? "critical" : highCount > 0 ? "high" : findings.length > 0 ? "warning" : "clean",
-    npr: {
-      noise: `${findings.length} pattern(s) detected in source`,
-      pattern: findings.map((f) => `${f.type} → ${f.capability}`).join("; ") || "no dangerous patterns",
-      return: criticalCount > 0 ? "Critical patterns require remediation" : highCount > 0 ? "High-risk patterns need review" : findings.length > 0 ? "Warnings to consider" : "Source clean",
+    routed: true,
+    source_type: analysis.type,
+    npr: analysis.npr,
+    digitalRoot: analysis.digitalRoot,
+    slot: slot,
+    slot_hex: "0x" + slot.toString(16).toUpperCase(),
+    phase: analysis.phase,
+  };
+}
+
+/**
+ * analyze — volledige NPR-analyse met metadata
+ * @param {{ source: string, trace: object }} params
+ * @returns {object} analyse resultaat
+ */
+function analyze(params) {
+  const { source, trace } = params || {};
+  
+  if (!source) {
+    return { error: "missing source" };
+  }
+  
+  const auto = auto_reduce(source);
+  const routeResult = route({ source });
+  
+  return {
+    input: {
+      length: source.length,
+      type: auto.type,
     },
-    languageCorrections: findings.map((f) => ({
-      finding: f.type,
-      before: f.match,
-      after: f.suggestion,
-      reason: f.message,
-    })),
+    npr: {
+      npr: auto.result.npr,
+      digitalRoot: auto.result.dr,
+      value: auto.result.value,
+      hex: auto.result.hex,
+    },
+    route: routeResult,
+    trace: trace || null,
   };
-};
+}
 
-const getSuggestion = (type) => {
-  const suggestions = {
-    "unsafe-eval": "JSON.parse(), structured data, or safe parser",
-    "function-constructor": "Pre-compiled functions, switch/case, or lookup tables",
-    "dom-injection": "textContent, DOMPurify.sanitize(), or template literals with escaping",
-    "dom-write": "DOM APIs (createElement, appendChild) or framework templating",
-    "shell-exec": "child_process.execFile() or spawn() with arg array",
-    "dynamic-require": "Static require() calls or module map",
-    "sync-io": "fs.promises.readFile/writeFile or async/await",
-    "timeout-string": "setTimeout(() => { ... }, delay) — function callback",
-    "interval-string": "setInterval(() => { ... }, delay) — function callback",
-    "prototype-write": "Object.create(null), Map, or schema validation",
-    "merge-pollution": "Object.assign(Object.create(null), ...), or schema-validated merge",
-  };
-  return suggestions[type] || "Review and sanitize";
-};
+// ─── Helpers ───
 
-// ─── Full Program Validation ───
-
-const validateProgram = ({ source = "", trace = null }) => {
-  const violations = [];
-  const corrections = [];
-
-  // Phase 1: Source analysis
-  const sourceResult = analyzeSource(source);
-  violations.push(...sourceResult.findings.map((f) => ({
-    phase: "source-analysis",
-    type: f.type,
-    severity: f.severity,
-    message: f.message,
-    capability: f.capability,
-    field: f.field,
-  })));
-
-  // Phase 2: Trace validation
-  if (trace && Array.isArray(trace)) {
-    for (const entry of trace) {
-      const entryResult = validateTraceEntry(entry);
-      violations.push(...entryResult.violations.map((v) => ({
-        phase: "trace-validation",
-        ...v,
-      })));
-    }
-
-    // Check: trace continuity
-    if (trace.length > 0) {
-      const gaps = [];
-      for (let i = 1; i < trace.length; i++) {
-        if (!trace[i - 1].operation || !trace[i].operation) {
-          gaps.push(i);
-        }
-      }
-      if (gaps.length > 0) {
-        violations.push({
-          phase: "trace-continuity",
-          type: "trace-gap",
-          severity: "error",
-          indices: gaps,
-          message: `Trace has gaps at indices ${gaps.join(", ")}`,
-        });
-      }
-    }
+function getEncoder(type) {
+  switch (type) {
+    case "integer": return hex_encode_integer;
+    case "ipv6": return hex_encode_ipv6;
+    case "git_hash": return hex_encode_git_hash;
+    default: return hex_encode_text;
   }
+}
 
-  // Phase 3: Capability boundary check
-  const capabilitiesUsed = new Set();
-  for (const v of violations) {
-    if (v.capability) capabilitiesUsed.add(v.capability);
-  }
-  if (trace) {
-    for (const entry of trace) {
-      if (entry.capability) capabilitiesUsed.add(entry.capability);
-    }
-  }
-
-  // Check: mixed field capabilities
-  const fields = new Set();
-  for (const cap of capabilitiesUsed) {
-    const route = routeCapability(cap);
-    if (route?.field) fields.add(route.field);
-  }
-
-  if (fields.size > 1) {
-    corrections.push({
-      type: "multi-field-boundary",
-      severity: "warning",
-      fields: [...fields],
-      message: `Program crosses ${fields.size} security fields: ${[...fields].join(", ")}`,
-      suggestion: "Ensure explicit boundary handling between fields",
-    });
-  }
-
-  // Phase 4: Language corrections from source
-  corrections.push(...(sourceResult.languageCorrections || []));
-
-  const criticalCount = violations.filter((v) => v.severity === "critical").length;
-  const highCount = violations.filter((v) => v.severity === "high").length;
-
-  // NPR analysis
-  const npr = {
-    noise: `${violations.length} violation(s), ${corrections.length} correction(s)`,
-    pattern: [...capabilitiesUsed].join(" → ") || "no capability violations",
-    return: criticalCount > 0
-      ? `Critical: ${criticalCount} — immediate remediation required`
-      : highCount > 0
-        ? `High-risk: ${highCount} — review before deployment`
-        : violations.length > 0
-          ? `Warnings: ${violations.length} — review recommended`
-          : "Program structurally sound",
-  };
-
-  return {
-    valid: criticalCount === 0 && highCount === 0,
-    violations,
-    violationCount: violations.length,
-    languageCorrections: corrections,
-    correctionCount: corrections.length,
-    capabilities: [...capabilitiesUsed],
-    fields: [...fields],
-    npr,
-  };
-};
-
-// ─── Capability Constraint Check ───
-
-const checkCapabilityConstraints = (program) => {
-  const { trace = [], constraints = {} } = program;
-  const issues = [];
-
-  // Check: no critical capability without explicit constraint
-  for (const entry of trace) {
-    const authClass = AUTHORITY_CLASSES[entry.operation];
-    if (authClass && authClass.risk === "critical") {
-      if (!constraints[entry.operation]) {
-        issues.push({
-          type: "unconstrained-critical",
-          operation: entry.operation,
-          message: `Critical operation "${entry.operation}" has no explicit constraint`,
-        });
-      }
-    }
-  }
-
-  return { issues, issueCount: issues.length, clean: issues.length === 0 };
-};
+function getPhase(npr) {
+  if (npr <= 2) return "Noise";
+  if (npr <= 4) return "Pattern";
+  if (npr <= 6) return "Return";
+  if (npr <= 8) return "Hexa";
+  return "Identity";
+}
 
 // ─── Exports ───
 
 module.exports = {
-  AUTHORITY_CLASSES,
-  DANGEROUS_PATTERNS,
-  analyzeSource,
-  validateProgram,
-  validateTraceEntry,
-  checkCapabilityConstraints,
-  getSuggestion,
+  // Encoders
+  hex_encode_text,
+  hex_encode_token,
+  hex_encode_integer,
+  hex_encode_ipv6,
+  hex_encode_git_hash,
+  
+  // NPR pipe
+  dr_hex,
+  npr_mod9,
+  hex_digit_value,
+  npr_reduce,
+  
+  // Auto
+  detect_input_type,
+  auto_reduce,
+  
+  // Tool-00 interface
+  validate,
+  route,
+  analyze,
+  
+  // Helpers
+  getEncoder,
+  getPhase,
 };

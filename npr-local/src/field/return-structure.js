@@ -9,6 +9,19 @@ const { nprRoute } = require('./npr');
 
 // ─── Helpers ───
 
+// @addr 10.04.2.0 | fd00:npr:0004:002::0 — halt reasons
+const HALT_REASONS = {
+  VALID_RETURN: 'VALID_RETURN',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  ITERATION_LIMIT: 'ITERATION_LIMIT',
+  CONVERGENCE: 'CONVERGENCE',
+  DIRECT: 'DIRECT',
+};
+
+// @addr 10.04.2.1 | fd00:npr:0004:002::1 — default iteration limits
+const DEFAULT_MAX_ITERATIONS = 16;
+const DEFAULT_CONVERGENCE_THRESHOLD = 0.01;
+
 // @addr 10.04.0.1 | fd00:npr:0004:000::1 — hex from int
 function toHex(n) {
   if (typeof n !== 'number') return '0x0000';
@@ -27,8 +40,11 @@ function checksumHex(str) {
 // ─── Canonical Return ───
 
 // @addr 10.04.1.0 | fd00:npr:0004:001::0 — create canonical return
-function createReturn({ noise, pattern, candidate, iterations, events = [] } = {}) {
+function createReturn({ noise, pattern, candidate, iterations, events = [], haltReason } = {}) {
   const route = noise?.route ?? nprRoute(noise?.input ?? '');
+
+  // Determine halt reason if not explicitly provided
+  const resolvedHalt = haltReason ?? (pattern?.valid ? HALT_REASONS.VALID_RETURN : HALT_REASONS.VALIDATION_FAILED);
 
   return {
     schema_hex: '0x0100',
@@ -53,7 +69,7 @@ function createReturn({ noise, pattern, candidate, iterations, events = [] } = {
     return: {
       content: pattern?.valid ? candidate : null,
       iterations_hex: toHex(iterations ?? 0),
-      halt_reason: pattern?.valid ? 'VALID_RETURN' : 'VALIDATION_FAILED',
+      halt_reason: resolvedHalt,
       events: events,
     },
   };
@@ -123,10 +139,108 @@ function envelope(content, { route, sessionId } = {}) {
   };
 }
 
+// ─── NPR Iteration Loop ──────────────────────────
+
+// @addr 10.04.2.2 | fd00:npr:0004:002::2 — run NPR iteration loop
+/**
+ * Run Noise→Pattern→Return iterations until convergence or limit.
+ *
+ * @param {object} opts - Options
+ * @param {object} opts.noise - Initial noise input
+ * @param {Function} [opts.patternFn] - Pattern extraction function (noise → pattern)
+ * @param {Function} [opts.validateFn] - Validation function (pattern → boolean)
+ * @param {Function} [opts.candidateFn] - Candidate builder (pattern, iteration → candidate)
+ * @param {number} [opts.maxIterations=16] - Max iterations before forced halt
+ * @param {number} [opts.convergenceThreshold=0.01] - Convergence threshold
+ * @param {Function} [opts.convergenceFn] - Convergence check (prev, curr → delta)
+ * @returns {object} Return envelope with iteration history
+ */
+function nprIterate({
+  noise,
+  patternFn,
+  validateFn,
+  candidateFn,
+  maxIterations = DEFAULT_MAX_ITERATIONS,
+  convergenceThreshold = DEFAULT_CONVERGENCE_THRESHOLD,
+  convergenceFn,
+} = {}) {
+  const cycles = [];
+  let prevCandidate = null;
+
+  for (let iter = 0; iter < maxIterations; iter++) {
+    // Noise → Pattern
+    const pattern = patternFn ? patternFn(noise, iter) : { valid: false };
+
+    // Build candidate
+    const candidate = candidateFn ? candidateFn(pattern, iter) : null;
+
+    // Validate
+    const valid = validateFn ? validateFn(pattern, candidate) : (pattern.valid ?? false);
+
+    // Record cycle
+    const cycle = {
+      iteration: iter,
+      iteration_hex: toHex(iter),
+      pattern: pattern ?? {},
+      candidate,
+      valid,
+    };
+    cycles.push(cycle);
+
+    // Check validation success
+    if (valid) {
+      return createReturn({
+        noise,
+        pattern,
+        candidate,
+        iterations: iter + 1,
+        events: cycles.map(c => ({
+          iteration_hex: c.iteration_hex,
+          valid: c.valid,
+        })),
+      });
+    }
+
+    // Check convergence (candidate stability)
+    if (convergenceFn && prevCandidate !== null) {
+      const delta = convergenceFn(prevCandidate, candidate);
+      if (delta < convergenceThreshold) {
+        return createReturn({
+          noise,
+          pattern,
+          candidate,
+          iterations: iter + 1,
+          events: cycles.map(c => ({
+            iteration_hex: c.iteration_hex,
+            valid: c.valid,
+            delta: typeof delta === 'number' ? delta.toFixed(4) : String(delta),
+          })),
+          haltReason: HALT_REASONS.CONVERGENCE,
+        });
+      }
+    }
+
+    prevCandidate = candidate;
+  }
+
+  // Iteration limit reached
+  return createFailedReturn({
+    cycles,
+    reason: HALT_REASONS.ITERATION_LIMIT,
+    noise,
+  });
+}
+
+// ─── Module Exports ──────────────────────────────
+
 module.exports = {
   createReturn,
   createFailedReturn,
   envelope,
   toHex,
   checksumHex,
+  nprIterate,
+  HALT_REASONS,
+  DEFAULT_MAX_ITERATIONS,
+  DEFAULT_CONVERGENCE_THRESHOLD,
 };

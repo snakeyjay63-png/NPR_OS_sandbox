@@ -516,7 +516,31 @@ color_value(1) = (255, 0, 0)  → Rood
 
 ---
 
-## 6. Determinisme
+## 6. Implementatiestatus
+
+**`js/15_signaal_perceptie.js`** — volwaardig, kanoniek conform.
+
+| Component | Status | Toetsing |
+|---|---|---|
+| `normalizeNfc` | ✅ | NFC-normalisatie, fout op leeg |
+| `segmentPhonemes` | ✅ | Klinkers, matra, virama, cluster, nukta, ॐ |
+| `phonemeId` | ✅ | 48 canoniek + 5 nukta = 53 fonemen |
+| `hexIndex` | ✅ | Disjointe 01–30 (klinker), 0F–30 (medeklinker) |
+| MIDI-frequentie | ✅ | Continue Gaṇa 1→8 = C3→G#5, ळ uitzondering C3 |
+| Klinker-filter | ✅ | Tabellenwaarden §3 exact |
+| Kleur (stuksgewijze) | ✅ | Exacte rationale grenzen, geen mod-approximatie |
+| Determinisme | ✅ | Zelfde input → identiek JSON-uitvoer |
+| Tests | ✅ | 43/43 |
+
+**Observatie:** de keten `foneem → phoneme_id → hex → freq → kleur` is
+intern reproduceerbaar en kanoniek geïmplementeerd. `segmentPhonemes` dekt
+basis Devanagari (enkel fonemen, matra's, virama, nukta, ॐ).
+Complexere klusters (conjuncten zoals क्त met samenvoeging) worden
+opgesplitst in componenten — voldoende voor stap 15, verfijning stap 16.
+
+---
+
+## 6b. Determinisme
 
 De volledige keten is deterministisch:
 

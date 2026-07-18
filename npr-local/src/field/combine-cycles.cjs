@@ -132,17 +132,38 @@ function semanticOverlap(a, b) {
 }
 
 /**
- * Check NPR root consistency between two cycle results.
+ * NPR root consistency for a PAIR of cycle results.
  * Returns 1 if roots match, 0 if they differ.
  *
  * @param {object} a - First cycle result.
  * @param {object} b - Second cycle result.
- * @returns {number} Consistency score: 1 (same root) or 0 (different root).
+ * @returns {number} 1 (same root) or 0 (different root).
  */
 function nprRootConsistency(a, b) {
   const rootA = (a.digitalRoot !== undefined) ? a.digitalRoot : digitalRoot(a.tokenValue || 0);
   const rootB = (b.digitalRoot !== undefined) ? b.digitalRoot : digitalRoot(b.tokenValue || 0);
   return rootA === rootB ? 1 : 0;
+}
+
+/**
+ * NPR root consistency for a LIST of cycle results.
+ * Returns the fraction that share the majority root.
+ * Spec: 1 = all agree, 0 = no consensus.
+ *
+ * @param {object[]} cycles - Array of cycle results.
+ * @returns {number} Fraction in [0, 1].
+ */
+function nprRootConsistencyList(cycles) {
+  const roots = cycles.map(c => c.digitalRoot ?? digitalRoot(c.tokenValue || 0));
+  const uniqueRoots = new Set(roots);
+
+  if (uniqueRoots.size <= 1) return 1;
+  if (roots.length === 0) return 0;
+
+  const counts = {};
+  for (const r of roots) counts[r] = (counts[r] || 0) + 1;
+  const maxCount = Math.max(...Object.values(counts));
+  return maxCount / roots.length;
 }
 
 /**
@@ -323,19 +344,63 @@ function weighted_motor_field_sum(cycleResults, weights, question) {
     try { return JSON.parse(r); } catch { return r; }
   });
 
-  // Contradictions: aggregated
+  // Contradictions: aggregated with cross-cycle marking
   const contradictions = [];
   for (let i = 0; i < cycleResults.length; i++) {
     if (Array.isArray(cycleResults[i].contradictions)) {
       for (const c of cycleResults[i].contradictions) {
         contradictions.push({
           source: `cycle[${i}]`,
+          cycleIndex: i,
           weight: weights[i],
+          crossCycle: false,
           ...typeof c === 'object' ? c : { text: String(c) },
         });
       }
     }
   }
+
+  // Cross-cycle contradiction detection (mark_cross_cycle_contradictions)
+  for (let i = 0; i < cycleResults.length; i++) {
+    for (let j = i + 1; j < cycleResults.length; j++) {
+      const delta = contradictionDelta(cycleResults[i], cycleResults[j]);
+      if (delta > 0.5) {
+        contradictions.push({
+          source: `cross-cycle[${i}↔${j}]`,
+          cycleIndex: [i, j],
+          weight: (weights[i] + weights[j]) / 2,
+          crossCycle: true,
+          delta,
+          text: `Cross-cycle contradiction detected between cycle[${i}] and cycle[${j}] (delta=${delta.toFixed(3)})`,
+        });
+      }
+    }
+  }
+
+  // Cross-cycle support resolution (resolve_cross_cycle_support)
+  const crossCycleSupport = [];
+  for (let i = 0; i < cycleResults.length; i++) {
+    for (let j = i + 1; j < cycleResults.length; j++) {
+      const overlap = semanticOverlap(cycleResults[i], cycleResults[j]);
+      if (overlap > 0.3) {
+        crossCycleSupport.push({
+          cycles: [i, j],
+          overlap,
+          type: overlap > 0.7 ? 'strong' : 'moderate',
+        });
+      }
+    }
+  }
+
+  // Cycle provenance (preserve_cycle_provenance)
+  const provenance = cycleResults.map((r, i) => ({
+    cycleIndex: i,
+    weight: weights[i],
+    digitalRoot: r.digitalRoot ?? digitalRoot(r.tokenValue || 0),
+    phasePosition: r.phasePosition,
+    sourceCount: Array.isArray(r.sources) ? r.sources.length : 0,
+    contentLength: (r.content || '').length,
+  }));
 
   // Compute combined digital root
   const combinedDigitalRoot = cycleResults.some(r => r.digitalRoot != null)
@@ -352,6 +417,8 @@ function weighted_motor_field_sum(cycleResults, weights, question) {
     digitalRoot: combinedDigitalRoot,
     cycleCount: n,
     weightDistribution: indices.map(i => ({ cycleIndex: i, weight: weights[i] })),
+    crossCycleSupport,
+    provenance,
     question,
   };
 }
@@ -383,6 +450,7 @@ module.exports = {
   // Internal helpers (exported for testing)
   semanticOverlap,
   nprRootConsistency,
+  nprRootConsistencyList,
   contradictionDelta,
   tokenize,
   DEFAULT_CYCLE_WEIGHT,

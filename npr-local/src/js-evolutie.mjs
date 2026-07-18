@@ -26,6 +26,7 @@ import * as ExploitTimeline from "./exploit-timeline.cjs";
 // CJS modules via createRequire
 const _require = createRequire(import.meta.url);
 const sec = _require("./sec-registry.cjs");
+const capabilityValidator = _require("./capability-validator.cjs");
 const tool00 = _require("./tool-00.cjs");
 
 // ─── Fase 0: Browser-primitieven (1995-2004) ───
@@ -663,10 +664,10 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    // POST /sec/validate — Tool-00 full validation
+    // POST /sec/validate — Capability Validator (was Tool-00)
     if (request.method === "POST" && url.pathname === "/sec/validate") {
       const body = await readJsonBody(request);
-      const result = tool00.validateProgram({
+      const result = capabilityValidator.validateProgram({
         source: body.source ?? "",
         trace: body.trace ?? null,
       });
@@ -675,10 +676,10 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    // POST /sec/analyze — Tool-00 source analysis
+    // POST /sec/analyze — Capability Validator source analysis
     if (request.method === "POST" && url.pathname === "/sec/analyze") {
       const body = await readJsonBody(request);
-      const result = tool00.analyzeSource(body.source ?? "");
+      const result = capabilityValidator.analyzeSource(body.source ?? "");
       response.statusCode = 200;
       response.end(JSON.stringify(result, null, 2));
       return;
