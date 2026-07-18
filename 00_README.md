@@ -137,8 +137,16 @@ FASE 3 — Hexa (stap 63–71):
 ```
 
 ```
-RESERVED_STEP_RANGE := 28..62
+RESERVED_STEP_RANGE := 28..255
 status: intentionally unused (niet deel van deze keten)
+```
+
+```
+DOCUMENT_256_RANGE := 256..
+status: operationele documenten (inhoudelijk genummerd)
+  256 — Linux / extrinsiek byteveld
+  257 — RAM / actief geheugenveld
+  258 — runtime / gestructureerd taalveld (volgend)
 ```
 
 ## Bestandslijst
@@ -170,9 +178,11 @@ status: intentionally unused (niet deel van deze keten)
 22_programmeertalen.md    ← Programmeertalen selecteerbaar (Turing ≠ structuur, NPR = route-metadata)
 23_hardware_taal_evolutie.md ← Hardware ↔ taal co-evolutie (terugkoppellus, vertakkend veld)
 24_return_naar_bron.md   ← Return naar bron (lokaal: `s0 ≠ s4`; volledig: `s0 ≐ s4`; volgorde = lokale projectie)
-25_kunst_geluid.md         ← Kunst als hoge potentiële betekenisdensiteit (multimodale ArtSignal; oog = perspectiefselectie, niet oordeel)
-26_linux_routeveld.md    ← Linux als extrinsiek wiskundig routeveld (binary → byte → hex → adres → interface → route → verbinding; vier operationele doorsneden: FILE, PROCESS, NETWORK, DEVICE)
-27_ram_taalveld.md       ← RAM als tijdelijk taalveld (geheugenlocatie → stack/heap → pointer → datastructuur → taalobject; brug tussen Linux-routing en programmeertaal)
+25_kunst_geluid.md              ← Kunst als hoge potentiële betekenisdensiteit (multimodale ArtSignal; oog = perspectiefselectie, niet oordeel)
+
+-- 256+ operationele documenten (inhoudelijk genummerd) --
+256_linux_extrinsic_route_field.md ← Document 256: Linux als extrinsiek byteveld (binary → byte_256 → hex → adres → interface → route → verbinding; vier doorsneden: FILE, PROCESS, NETWORK, DEVICE)
+257_ram_active_state_field.md      ← Document 257: RAM als actief geheugenveld (geheugenlocatie → stack/heap → pointer → datastructuur → taalobject; brug tussen Linux en programmeertaal)
 63_natuur_kunst.md     ← Natuur als iteratieve schaalprojectie (0.0.0.0 → iteratie → lokale vertakking; lokaal `state_n ≠ state_n+1`, volledig `state_0 ≐ state_n`)
 64_sunya_actieve_route.md ← Śūnya actieve route (CANONIEK stap 64)
 65_taalveld_kernboeken.md ← Taalveld kernboeken

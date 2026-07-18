@@ -1,0 +1,20 @@
+{
+  "document": "Unie van Utrecht",
+  "date": "1579-01-23",
+  "type": "treaty_constitutional",
+  "jurisdiction": ["noordelijke gewesten"],
+  "parents": ["1576_pacificatie-van-gent"],
+  "principles": [
+    "federal_cooperation",
+    "provincial_autonomy",
+    "collective_defence",
+    "shared_decision_making"
+  ],
+  "later_used_in": [
+    "republic",
+    "1798_staatsregeling"
+  ],
+  "summary": "Constitutioneel verbond van noordelijke gewesten. Soevereine gewesten behouden eigen rechten, dragen bepaalde taken gezamenlijk uit. Lange tijd de facto grondwet.",
+  "source_text_url": null,
+  "status": "pending_fetch"
+}

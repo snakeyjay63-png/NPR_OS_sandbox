@@ -1,0 +1,20 @@
+{
+  "document": "Groot Privilege",
+  "date": "1477-02-11",
+  "type": "privilege",
+  "jurisdiction": ["Bourgondië", "Brabant", "Nederlandse gewesten"],
+  "issuer": "Marianne van Bourgondië",
+  "parents": [],
+  "principles": [
+    "limited_government",
+    "fundamental_rights",
+    "consent_to_taxes"
+  ],
+  "later_used_in": [
+    "1581_plakkaat-van-verlatinghe",
+    "1798_staatsregeling"
+  ],
+  "summary": "Bevoegdheden van de landsheer begrensd; gewesten en steden krijgen eerder verkregen rechten terug. Vroege bron van 'geen belasting zonder instemming'.",
+  "source_text_url": null,
+  "status": "pending_fetch"
+}

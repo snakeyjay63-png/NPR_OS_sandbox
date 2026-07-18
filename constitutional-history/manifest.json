@@ -1,0 +1,44 @@
+{
+  "project": "constitutional-history",
+  "description": "Nederlandse constitutionele en juridische bronnen als NPR-OS taalvelden",
+  "insights": [
+    "Grondwet = politieke samenvoeging van rechtsvelden",
+    "waterrecht = functionele samenvoeging door gedeeld fysiek systeem",
+    "waterdefensie = bewuste verplaatsing van grens land ↔ water"
+  ],
+  "fields": [
+    {
+      "name": "water-law",
+      "period": "12e eeuw+",
+      "type": "functioneel",
+      "status": "structure_only",
+      "dual": {
+        "protection_from_water": "verdediging tégen water (civiel bestuur)",
+        "defence_with_water": "verdediging dóór water (militair bestuur)"
+      },
+      "note": "Oudste juridische veld — vóór provincies, vóór Grondwet"
+    },
+    {
+      "name": "provincial-law",
+      "period": "1588–1795",
+      "type": "federaal",
+      "status": "partial",
+      "collected": {
+        "holland": ["politieke_ordonnantie_1531"],
+        "zeeland": ["staatkundige_vereniging"],
+        "friesland": ["fries_recht_saksische"],
+        "staten_generaal": ["unie_van_utrecht_1579", "pacificatie_gent_1576", "groot_privilege_1410", "klein_plakkaatboek"]
+      },
+      "missing": ["gelderland", "utrecht", "overijssel", "groningen"]
+    },
+    {
+      "name": "1798_staatsregeling",
+      "period": "1798",
+      "type": "nationaal",
+      "status": "complete",
+      "text": "164K, oude spelling"
+    }
+  ],
+  "total_size": "1.2MB",
+  "total_files": 34
+}

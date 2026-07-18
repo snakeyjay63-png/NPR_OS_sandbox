@@ -1,0 +1,20 @@
+{
+  "document": "Ontwerpen van staatsregeling 1796-1797",
+  "date_start": "1796",
+  "date_end": "1797",
+  "type": "draft_constitutions",
+  "jurisdiction": ["Bataafse Republiek"],
+  "parents": ["1795_rechten-van-de-mens"],
+  "principles": [
+    "popular_sovereignty",
+    "fundamental_rights",
+    "equality_before_law",
+    "individual_liberty",
+    "separation_of_powers"
+  ],
+  "later_used_in": [
+    "1798_staatsregeling"
+  ],
+  "summary": "Eerste constitutiecommissie (1796) en tweede Nationale Vergadering (1797). Verworpen ontwerp 1797 belangrijk — toont verlaten routes.",
+  "status": "pending_fetch"
+}

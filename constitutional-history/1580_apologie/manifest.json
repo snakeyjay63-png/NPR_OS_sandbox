@@ -1,0 +1,19 @@
+{
+  "document": "Apologie van Willem van Oranje",
+  "date": "1580-05-01",
+  "type": "political_tract",
+  "jurisdiction": ["Nederlandse gewesten"],
+  "parents": [],
+  "principles": [
+    "accountability",
+    "resistance_theory",
+    "limited_government"
+  ],
+  "later_used_in": [
+    "1581_plakkaat-van-verlatinghe",
+    "1795_rechten-van-de-mens"
+  ],
+  "summary": "Constitutioneel-politiek argument ter verdediging van verzet tegen de vorst. Niet zelf een wet, maar de rationale achter het Plakkaat van Verlatinghe.",
+  "source_text_url": null,
+  "status": "pending_fetch"
+}

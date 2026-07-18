@@ -1,0 +1,19 @@
+{
+  "document": "Verklaring van de Rechten van de Mens en van de Burger",
+  "date": "1795-10-31",
+  "type": "declaration_of_rights",
+  "jurisdiction": ["Bataafse Republiek"],
+  "parents": ["1581_plakkaat-van-verlatinghe", "republic"],
+  "principles": [
+    "popular_sovereignty",
+    "fundamental_rights",
+    "equality_before_law",
+    "individual_liberty"
+  ],
+  "later_used_in": [
+    "1796_1797_draft-constitutions",
+    "1798_staatsregeling"
+  ],
+  "summary": "Na de Bataafse Revolutie — eerste formele rechtenverklaring in Nederland. Eenheidsstaat + volkssoevereiniteit + burgerrechten + machtenscheiding.",
+  "status": "pending_fetch"
+}

@@ -1,0 +1,19 @@
+{
+  "document": "Pacificatie van Gent",
+  "date": "1576-11-08",
+  "type": "treaty_pacification",
+  "jurisdiction": ["Nederlandse gewesten"],
+  "parents": [],
+  "principles": [
+    "federal_cooperation",
+    "religious_tolerance",
+    "collective_defence"
+  ],
+  "later_used_in": [
+    "1579_unie-van-utrecht",
+    "republic"
+  ],
+  "summary": "Nederlandse gewesten spreken samenwerking af; religieuze en politieke verdeeldheid tijdelijk overbrugd. Federatieve bronlijn.",
+  "source_text_url": null,
+  "status": "pending_fetch"
+}

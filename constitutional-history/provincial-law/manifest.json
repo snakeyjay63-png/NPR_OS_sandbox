@@ -1,0 +1,38 @@
+{
+  "document": "Republiek der Zeven Verenigde Nederlanden",
+  "date_start": "1588",
+  "date_end": "1795",
+  "type": "constitutional_order",
+  "jurisdiction": ["Republiek der Zeven Verenigde Nederlanden"],
+  "parents": ["1579_unie-van-utrecht", "1581_plakkaat-van-verlatinghe"],
+  "principles": [
+    "federal_cooperation",
+    "provincial_autonomy",
+    "shared_decision_making",
+    "collective_defence"
+  ],
+  "later_used_in": [
+    "1795_rechten-van-de-mens",
+    "1798_staatsregeling"
+  ],
+  "summary": "Geen enkel nationaal grondwetsdocument. Constitutioneel systeem bestond uit verzameling van Unie van Utrecht, gewestelijke constituties, privileges, resoluties, instructies, reglementen, gewoonterecht, verdragen.",
+  "status": "partially_collected",
+  "collected": {
+    "federal": [
+      {"name": "Unie van Utrecht", "year": 1579, "file": "staten_generaal/unie_van_utrecht_1579.txt", "size": "40K"},
+      {"name": "Pacificatie van Gent", "year": 1576, "file": "Pacificatie_van_Gent.txt"},
+      {"name": "Eerste Unie van Brussel", "file": "Eerste_Unie_van_Brussel.txt"},
+      {"name": "Tweede Unie van Brussel", "file": "Tweede_Unie_van_Brussel.txt"},
+      {"name": "Groot Privilege", "year": 1410, "file": "Groot_Privilege.txt"}
+    ],
+    "provincial": {
+      "holland": [{"name": "Politieke Ordonnantie", "year": 1531, "file": "holland/politieke_ordonnantie.txt"}],
+      "zeeland": [{"name": "Staatkundige Vereniging van Zeeland", "file": "zeeland/staatkundige_vereniging_zeeland.txt"}],
+      "friesland": [{"name": "Fries Recht (Saksische bronnen)", "file": "friesland/fries_recht_saksische.txt"}],
+      "gelderland": [],
+      "utrecht": [],
+      "overijssel": [],
+      "groningen": []
+    }
+  }
+}

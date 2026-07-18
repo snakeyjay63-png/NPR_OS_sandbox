@@ -1,0 +1,21 @@
+{
+  "document": "Plakkaat van Verlatinghe",
+  "date": "1581-07-26",
+  "type": "decree_abdication",
+  "jurisdiction": ["Nederlandse gewesten"],
+  "parents": ["1580_apologie", "1477_groot-privilege"],
+  "principles": [
+    "popular_sovereignty",
+    "accountability",
+    "limited_government",
+    "conditional_authority"
+  ],
+  "later_used_in": [
+    "republic",
+    "1795_rechten-van-de-mens",
+    "1798_staatsregeling"
+  ],
+  "summary": "Filips II verklaard vervallen van gezag. Fundamentele gedachte: vorst moet onderdanen beschermen, kan worden afgezet bij tirannie. Gedrukt en verspreid — wettelijke werking.",
+  "source_text_url": null,
+  "status": "pending_fetch"
+}
