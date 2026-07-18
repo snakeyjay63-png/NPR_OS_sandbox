@@ -108,7 +108,7 @@ technically_integreerbaar(stap) :=
 | 12 | Vortex-primes → digitale wortels | ✅ | dr(1A)=B, dr(19)=A. 0≐1 bronidentiteit. Vierlagenmodel. npr_mod9 hex-native. |
 | 13 | CRITICAL — hex-native check | ✅ | dr(1A)=B (hex). 1A→26→8 = FOUT (dec trap). |
 | 14 | NPR-reductielagen | ✅ | 6D→3D→1D→9. Flower of Life hex-native. |
-| 15 | Signaal→perceptie | ✅ | Foneem→ID→hex→ratio→synth→kleur. Exacte rationale grenzen. |
+| 15 | Signaal→perceptie | ✅ conditioneel geldig | Foneem→ID→hex→ratio→synth→kleur. Exacte rationale grenzen. Canonieke route deterministisch gedeclareerd. Open onderdelen: `segment_phonemes`, foutroutes, akoestische meting (uitvoeringselementen, breken de specificatie niet). |
 | 16 | Taalmapping | ✅ | FULL_LANGUAGE_PRINCIPLE: iedere taal = volledige structuur. Perspectief ≠ exclusief. |
 | 17 | Sandbox observatie | ✅ | Hex-native reductie = patroon, onafhankelijk van data. |
 | 18 | Driefasen router | ✅ | ΦA/ΦB/ΦC → motorveld → rotor_response. Drie-toestand model. |
@@ -165,7 +165,15 @@ CHAIN_STATUS := {
 }
 
 **Per-stap runtime-status:**
-- Stap 15: ⚠️ `segment_phonemes` — normatieve segmentatietabel open
+
+- Stap 15: ⚠️ conditioneel geldig
+  - ✅ canonieke route (foneem→ID→hex→ratio→synth→kleur) deterministisch gedeclareerd
+  - ✅ exacte rationale grenzen vastgelegd
+  - ⚠️ `segment_phonemes` — normatieve segmentatietabel (uitvoering)
+  - ⚠️ foutroutes — definieerbaar binnen contractgrenzen (uitvoering)
+  - ⚠️ akoestische meting — fysieke verificatie (uitvoering)
+  - *Open onderdelen breken de specificatie niet*
+
 - Stap 17: ⚠️ `hex_encoders` — canonieke encoder-implementaties open
 - Stap 18: ⚠️ `combine_cycles` + `contradiction_delta` — deterministische implementatie open
 - Stap 19: ⚠️ `semantic_distance` + `contradiction_delta` — implementatie open
@@ -475,7 +483,7 @@ computationele kern:     ✅ stap 01–14
 signaal_perceptie:       ✅ stap 15 (exacte grenzen)
 taalveld:               ✅ stap 65–71
 route_notatie:          ✅ stap 71 (4 niveaus + provenance)
-runtime_implementation:  ⚠️ stappen 15, 17, 18 en 19 gedeeltelijk | ✅ stap 20 volledig
+runtime_implementation:  ⚠️ stap 15 conditioneel geldig, 17/18/19 gedeeltelijk | ✅ stap 20 volledig
 ```
 
 **Geen fundamentele inconsistenties gevonden.**
@@ -496,14 +504,14 @@ Definitief gevalideerd (07→14):
 ✅ stap 14: ✅ kernreductie + operatorbreuk opgelost
 
 Intern gesloten als specificatie (15→19):
-✅ stap 15: ✅ intern geldig (inputpipeline + foutroutes gedeclareerd)
+✅ stap 15: ✅ conditioneel geldig (canonieke route deterministisch, uitvoeringselementen open)
 ✅ stap 16: ✅ intern geldig (T7 consistent, token-encoding formeel)
 ✅ stap 17: ✅ intern geldig (canonieke encoders gedeclareerd)
 ✅ stap 18: ✅ intern geldig (randvoorwaarden compleet)
 ✅ stap 19: ✅ intern geldig (convergentie + return-modi formeel)
 
 Operationele status:
-⚠️ stap 15: ⚠️ segment_phonemes + foutroutes implementatie open
+⚠️ stap 15: ⚠️ segment_phonemes, foutroutes, akoestische meting (uitvoering, niet specificatie)
 ⚠️ stap 17: ⚠️ hex_encoder-implementaties open
 ⚠️ stap 18: ⚠️ combine_cycles + superpose deterministisch open
 ⚠️ stap 19: ⚠️ semantic_distance + contradiction_delta implementatie open
@@ -513,7 +521,7 @@ CHAIN_STATUS:
   reverse:      ✅ geen ontbrekende schakel
   return:       ✅ stap 19 formeel gesloten | ✅ stap 18 afhankelijkheden opgelost
   epistemic:    ✅ (3 lagen: consistentie + reproduceerbaarheid + verificatie)
-  runtime:      ⚠️ stap 15,17,18,19 gedeeltelijk | ✅ stap 20 volledig
+  runtime:      ⚠️ stap 15 conditioneel geldig, 17/18/19 gedeeltelijk | ✅ stap 20 volledig
 
 Herstelde breuken (2026-07-14 11:27 → 11:40):
   1. Circulaire afhankelijkheid Stap 15↔16: ✅ opgelost (required_by)
@@ -530,7 +538,7 @@ Correctie talstelsels (2026-07-14 12:02):
   - dr_hex(1A) = B ≠ dr_dec(26) = 8; beide geldig, verschillende functie.
 
 Open afhankelijkheden (chronologische volgorde):
-  1. stap 15: segment_phonemes implementatie
+  1. stap 15: segment_phonemes, foutroutes, akoestische meting (uitvoering, niet specificatie)
   2. stap 17: hex_encoder-implementaties
   3. stap 18: combine_cycles deterministisch
   4. stap 19: semantic_distance + contradiction_delta
