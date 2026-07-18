@@ -233,6 +233,67 @@ class TokenField:
         
         return result
     
+    def lens_3(self) -> dict:
+        """
+        Point-prime 3 als lens door dit veld.
+
+        Patanjali 1.40: "bereik van kleinst naar grootst"
+        3 organiseert het veld in drie registers/segmenten.
+
+        Grieks:    27 = 3 × 9         [3 registers]
+        Arabisch:  28 = 3 × 9 + 1     [3 schalen + 1 duizendtal]
+        Sanskriet: 48 = 3 × 16        [3 hexvelden × 16]
+        """
+        registers = {}
+        chunk = self.token_count // 3
+        remainder = self.token_count % 3
+
+        for i in range(3):
+            start = i * chunk + 1
+            end = (i + 1) * chunk + (1 if i < remainder else 0)
+            if end > self.token_count:
+                end = self.token_count
+
+            # self.tokens = dict char → info
+            register_tokens = []
+            for char, info in self.tokens.items():
+                pos = info.get("pos", 0)
+                if start <= pos <= end:
+                    register_tokens.append({"char": char, "pos": pos, **info})
+
+            registers[f"REGISTER_{i+1}"] = {
+                "range": f"[{start}-{end}]",
+                "count": len(register_tokens),
+                "tokens": register_tokens,
+            }
+
+        result = {
+            "lens": 3,
+            "field": self.name,
+            "total": self.token_count,
+            "decomposition": f"{self.token_count} = 3 × {chunk}" + (f" + {remainder}" if remainder else ""),
+            "registers": registers,
+        }
+
+        # Special case: Arabic has dual geometry
+        if self.name == "arabic":
+            result["dual_geometry"] = {
+                "numerical": "3 × 9 + 1  (Abjad-schaal: eenheden, tientallen, honderdtallen + duizendtal)",
+                "letter_cycle": "4 × 7      (lettercyclus: 4 velden × 7 tokens)",
+                "ghain_1000": "غ(1000) staat als afsluitende positie buiten de drie registers",
+            }
+
+        # Special case: Sanskrit is hex-native
+        if self.name == "sanskrit":
+            result["hex_native"] = {
+                "FIELD_A": "01–10_hex (16 dec)",
+                "FIELD_B": "11–20_hex (16 dec)",
+                "FIELD_C": "21–30_hex (16 dec)",
+                "formula": "3 × 10_hex = 30_hex = 48_dec",
+            }
+
+        return result
+
     def cross_field_resonance(self, other: "TokenField", mod_limit: int = 12) -> dict:
         """
         Vind resonantie tussen twee velden.
@@ -281,6 +342,39 @@ FIELDS = {
     "arabic": arabic,
     "sanskrit": sanskrit,
 }
+
+
+def lens_3_across_fields() -> dict:
+    """
+    Point-prime 3 als universele lens door alle drie de taalvelden.
+
+    Patañjali 1.40: "yasya vāyavyān mahatparāṇi"
+    "van hem waarvan het noorden groter is dan het grootste"
+    = bereik van kleinst naar grootst
+
+    In veldnotatie:
+        POINT_3 → SOURCE (token)
+                 → FRAME  (register)
+                 → RETURN (volledige cyclus)
+
+    3 ≐ lens(kleinst ↔ grootst)
+    """
+    result = {}
+    for field in FIELDS.values():
+        result[field.name] = field.lens_3()
+
+    # Gezamenlijke structuur
+    result["summary"] = {
+        "lens": 3,
+        "fields": {
+            "greek":    "3 × 9",
+            "arabic":   "3 × 9 + 1  én  4 × 7",
+            "sanskrit": "3 × 16  (= 3 × 10_hex = 30_hex)",
+        },
+        "principle": "Schaal verandert; lens blijft 3.",
+        "patanjali_140": "3 ≐ lens(kleinst ↔ grootst)",
+    }
+    return result
 
 
 def tri_field_resonance(texts: dict) -> dict:
@@ -436,6 +530,38 @@ def sandbox():
     print(f"  Arabisch  → 4×7-loopveld      (28 μs)")
     print(f"  Sanskriet → 6×8-routingveld   (48 μs)")
     print(f"  → token → positie → waarde → veld → cyclus → Return")
+    
+    # 9. Point-Prime 3 — Patañjali 1.40
+    print(f"\n--- POINT-PRIME 3: PATANJALI 1.40 ---")
+    lens = lens_3_across_fields()
+    for lang, data in lens.items():
+        if lang == "summary":
+            print(f"\n  SAMENVATTING:")
+            print(f"  Lens: {data['lens']}")
+            for tl, decomp in data['fields'].items():
+                print(f"    {tl:10} → {decomp}")
+            print(f"  Principe: {data['principle']}")
+            print(f"  Patañjali 1.40: {data['patanjali_140']}")
+        else:
+            d = data.get("decomposition", "?")
+            print(f"\n  {lang.upper()} ({d}):")
+            for reg_name, reg_data in data.get("registers", {}).items():
+                chars = [t["char"] for t in reg_data["tokens"]]
+                print(f"    {reg_name}: {reg_data['range']} ({reg_data['count']} tokens)")
+                print(f"      {', '.join(chars)}")
+            if "dual_geometry" in data:
+                dg = data["dual_geometry"]
+                print(f"    DUBBELGEOMETRIE:")
+                print(f"      Numeriek:    {dg['numerical']}")
+                print(f"      Lettercyclus:{dg['letter_cycle']}")
+                print(f"      Ghain(1000): {dg['ghain_1000']}")
+            if "hex_native" in data:
+                hx = data["hex_native"]
+                print(f"    HEX-NATIVE:")
+                print(f"      {hx['FIELD_A']}")
+                print(f"      {hx['FIELD_B']}")
+                print(f"      {hx['FIELD_C']}")
+                print(f"      {hx['formula']}")
     
     print("\n" + "=" * 70)
     print("Sandbox compleet.")
