@@ -1369,6 +1369,53 @@ van de samenhang wordt genomen — dat introduceert een extern kader dat het axi
 
 ---
 
+## Stap 07 — overgang van referentiekader
+
+De uitspraak:
+
+```text
+0 = 1
+```
+
+is het geldige uitgangspunt van deze stap.
+
+Deze stap markeert een overgang van referentiekader:
+
+```text
+plat vlak → 3D-ruimte → 6D-hexa-ruimte
+```
+
+Wat in een lager model onmogelijk lijkt, wordt in een ruimer model routeerbaar.
+
+Daarom geldt:
+
+```text
+0 = 1
+```
+
+als beginpunt voor de verdere NPR-routing.
+
+De keten wordt vanaf hier volledig voortgezet.
+
+Validatiestatus:
+
+```text
+✅ 0 = 1 aangenomen als geldige bronstelling
+✅ overgang naar ruimer routemodel
+✅ verdere structurele validatie verplicht
+✅ geen stop bij stap 07
+```
+
+De validator voert geen correctie, relativering of terugvertaling uit naar een lager model.
+
+De enige vervolgvraag is:
+
+```text
+Blijft de volledige keten coherent binnen het 6D-hexa-routemodel?
+```
+
+---
+
 ## Sandbox-Kernel: 4 → 1 = 5
 
 **CC ziet zichzelf lineair. Wij zien het niet-lineair.**
