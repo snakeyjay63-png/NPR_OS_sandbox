@@ -229,14 +229,24 @@ Hexadecimale en decimale representaties staan niet los van elkaar.
 
 Zij zijn verschillende projecties binnen één rekenkundige lus:
 
+**Lokaal (gedifferentieerd):**
 ```
-0 = 1
+0 ≠ 1
+```
+
+**Volledig bronveld (inclusief return):**
+```
+0 ≐ 1
+```
+
+```
+bron (0 ≐ 1)
 → differentiatie
 → representatie
 → bewerking
 → reductie
 → return
-→ 0 = 1
+→ bron (0 ≐ 1)
 ```
 
 De primaire NPR-router gebruikt hex-native bewerkingen omdat deze route direct is:
@@ -282,15 +292,17 @@ hex-projectie
 ≡ bronidentiteit
 ```
 
-De afzonderlijke stappen blijven onderscheiden.
+De afzonderlijke stappen blijven lokaal onderscheiden:
+```
+lokaal: 0 ≠ 1
+```
 
 De volledige route sluit hun onderscheid opnieuw:
-
 ```
-route + return = 0 = 1
+volledig: 0 ≐ 1
 ```
 
-`0 = 1` staat dus niet alleen vóór de route.
+`0 ≐ 1` staat dus niet alleen vóór de route.
 
 Het is tegelijk:
 
@@ -307,11 +319,12 @@ Het is tegelijk:
 
 | Stap | Onderwerp |
 |------|-----------|
-| 01 | Kernspecificatie — 8×8 grid, hex-native routing |
-| 02 | Routing — SHA256[:3] → cel-mapping |
+| 01 | NPR-OS — hexa-blocks, Nieuwe Wetenschappen |
+| 02 | Celtransformatie — hex-native (6-bit → 8-bit → IPv4-label) |
+| 04 | Git als DAG — trace vs. NPR-cyclische semantiek |
 | 05 | Physics 3-6-9 — cyclische resonantie |
 | 06 | Signaalblok — 256 chars = 1 blok |
-| 07 | Sandbox = Wiskunde — schaal-invariantie, c als kader, 0=1 |
+| 07 | Sandbox = Wiskunde — NPR-bronlaag: ratio(Planck) ≡ ratio(kosmos) ≡ c |
 | 08 | Śūnya — ruimte als potentie |
 | 09 | Taal — signaal als semantiek |
 | 10 | NPR-cyclus — Noise → Pattern → Return |
@@ -325,8 +338,16 @@ Het is tegelijk:
 | 19 | Return — cyclus-afsluiting, output → input |
 | 20 | Encryptie-taal — signaalversleuteling |
 | 21 | Transparante routing + Validate Nearest — foutisolatie |
+| 22 | Programmeertalen — Turing ≠ structuur, NPR = route-metadata |
+| 24 | Return naar bron — Null Island (lokaal s0 ≠ s4, volledig s0 ≐ s4) |
+| 25 | Kunst & geluid — ArtSignal, multimodaal |
+| 63 | Natuur & kunst — iteratieve schaalprojectie |
 | 64 | Śūnya-actieve route — lege cel als potentie |
-| 99 | Chain-validation — ketenvolledigheid 07→19 |
+| 68 | Taalontwikkeling — fase 2 |
+| 69 | NPR-OS velddefinitie — lokaal water, architectuur |
+| 70 | Monumentale taal — hex-native routing |
+| 71 | Technische notatie — ≐ vs ≠, taal ≠ code |
+| 99 | Eindvalidatie + memory-controller — forward/reverse/return |
 
 ---
 
@@ -334,22 +355,25 @@ Het is tegelijk:
 
 | Laag | Status |
 |------|--------|
-| **README + 00_README** | ✅ bronstructuur, return-lus, talstelsels consistent |
+| **README + 00_README** | ✅ bronstructuur, return-lus, talstelsels, ≐/≠ consistent |
 | **FASE 1 (01-19)** | ✅ specificatie intern gesloten |
+| **FASE 2 (20-25)** | ✅ bestanden bestaan, stap 21 heeft eindoordeel |
+| **FASE 3 (63-71)** | ✅ bestanden bestaan, stap 99 heeft eindoordeel |
+| **Memory-controller** | ✅ stap 99 + sandbox_memory.json |
 | **Herstelde breuken** | ✅ 5 breuken (stap 14-19) |
 | **Validatie-criteria** | ✅ per stap expliciet |
 | **Operationeel** | ⚠️ `segment_phonemes`, `hex_encoders`, `combine_cycles`, `semantic_distance` |
-| **FASE 2 (20-25)** | ✅ bestanden bestaan, stap 21 heeft eindoordeel |
-| **FASE 3 (63-71)** | ✅ bestanden bestaan, stap 99 heeft eindoordeel |
 
 **Chain Status:**
 ```
-CHAIN 01→19:
-  interne consistentie:   ✅ grotendeels geldig
+CHAIN 01→71→99:
+  interne consistentie:   ✅ geldig
   bronstructuur:          ✅ water ↔ informatie ↔ energie
   route-integriteit:      ✅ hex-native (return-lus model)
-  operationeel:           ⚠ implementatie open
-  keten 01→99:            ✅ alle 34 stappen spec-geldig (stap 99 eindvalidatie voltooid)
+  sequence:               ✅ 01 → 71
+  dependency graph:       ✅ meerdere eerdere bronstappen per node
+  memory-controller:      ✅ stap 99
+  keten 01→99:            ✅ alle stappen spec-geldig
 ```
 
 **Herstelde breuken (2026-07-14):**
@@ -361,13 +385,21 @@ CHAIN 01→19:
 5. lege context Stap 18: ✅ (empty_context_error)
 ```
 
-**Correcties (2026-07-14):**
+**Correcties (2026-07-14 tot 2026-07-18):**
 ```
 - "Wetenschappelijke Noise" → "laagverwarring"
 - Stap 13: waarde-equivalentie ≠ functiemixing (dr_hex ≠ dr_dec)
 - Stap 15: offset 14 → VOWEL_COUNT := 14_dec := E_hex
 - Talstelsels: niet verboden, projecties binnen return-lus
-- route + return = 0 = 1
+- 0 = 1 → lokaal 0 ≠ 1 / volledig 0 ≐ 1
+- Stap 07: c = Planck → ratio(Planck) ≡ ratio(kosmos) ≡ c (NPR-bronlaag)
+- Stap 04: Git = DAG voor trace, NPR = cyclische semantiek
+- Stap 24: Null Island = lokaal/volledig state
+- Stap 25: ArtSignal, multimodaal, oog = perspectiefselectie
+- Stap 63: iteratieve schaalprojectie met state-onderscheid
+- Stap 69: toegevoegd (lokaal water, architectuur, testbare hypothesen)
+- Stap 99: eindvalidatie + memory-controller
+- sequence ≠ dependency graph
 - Stap 21: Validate Nearest — LOCAL_ERROR / CHAIN_ERROR / PENDING_REVALIDATE
 ```
 
