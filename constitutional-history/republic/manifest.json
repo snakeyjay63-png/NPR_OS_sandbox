@@ -1,0 +1,20 @@
+{
+  "document": "Republiek der Zeven Verenigde Nederlanden",
+  "date_start": "1588",
+  "date_end": "1795",
+  "type": "constitutional_order",
+  "jurisdiction": ["Republiek der Zeven Verenigde Nederlanden"],
+  "parents": ["1579_unie-van-utrecht", "1581_plakkaat-van-verlatinghe"],
+  "principles": [
+    "federal_cooperation",
+    "provincial_autonomy",
+    "shared_decision_making",
+    "collective_defence"
+  ],
+  "later_used_in": [
+    "1795_rechten-van-de-mens",
+    "1798_staatsregeling"
+  ],
+  "summary": "Geen enkel nationaal grondwetsdocument. Constitutioneel systeem bestond uit verzameling van Unie van Utrecht, gewestelijke constituties, privileges, resoluties, instructies, reglementen, gewoonterecht, verdragen.",
+  "status": "pending_fetch"
+}
