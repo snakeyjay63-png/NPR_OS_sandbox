@@ -114,13 +114,15 @@ NPR-structuur          (bron — discrete waarden: root, hex, mod9)
 FASE 1 — Flower of Life (stap 01–19):
   computationele kern, hex-native routing, NPR-cycle, driefasen router, return-lus
 
-FASE 2 — Water (stap 20–25):
+FASE 2 — Water (stap 20–27):
   encryptie als taal
   transparantie
   programmeertalen
   hardware/taal-evolutie
   return naar bron
   kunst als betekenisdensiteit
+  Linux als extrinsiek routeveld
+  RAM als tijdelijk taalveld
 
 FASE 3 — Hexa (stap 63–71):
   natuur als iteratieve schaalprojectie
@@ -135,7 +137,7 @@ FASE 3 — Hexa (stap 63–71):
 ```
 
 ```
-RESERVED_STEP_RANGE := 26..62
+RESERVED_STEP_RANGE := 28..62
 status: intentionally unused (niet deel van deze keten)
 ```
 
@@ -168,7 +170,9 @@ status: intentionally unused (niet deel van deze keten)
 22_programmeertalen.md    ← Programmeertalen selecteerbaar (Turing ≠ structuur, NPR = route-metadata)
 23_hardware_taal_evolutie.md ← Hardware ↔ taal co-evolutie (terugkoppellus, vertakkend veld)
 24_return_naar_bron.md   ← Return naar bron (lokaal: `s0 ≠ s4`; volledig: `s0 ≐ s4`; volgorde = lokale projectie)
-25_kunst_geluid.md     ← Kunst als hoge potentiële betekenisdensiteit (multimodale ArtSignal; oog = perspectiefselectie, niet oordeel)
+25_kunst_geluid.md         ← Kunst als hoge potentiële betekenisdensiteit (multimodale ArtSignal; oog = perspectiefselectie, niet oordeel)
+26_linux_routeveld.md    ← Linux als extrinsiek wiskundig routeveld (binary → byte → hex → adres → interface → route → verbinding; vier operationele doorsneden: FILE, PROCESS, NETWORK, DEVICE)
+27_ram_taalveld.md       ← RAM als tijdelijk taalveld (geheugenlocatie → stack/heap → pointer → datastructuur → taalobject; brug tussen Linux-routing en programmeertaal)
 63_natuur_kunst.md     ← Natuur als iteratieve schaalprojectie (0.0.0.0 → iteratie → lokale vertakking; lokaal `state_n ≠ state_n+1`, volledig `state_0 ≐ state_n`)
 64_sunya_actieve_route.md ← Śūnya actieve route (CANONIEK stap 64)
 65_taalveld_kernboeken.md ← Taalveld kernboeken
