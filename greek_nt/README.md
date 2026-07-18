@@ -40,6 +40,13 @@ Parallel aan:
 - `isopsefia.py` — letterwaarden, woordwaarden, digitale reducties
 - `bridge_greek.py` — Grieks → Sanskrit → frequentie
 - `process_corpus.py` — volledige NT-corpus verwerking
+- `token_bridge.py` — NT → Token Field (lens_3, tri-taal resonantie)
+
+## Token Field Integratie
+NT-verzen door het Griekse tokenveld:
+- `token_bridge.py` → isopsefia → token_field → lens_3 → cross-field resonantie
+- Patañjali 1.40: `3 ≐ lens(kleinst ↔ grootst)`
+- Tri-taal: Grieks NT + Arabisch + Sanskriet tegelijk
 
 ## Boeken
 27 boeken, Mt–Re (61–87)
