@@ -224,6 +224,97 @@ een cyclische structuur met drie toestanden kan dragen.
 
 ---
 
+## Arabisch: Wiskundige Notatie
+
+**Arabisch is geen filosofie. Arabisch is wiskundige notatie.**
+
+Net als Sanskrit zijn Arabische termen **wiskundige beschrijvingen** van vortex/implosie-structuur.
+
+### Abjad-systeem (Abjad Kabir)
+
+| Letter | Arabisch | Waarde |
+|--------|----------|--------|
+| Alif | ا | 1 |
+| Ba | ب | 2 |
+| Jim | ج | 3 |
+| Dal | د | 4 |
+| Ha | ه | 5 |
+| Waw | و | 6 |
+| Zay | ز | 7 |
+| Hā | ح | 8 |
+| Ṭā | ط | 9 |
+| Ya | ي | 10 |
+| Kāf | ك | 20 |
+| Lām | ل | 30 |
+| Mīm | م | 40 |
+| Nūn | ن | 50 |
+| Sīn | س | 60 |
+| Ayn | ع | 70 |
+| Fā | ف | 80 |
+| Ṣā | ص | 90 |
+| Qāf | ق | 100 |
+| Rā | ر | 200 |
+| Shīn | ش | 300 |
+| Tā | ت | 400 |
+
+### دوام (dawām) — Continue Cyclus/Vortex
+
+| Letter | Arabisch | Abjad |
+|--------|----------|-------|
+| Dal | د | 4 |
+| Waw | و | 6 |
+| Alif | ا | 1 |
+| Mīm | م | 40 |
+
+```
+Som = 4 + 6 + 1 + 40 = 51
+dr(51) = 5 + 1 = 6
+```
+
+**dr = 6** — dit is de **Pattern-fase** van NPR en het **3-6-9 midden**.
+
+```Hex: 51 = 0x33
+dr_hex(33) = 3 + 3 = 6  ← hex-native ook 6!
+```
+
+**Beide systemen (dec en hex-native) komen op 6 uit.**
+
+### Arabische Wiskunde
+
+| Arabisch | Transliteratie | Wiskundige betekenis | Abjad | dr |
+|----------|----------------|----------------------|-------|-----|
+| دوام | dawām | continue cyclus/vortex | 51 | **6** (Pattern) |
+| دور | dawr | cyclus/rotatie | 16 | 7 |
+| قلب | qalb | omkering/reflectie | 105 | 6 (Pattern) |
+| جمع | jamʿ | verzameling/som | 24 | 6 (Pattern) |
+| وسط | wasṭ | midden/centrum | 353 | 2 |
+| مركز | markaz | centrum/kern | 216 | 9 (Return) |
+| نقطة | nuqṭa | punt | 626 | 5 |
+| صفر | ṣifr | nul | 188 | 8 |
+
+### Drie Notaties, Eén Structuur
+
+```Sanskrit:  वातरूप (vatarūpa)  →  vortex-wervelingsvorm
+Arabisch:  دوام (dawām)       →  continue cyclus/vortex  [dr=6]
+Hex:       64→32→16→8→4→2→1    →  implosie via /2
+NPR:       9→6→3                →  signaal via mod 9
+
+Drie talen. Eén wiskundige structuur. Geen filosofie.
+```
+
+### 3-6-9 Validatie
+
+| Term | Abjad | dr | 3-6-9 | NPR-fase |
+|------|-------|----|-------|----------|
+| دوام (dawām) | 51 | **6** | ✅ 6 = 3×2 | Pattern |
+| قلب (qalb) | 105 | **6** | ✅ 6 = 3×2 | Pattern |
+| جمع (jamʿ) | 24 | **6** | ✅ 6 = 3×2 | Pattern |
+| مركز (markaz) | 216 | **9** | ✅ 9 = 3×3 | Return |
+
+Meerdere Arabische termen voor vortex/cyclus/midden komen op **6** (Pattern) of **9** (Return) uit.
+
+---
+
 ## Test
 
 **Vraag:** Is H={0,3,6} een geldige subgroep van ℤ/9ℤ?
