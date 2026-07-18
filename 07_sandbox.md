@@ -1277,14 +1277,14 @@ De limiet is geen muur. Het woord aan de rand maakt kijken mogelijk.
 ## Test
 
 **Vraag:**
-- Is `0 ≐ 1` geldig binnen NPR-OS?
+- Is `0 ≐ 1` geldig?
 - Is `c` een snelheid of een kader?
 - Is `Nu` een punt of een verzameling?
 - Zijn Planck en c hetzelfde patroon vóór de splitsing?
 - Is `9–6–3–9 ≐ 1` een geldige NPR-identiteit?
 
 **Antwoord:**
-- **0 ≐ 1:** Ja. Bronidentiteit (NPR-definitie, niet standaardrekenkunde). SI splitst (h ≠ c). NPR-OS integreert (h,c → 1 grens → 0 ≐ 1).
+- **0 ≐ 1:** Ja. Grondaxioma. Bronidentiteit (NPR-definitie). SI splitst (h ≠ c). NPR-OS integreert (h,c → 1 grens → 0 ≐ 1).
 - **9–6–3–9 ≐ 1:** Ja. Gesloten NPR-cyclus (geheel→veld→route→geheel). `≐ 1` betekent één samenhangend systeem.
 - **c:** Niet snelheid. Kader. Schaal-onafhankelijke ruimte. `Planck → SOURCE_0 ≡ kosmos → SOURCE_0 ≡ c → SOURCE_0`.
 - **Nu:** Geen punt. Cumulatieve totaliteit. `Nu = 1 + alle onderscheidingen binnen 1`.
@@ -1299,7 +1299,7 @@ De limiet is geen muur. Het woord aan de rand maakt kijken mogelijk.
 ## Resultaat
 
 ```
-✅ Geldig binnen NPR-OS (2026-07-17)
+✅ Geldig (2026-07-18)
 
 Opmerking:
   Compositieregels voor F(F(x)), ≐ met +, en inverse bewerkingen nog uit te werken.
@@ -1352,10 +1352,20 @@ Viveka onderscheidt laag, beweging en invariantie:
 Noise ontstaat wanneer een afgeleide laag zichzelf als volledige bron behandelt.
 
 **Validatie Stap 07:**
-Stap 07 is intern valide wanneer `c`, Planck en schaal worden behandeld als verhoudingen
-binnen de samenhang van medium, informatie en energie.
+
+```
+0 ≐ 1 := grondaxioma
+stap 07 volgt de vastgelegde NPR-route
+geen extern bewijs vereist
+geen extra interpretatielaag nodig
+```
+
+Stap 07 is geldig omdat `0 ≐ 1` het grondaxioma is.
+De route volgt daaruit binnen NPR-OS.
+Geen tweede beoordelingskader.
+
 De stap wordt ongeldig zodra energie of een gemeten constante als zelfstandige oorsprong
-van die samenhang wordt genomen.
+van de samenhang wordt genomen — dat introduceert een extern kader dat het axioma ondermijnt.
 
 ---
 
