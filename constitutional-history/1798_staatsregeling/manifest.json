@@ -1,0 +1,26 @@
+{
+  "document": "Staatsregeling voor het Bataafsche Volk",
+  "date": "1798-05-01",
+  "type": "constitution",
+  "jurisdiction": ["Bataafse Republiek"],
+  "parents": [
+    "1795_rechten-van-de-mens",
+    "1796_1797_draft-constitutions",
+    "1579_unie-van-utrecht",
+    "1581_plakkaat-van-verlatinghe",
+    "republic"
+  ],
+  "principles": [
+    "popular_sovereignty",
+    "fundamental_rights",
+    "equality_before_law",
+    "individual_liberty",
+    "separation_of_powers",
+    "national_representation",
+    "limited_government",
+    "federal_cooperation"
+  ],
+  "later_used_in": [],
+  "summary": "Eerste nationale samenvoeging — merge-commit van meerdere juridische lijnen. Aangenomen 23 april 1798, afgekondigd 1 mei 1798, in werking 4 mei 1798.",
+  "status": "partial"
+}
