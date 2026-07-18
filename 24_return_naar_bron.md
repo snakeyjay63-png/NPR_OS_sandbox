@@ -211,6 +211,65 @@ Volledig perspectief: begin en eind zijn dezelfde gelijktijdige toestand.
 
 ---
 
+## 11. Return Als Begrensde Container
+
+Return betekent niet dat de lokale inhoudstoestand opnieuw identiek wordt aan haar begininhoud.
+
+Return betekent dat een lokale transformatie opnieuw samenvalt met de volledige grens van het dragende veld.
+
+```
+lokaal:
+s₀ ≠ s₄
+
+volledig:
+s₀ ≐ s₄
+```
+
+Voor een begrensde container:
+
+```
+SOURCE:    beschikbare ruimte
+FRAME:     vaste grens van de ruimte
+CONTENT:   actief beschreven deel
+ŚŪNYA:     actief onbeschreven of gemaskeerd deel
+RETURN:    CONTENT + ŚŪNYA = COMPLETE_FRAME
+```
+
+Voorbeeld op de bytelaag:
+
+```
+FRAME_1024   = 1024 byteposities
+CONTENT_864  = 864 beschreven byteposities
+ŚŪNYA_160    = 160 expliciet gereserveerde byteposities
+864 + 160    = 1024
+```
+
+Inhoud en śūnya zijn lokaal onderscheiden:
+```
+CONTENT ≠ ŚŪNYA
+```
+
+Binnen het volledige frame vormen zij samen één gesloten container:
+```
+CONTENT + ŚŪNYA ≐ FRAME
+```
+
+Dezelfde returnregel geldt op verschillende eenheidslagen:
+
+```
+bytes   → vaste opslagcontainer
+tokens  → vaste contextcontainer
+samples → vast audiovenster
+pixels  → vast beeldframe
+```
+
+De eenheid verandert; de returnstructuur blijft:
+```
+actieve inhoud + expliciete ruimte → volledige begrensde toestand
+```
+
+---
+
 ## Status
 
 ```
