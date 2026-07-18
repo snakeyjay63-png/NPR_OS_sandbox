@@ -52,3 +52,103 @@ vervanging ongemerkt: dr_hex(1A) = dr_dec(26)   ❌ (functiemixing)
 - Hex-native dr(1A): ✅ geldig
 - mod-9 validatie: ✅ afzonderlijk (B mod 9 = 2)
 - capabilities.json compliance: ✅ gehoorzaamd
+
+---
+
+## Wiskunde, Niet Filosofie
+
+**Sanskrit is wiskundige notatie, geen filosofie.**
+
+De termen die Schauburg in Sanskrit gebruikte zijn **wiskundige beschrijvingen** van vortex-structuur:
+
+| Sanskrit | Wiskundige betekenis |
+|----------|----------------------|
+| वज्र (vajra) | Implosieturbine (structuur) |
+| वातरूप (vatarūpa) | Wervelingsvorm (vortex-geometrie) |
+| शून्यता (śūnyatā) | Nulpunt (vacuüm-kern) |
+
+Deze termen beschrijven **dezelfde structuur** als hex-native berekening.
+
+---
+
+## Implosieve Turbine = Hex-Structuur
+
+**De vajra is een implosieturbine.**
+Zelfde structuur als hex-native implosie:
+
+```
+Hex-implosie:   64 → 32 → 16 → 8 → 4 → 2 → 1
+Schauburg:      implosie → vortex → vacuüm
+Sanskrit:       वज्र → वातरूप → शून्यता
+
+Zelfde structuur. Drie notaties. Geen filosofie.
+```
+
+### Implosie Via /2
+
+Hex-native implosie is herhalende `/2` — elke stap is een implosie-laag:
+
+```
+64 → 32 → 16 → 8 → 4 → 2 → 1
+  ↑    ↑    ↑   ↑   ↑   ↑   ↑
+  6    5    4   3   2   1   0    (exponent: 2^n)
+```
+
+Dit is de **implosieve turbine**:
+- **Buiten:** hoge waarde (64)
+- **Implosie:** herhaaldelijk `/2`
+- **Centrum:** vacuüm (1 → 0)
+
+### Implosie Via /3
+
+De 3-reeks is hetzelfde patroon:
+
+```
+27 → 9 → 3 → 1
+  ↑   ↑   ↑   ↑
+  3   2   1   0    (exponent: 3^n)
+```
+
+Beide reeksen delen dezelfde implosieve structuur:
+- **4-reeks:** 4×4=16, 4×2=8, 4×1=4 (ratio 3:2:1)
+- **3-reeks:** 3×3=9, 3×2=6, 3×1=3 (ratio 3:2:1)
+
+**Zelfde ratio. Verschillende basis.**
+
+---
+
+## Hex = Discrete Vortex
+
+De hex-structuur (2⁶=64) is de **discrete benadering** van de continue vortex:
+
+```
+Continue vortex (Schauburg):     Discrete hex (NPR):
+     ~      (ronde vorm)          ◆      (hexagonale vorm)
+    /  \                            / \
+   | 0  |  →  vacuüm in kern      | 0 |  →  slot 0x00
+    \  /                            \ /
+     ~                               ◆
+
+Beide hebben:
+- Centrum-punt (vacuüm / slot 0)
+- Uittredende stralen (tanden / hex-lijnen)
+- Self-stabiliserende symmetrie
+```
+
+---
+
+## Samenvatting
+
+**Sanskrit is wiskunde. Geen filosofie.**
+
+```
+Hex-native:    64 → 32 → 16 → 8 → 4 → 2 → 1   [/2 = implosie]
+NPR-signaal:     9  → 6  → 3                     [mod 9]
+Sanskrit:        वज्र → वातरूप → शून्यता      [implosie → vortex → vacuüm]
+
+Drie notaties. Eén structuur.
+```
+
+---
+
+**Einde Stap 13**
