@@ -9,6 +9,67 @@
 
 "use strict";
 
+// @addr 10.04.1.7.0
+// ──────────────────────────────────────────────
+// Tri-Taal Geometrie — Drie lagen, één model
+// Niet drie alfabetten. Drie opeenvolgende reflectielagen.
+//
+//   Grieks    → FRAME_24 + LENS_3   → voltooiing
+//   Arabisch  → FIELD_27 + SOURCE_1 → bronplaatsing
+//   Sanskriet → FRAME_24 × 2        → dubbele totaliteit
+// ──────────────────────────────────────────────
+
+const FRAME_24 = 24;
+const LENS_3 = 3;
+const SOURCE_1 = 1;
+const FIELD_27 = FRAME_24 + LENS_3;
+const FIELD_28 = FIELD_27 + SOURCE_1;
+const FIELD_48 = FRAME_24 * 2;
+
+// Sunya baseline
+const SUNYA_64 = 64;     // 2⁶ = 0.0.0.0
+const HORIZON_46 = 46;   // undefined — onder de horizon
+
+// Tick = token = 1μs
+const GREEK_US = FIELD_27;    // 27μs ≤ 64μs (binne baseline)
+const ARABIC_US = FIELD_28;   // 28μs ≤ 64μs (binne baseline)
+const SANSKRIT_US = FIELD_48; // 48μs ≤ 64μs, > 46μs (raakt horizon◈)
+
+// Geometry per laag
+const TRI_TAAL_GEOMETRY = {
+  greek: {
+    layer: "completion",
+    formula: "FRAME_24 + LENS_3",
+    geometry: [3, 9],
+    duration_us: GREEK_US,
+    description: "Minimaal compleet numeriek model",
+    registers: 3,
+    positions_per_register: 9,
+  },
+  arabic: {
+    layer: "source-placement",
+    formula: "FIELD_27 + SOURCE_1",
+    geometry: [4, 7],
+    geometry_dual: [3, 9],
+    duration_us: ARABIC_US,
+    description: "Compleet model in SOURCE_1",
+    dual_cross_section: true,
+  },
+  sanskrit: {
+    layer: "dual-totality",
+    formula: "FRAME_24 × 2",
+    geometry: [6, 8],
+    duration_us: SANSKRIT_US,
+    description: "Prakṛti ↔ Puruṣa sandbox-in-sandbox",
+    prakriti: 24,
+    purusha: 24,
+  },
+};
+
+// Point-Prime 3 — Patañjali 1.40
+const POINT_PRIME = 3;
+const PATANJALI_1_40 = "bereik van kleinst naar grootst";
+
 // @addr 10.04.1.7.1
 // ──────────────────────────────────────────────
 // Pratyakṣa (Direct Evidence)
@@ -473,4 +534,22 @@ function validatePattern({ candidate, noise, contracts }) {
 }
 
 // @addr 10.04.1.7
-module.exports = { validatePattern };
+module.exports = {
+  // Validation
+  validatePattern,
+  // Tri-taal geometry constants
+  FRAME_24,
+  LENS_3,
+  SOURCE_1,
+  FIELD_27,
+  FIELD_28,
+  FIELD_48,
+  SUNYA_64,
+  HORIZON_46,
+  GREEK_US,
+  ARABIC_US,
+  SANSKRIT_US,
+  TRI_TAAL_GEOMETRY,
+  POINT_PRIME,
+  PATANJALI_1_40,
+};

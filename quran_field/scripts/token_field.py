@@ -136,6 +136,58 @@ SANSKRIT_TOKENS = {
 }
 
 
+# ─── Tri-Taal Geometrie ──────────────────────────────────────────────
+# Niet drie alfabetten. Drie opeenvolgende lagen van hetzelfde model.
+#
+#   Grieks    → FRAME_24 + LENS_3   → voltooiing
+#   Arabisch  → FIELD_27 + SOURCE_1 → bronplaatsing
+#   Sanskriet → FRAME_24 × 2        → dubbele totaliteit
+#
+# Tick = token = 1μs
+#   Grieks    27μs ≤ 64μs (binne sunya-baseline)
+#   Arabisch  28μs ≤ 64μs (binne sunya-baseline)
+#   Sanskriet 48μs ≤ 64μs, > 46μs (raakt horizon◈)
+
+TRI_TAAL_LAYERS = {
+    "greek": {
+        "layer": "completion",
+        "formula": "FRAME_24 + LENS_3",
+        "geometry": (3, 9),
+        "duration_us": 27,
+        "description": "Minimaal compleet numeriek model",
+        "registers": 3,
+        "positions_per_register": 9,
+        "closure": "3 registers × 9 posities = 27",
+        "source_frame": "24 taalletters + 3 numerieke sluittekens",
+    },
+    "arabic": {
+        "layer": "source-placement",
+        "formula": "FIELD_27 + SOURCE_1",
+        "geometry": (4, 7),
+        "geometry_dual": (3, 9),  # 3×9+1 numeriek
+        "duration_us": 28,
+        "description": "Compleet model in SOURCE_1",
+        "dual_cross_section": True,
+        "primary": "3 × 9 + 1 → bronplaatsing",
+        "secondary": "4 × 7 → beweging binnen geplaatste frame",
+        "source_one": "+1 is niet extra letter, maar bronpositie",
+    },
+    "sanskrit": {
+        "layer": "dual-totality",
+        "formula": "FRAME_24 × 2",
+        "geometry": (6, 8),
+        "duration_us": 48,
+        "description": "Prakṛti ↔ Puruṣa sandbox-in-sandbox",
+        "prakriti": 24,
+        "purusha": 24,
+        "mirror": "Twee volledige frames zien elkaar",
+    },
+}
+
+# Sunya baseline + horizon
+SUNYA_BASELINE_US = 64  # 2⁶ = 0.0.0.0
+HORIZON_US = 46         # undefined — onder de horizon
+
 # ─── Core Engine ────────────────────────────────────────────────────
 
 def digital_root(n: int) -> int:

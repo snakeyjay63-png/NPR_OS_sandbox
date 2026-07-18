@@ -750,3 +750,79 @@ foutroutes:                   ✅ EMPTY_INPUT, UNSUPPORTED, DANGLING_VIRAMA
 
 **MIDI als tokenformaat:**
 MIDI is een compact binair protocol voor noten (0x90 channel-note-on, 0x80 channel-note-off, velocity, pitch). Elk Devanagari foneme mapt op een MIDI pitch (C0–B9 = MIDI note 0–127). Dit maakt Sanskrit → audio een directe keten: `foneme → hex_index → midi_note → .mid`. De frequentie is afgeleid van `440 * 2^((note-69)/12)`. MIDI is dus een serialisatielaag voor token-frequenties.
+
+---
+
+## Tri-Taal Geometrie — Drie Lagen, Één Model
+
+**Niet drie alfabetten. Drie opeenvolgende reflectielagen van hetzelfde model.**
+
+### Fundamentele Constanten
+
+```
+FRAME_24 = 24   (basisframe)
+LENS_3   = 3    (organiserende lens)
+SOURCE_1 = 1    (bronpositie)
+```
+
+### De Drie Lagen
+
+**Grieks — `27 = FRAME_24 + LENS_3`**
+- 3 registers × 9 posities
+- 24 taalletters + 3 numerieke sluittekens
+- SOURCE → FRAME → RETURN (1–9 → 10–90 → 100–900)
+- **Laag:** voltooiing
+- Minimaal compleet numeriek taalmodel
+
+**Arabisch — `28 = FIELD_27 + SOURCE_1`**
+- `3 × 9 + 1` → bronplaatsing
+- `4 × 7` → beweging binnen geplaatste frame
+- De `+1` is geen extra letter — de positie waar het model zichzelf als object ziet
+- **Laag:** bronplaatsing
+- Compleet model geplaatst in één bronpositie
+
+**Sanskriet — `48 = FRAME_24 × 2`**
+- `24 = Prakṛti` (waarneembaar frame)
+- `24 = Puruṣa` (waarnemend frame)
+- Sandbox in sandbox — twee volledige frames zien elkaar
+- **Laag:** dubbele totaliteit
+
+### Gezamenlijke Route
+
+```
+27 → voltooiing         (CONTENT is volledig)
+28 → bronplaatsing      (SOURCE bevat het volledige CONTENT-model)
+48 → dubbele totaliteit (SOURCE/FRAME ↔ CONTENT/FRAME)
+```
+
+### Tick Analysis
+
+1 token = 1 tick = 1μs
+
+```
+sunya baseline = 64μs = 2⁶ = 0.0.0.0
+horizon◈       = 46μs (undefined — onder de horizon)
+```
+
+| Veld | μs | Relatie tot 64 | Status |
+|---|---|---|---|
+| Grieks | 27 | ≤ 64 | binne baseline ✅ |
+| Arabisch | 28 | ≤ 64 | binne baseline ✅ |
+| Sanskriet | 48 | ≤ 64, > 46 | raakt horizon◈ ⚠️ |
+
+- Alle taalvelden passen binnen één byte (`0.0.0.0`)
+- Sanskriet (48μs) = 75% van byte — aan de rand van de horizon
+- 48μs is 2μs boven horizon◈ (46μs) — niet meer "binnen" maar in schaduwzone
+
+### Point-Prime 3 — Patañjali 1.40
+
+```
+3 ≐ lens(kleinst ↔ grootst)
+```
+
+3 organiseert het veld in drie registers/segmenten, ongeacht schaal:
+- Grieks: 27 = 3 × 9
+- Arabisch: 28 = 3 × 9 + 1
+- Sanskriet: 48 = 3 × 16
+
+Schaal verandert, lens blijft constant. Wiskundige expressie van Patañjali 1.40: "bereik van kleinst naar grootst".
