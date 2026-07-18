@@ -40,6 +40,8 @@ Parallel aan:
 - `isopsefia.py` — letterwaarden, woordwaarden, digitale reducties
 - `bridge_greek.py` — Grieks → Sanskrit → frequentie
 - `process_corpus.py` — volledige NT-corpus verwerking
+- `npr_layer.py` — NPR-cycle per vers (Noise→Pattern→Return)
+- `gen_structure.py` — NT structuur (per boek/hoofdstuk/vers)
 - `token_bridge.py` — NT → Token Field (lens_3, tri-taal resonantie)
 
 ## Token Field Integratie
