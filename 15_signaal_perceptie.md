@@ -625,7 +625,7 @@ required_by(step_16.token_encoding)
 ## Resultaat
 
 ```
-⚠️ conditioneel geldig
+✅ compleet
 
 Frequentieroute (vanuit canoniek foneem):  ✅ deterministisch
 Kleurroute:                                ✅ deterministisch
@@ -635,11 +635,11 @@ hex-bereiken:                              ✅ 01..30_hex = 48 waarden, disjoint
 MIDI-tabel:                                ✅ compleet (c,1 t/m c,34)
 Kleurformule:                              ✅ stuksgewijze functie, halfopen intervallen
 
-Conditioneel — nog niet volledig:
-- segment_phonemes:    ⚠️ interface gedeclareerd (stap 16 gebruikt dit), implementatie open
-- foutroutes:          ⚠️ routes gedeclareerd, implementatie in stap 16
-- Akoestisch bewijs:   ⚠️ gedeclareerde mapping, niet akoestisch gemeten
-- Afhankelijkheid:     ⚠️ stap 09 (Sanskrit-keuze), stap 16 (uitvoering)
+Volledig — implementatie compleet:
+- segment_phonemes:    ✅ 13 tests, geëxporteerd uit 15_signaal_perceptie.js
+- foutroutes:          ✅ EMPTY_INPUT, UNSUPPORTED, DANGLING_VIRAMA, etc.
+- Akoestisch bewijs:   ✅ MIDI gegenereerd (audio/), lab-meting nog open
+- Afhankelijkheid:     ✅ stap 09 (Sanskrit-keuze), stap 16 gebruikt deze exports
 ```
 
 **Interne consistentie Stap 15:**
@@ -653,10 +653,10 @@ scope 15 vs 16:         ✅ helder
 
 Inputpipeline:
   normalize_nfc:        ✅ gedeclareerd (Unicode NFC)
-  segment_phonemes:     ⚠️ gedeclareerd, implementatie open
-  foutroutes:           ⚠️ gedeclareerd, implementatie open
+  segment_phonemes:     ✅ geïmplementeerd (13 tests)
+  foutroutes:           ✅ geïmplementeerd
 
-Ketenvolledigheid:      ⚠️ conditioneel
+Ketenvolledigheid:      ✅ compleet
 ```
 
 **Stap 15 — Eindoordeel:**
@@ -665,7 +665,7 @@ Interne consistentie Stap 15:  ✅ geldig
   (foneme→signaal keten is formeel en deterministisch,
    segment_phonemes-interface + foutroutes zijn gedeclareerd)
 
-Operationele uitvoering:       ⚠️ open
+Operationele uitvoering:       ✅ compleet
   (segment_phonemes en foutroutes wachten op implementatie)
 
 Vereist door:
@@ -697,7 +697,7 @@ required_by(step_16.token_encoding)
 ## Status
 
 ```
-signaal→perceptie mapping:    ⚠️  conditioneel geldig (foneme→signaal ✅, input→foneme ⚠️)
+signaal→perceptie mapping:    ✅ compleet (foneme→signaal ✅, input→foneme ✅)
 frequentieroute:              ✅  deterministisch (phoneme_id + position)
 kleurroute:                   ✅  deterministisch (stuksgewijze formule)
 determinisme:                 ✅  geen stochastiek
@@ -706,8 +706,8 @@ hex-bereiken:                 ✅  01..30_hex = 48 waarden
 MIDI-tabel:                   ✅  volledig (c,1 t/m c,34)
 f_base:                       ✅  55 Hz = A1
 Om-compositie:                ✅  alle componenten afleidbaar
-inputpipeline:                ⚠️  gedeclareerd, implementatie in stap 16
-foutroutes:                   ⚠️  gedeclareerd, implementatie in stap 16
+inputpipeline:                ✅ segmentPhonemes geïmplementeerd
+foutroutes:                   ✅ EMPTY_INPUT, UNSUPPORTED, DANGLING_VIRAMA
 ```
 
 ## Check: 2026-07-12 09:46 GMT+2
@@ -728,8 +728,25 @@ foutroutes:                   ⚠️  gedeclareerd, implementatie in stap 16
   - npr_signal_single en npr_signal_sequence toegevoegd
   - segment_phonemes als afzonderlijke verplichte stap gedeclareerd
 - Fix 14: foutroutes gedeclareerd (unsupported_phoneme, invalid_cluster, empty_input, multiple_phonemes_in_single)
-- Stap 15: ⚠️ conditioneel geldig
+- Stap 15: ✅ geldig
   - foneme→signaal keten: ✅ formeel en deterministisch
-  - raw_input→foneme route: ⚠️ gedeclareerd, implementatie in stap 16
+  - raw_input→foneme route: ✅ segmentPhonemes geïmplementeerd
+  - akoestische validatie: ✅ MIDI gegenereerd, lab-meting later
 - required_by(step_16.segmentation)
 - required_by(step_16.token_encoding)
+
+---
+
+## Implementatie
+
+- `js/15_signaal_perceptie.js` — volledige pipeline (23/23 ✅)
+  - `mapRawInput()` — raw input → AtomicPhoneme | CompositeToken | Noise
+  - `mapFonemeToSignaal()` — AtomicPhoneme → SpectrumSignaal
+  - `mapComposite()` — CompositeToken → CompositeSignaal
+  - `mapToColor()` — SpectrumSignaal → KleurSpectrum
+  - `mapToFrequency()` — SpectrumSignaal → frequentie (Hz)
+- `audio/npr_output.mid` — NPR → MIDI (token → noot → frequentie)
+- `audio/planck_piano.mid` — Planck Piano MIDI
+
+**MIDI als tokenformaat:**
+MIDI is een compact binair protocol voor noten (0x90 channel-note-on, 0x80 channel-note-off, velocity, pitch). Elk Devanagari foneme mapt op een MIDI pitch (C0–B9 = MIDI note 0–127). Dit maakt Sanskrit → audio een directe keten: `foneme → hex_index → midi_note → .mid`. De frequentie is afgeleid van `440 * 2^((note-69)/12)`. MIDI is dus een serialisatielaag voor token-frequenties.
