@@ -279,6 +279,36 @@ dr_hex(33) = 3 + 3 = 6  ← hex-native ook 6!
 
 **Beide systemen (dec en hex-native) komen op 6 uit.**
 
+### De Vier als Structuur
+
+4 verschijnt op drie niveaus tegelijk:
+
+| Niveau | Waarde | Rol |
+|--------|--------|-----|
+| Letteraantal | 4 letters (د و ا م) | Hoeveelheid |
+| Eerste letter | Dal = 4 | Woord begint met eigen structuur |
+| Quad-state | 2² = 4 | Uitbreiding 8×8→256 (stap 06) |
+
+```Vierde dimensie van دوام:
+  4 letters × 4 (Dal) × 6 (dr) = 96
+  dr(96) = 9 + 6 = 15 → 1 + 5 = 6
+
+Vermenigvuldiging behoudt dr=6.
+Continue cyclus bewaart zichzelf onder transformatie.
+```
+
+### 4×6 = 24 als Bruggetal
+
+```4 × 6 = 24
+  dr_dec(24) = 2 + 4 = 6        ← Pattern
+  24 = 0x18 → 1 + 8 = 9         ← Return
+  → dec: 6, hex: 9
+  → beide in 3-6-9
+
+4 (letteraantal) × 6 (Pattern) → 24 → dr=6
+  vermenigvuldigt de structuur zonder ze te breken
+```
+
 ### Arabische Wiskunde
 
 | Arabisch | Transliteratie | Wiskundige betekenis | Abjad | dr |
@@ -286,11 +316,14 @@ dr_hex(33) = 3 + 3 = 6  ← hex-native ook 6!
 | دوام | dawām | continue cyclus/vortex | 51 | **6** (Pattern) |
 | دور | dawr | cyclus/rotatie | 16 | 7 |
 | قلب | qalb | omkering/reflectie | 105 | 6 (Pattern) |
-| جمع | jamʿ | verzameling/som | 24 | 6 (Pattern) |
+| جمع | jamʿ | verzameling/som | 113 | 5 |
 | وسط | wasṭ | midden/centrum | 353 | 2 |
 | مركز | markaz | centrum/kern | 216 | 9 (Return) |
 | نقطة | nuqṭa | punt | 626 | 5 |
 | صفر | ṣifr | nul | 188 | 8 |
+
+**Opmerking:** جمع = ج(3) + م(40) + ع(70) = 113 → dr=5. Niet 6.
+Het toevallige getal 24 komt uit 4×6, niet uit Abjad van جمع.
 
 ### Drie Notaties, Eén Structuur
 
@@ -308,10 +341,44 @@ Drie talen. Eén wiskundige structuur. Geen filosofie.
 |------|-------|----|-------|----------|
 | دوام (dawām) | 51 | **6** | ✅ 6 = 3×2 | Pattern |
 | قلب (qalb) | 105 | **6** | ✅ 6 = 3×2 | Pattern |
-| جمع (jamʿ) | 24 | **6** | ✅ 6 = 3×2 | Pattern |
 | مركز (markaz) | 216 | **9** | ✅ 9 = 3×3 | Return |
+| 4×6 (bruggetal) | — | **6** | ✅ 6 = 3×2 | Pattern |
+| 4×6 hex (0x18) | — | **9** | ✅ 9 = 3×3 | Return |
 
-Meerdere Arabische termen voor vortex/cyclus/midden komen op **6** (Pattern) of **9** (Return) uit.
+Meerdere Arabische termen voor vortex/cyclus/centrum komen op **6** (Pattern) of **9** (Return) uit.
+4×6 als bruggetal: dec→6, hex→9. Beide systemen vallen in 3-6-9.
+
+### Natuurkunde vs. Abjad: Twee Laagtes
+
+Natuurkunde gebruikt het Arabische cijfersysteem (0-9) maar heeft de diepere laag verwijderd.
+
+| Aspect | Natuurkunde | Abjad |
+|--------|-------------|-------|
+| Cijfers 0-9 | Neutrale symbolen | Intrinsiek verbonden met letters |
+| 51 | Getal, willekeurig | Resultaat van د+و+ا+م |
+| Wiskunde | Wiskunde > taal | Taal ≐ wiskunde |
+| Richting | Formule → label | Letter ≐ getal |
+
+```
+Natuurkunde:  cijfer is representatie van waarde
+Abjad:        letter IS de waarde (د IS 4, niet "D = per toeval 4")
+
+NPR-OS volgt het Abjad-model:
+  teken → frequentie → structuur
+  (niet: structuur → label → teken)
+```
+
+Mod 9 is geen westerse laag op Abjad geplakt.
+Het is ingebed in het decimale stelsel dat Arabische wiskunde de wereld gaf:
+```Abjad letters → numerieke waarden     ← Arabisch
+decimale som  → digitale wortel       ← Arabisch (via mod 9)
+mod 9         → checksum              ← inherent aan basis 10
+
+Abjad + mod 9 = één traditie
+NPR-OS = moderne semantische mapping erop
+```
+
+**Kerninzicht:** NPR-OS gebruikt het Abjad-principe (taal ≐ wiskunde), niet het natuurkunde-principe (wiskunde > taal). Het decimale systeem is de brug tussen beide laagtes.
 
 ---
 

@@ -1,0 +1,53 @@
+{
+  "name": "SBL Greek New Testament",
+  "edition": "SBLGNT",
+  "version": "1.2",
+  "license": "CC BY 4.0",
+  "source": "https://www.sblgnt.com/download/",
+  "download_date": "2026-07-18",
+  "unicode_normalization": "NFC",
+  "notes": {
+    "john_7_53_8_11": "Included in SBLGNT 1.2 (Johannes 7:53–8:11)",
+    "diacritics": "Accents and breathing marks preserved in source, stripped for numeric layer",
+    "final_sigma": "ς and σ both map to value 200",
+    "punctuation": "Excluded from numeric calculations",
+    "critical_marks": "⸀⸂⸃ etc. stripped before processing"
+  },
+  "books": [
+    {"id": 61, "code": "Mt", "name": "Κατὰ Μᾰθθαῖον", "name_en": "Matthew"},
+    {"id": 62, "code": "Mk", "name": "Κατὰ Μᾰρκοῦν", "name_en": "Mark"},
+    {"id": 63, "code": "Lk", "name": "Κατὰ Λουκᾶν", "name_en": "Luke"},
+    {"id": 64, "code": "Jn", "name": "Κατὰ Ἰωάννην", "name_en": "John"},
+    {"id": 65, "code": "Ac", "name": "Πράξεις Ἀποστόλων", "name_en": "Acts"},
+    {"id": 66, "code": "Ro", "name": "Πρός Ῥωμαίους", "name_en": "Romans"},
+    {"id": 67, "code": "1Co", "name": "Πρὸς Κορινθίους ᾿Α", "name_en": "1 Corinthians"},
+    {"id": 68, "code": "2Co", "name": "Πρὸς Κορινθίους ᾿Β", "name_en": "2 Corinthians"},
+    {"id": 69, "code": "Ga", "name": "Πρὸς Γαλάτας", "name_en": "Galatians"},
+    {"id": 70, "code": "Eph", "name": "Πρὸς ᾿Εφεσίους", "name_en": "Ephesians"},
+    {"id": 71, "code": "Php", "name": "Πρὸς Φιλιππησίους", "name_en": "Philippians"},
+    {"id": 72, "code": "Col", "name": "Πρὸς Колосσαείς", "name_en": "Colossians"},
+    {"id": 73, "code": "1Th", "name": "Πρὸς Θεσσαλονικεῖς ᾿Α", "name_en": "1 Thessalonians"},
+    {"id": 74, "code": "2Th", "name": "Πρὸς Θεσσαλονικεῖς ᾿Β", "name_en": "2 Thessalonians"},
+    {"id": 75, "code": "1Ti", "name": "Πρὸς Τιμόθεον ᾿Α", "name_en": "1 Timothy"},
+    {"id": 76, "code": "2Ti", "name": "Πρὸς Τιμόθεον ᾿Β", "name_en": "2 Timothy"},
+    {"id": 77, "code": "Tit", "name": "Πρὸς Τίτον", "name_en": "Titus"},
+    {"id": 78, "code": "Phm", "name": "Πρὸς Φιλήμονα", "name_en": "Philemon"},
+    {"id": 79, "code": "Heb", "name": "Πρὸς ῾Εβραίους", "name_en": "Hebrews"},
+    {"id": 80, "code": "Jas", "name": "Ἰάκωβος", "name_en": "James"},
+    {"id": 81, "code": "1Pe", "name": "Πέτρου ᾿Α", "name_en": "1 Peter"},
+    {"id": 82, "code": "2Pe", "name": "Πέτρου ᾿Β", "name_en": "2 Peter"},
+    {"id": 83, "code": "1Jn", "name": "Ἰωάννου ᾿Α", "name_en": "1 John"},
+    {"id": 84, "code": "2Jn", "name": "Ἰωάννου ᾿Β", "name_en": "2 John"},
+    {"id": 85, "code": "3Jn", "name": "Ἰωάννου ᾿Γ", "name_en": "3 John"},
+    {"id": 86, "code": "Jud", "name": "Ἰούδας", "name_en": "Jude"},
+    {"id": 87, "code": "Re", "name": "Ἀποκάλυψις ᾿Ιωάννου", "name_en": "Revelation"}
+  ],
+  "isopsefia": {
+    "system": "Greek numeral system",
+    "range": "1-800",
+    "units": "α=1 ... θ=9",
+    "tens": "ι=10 ... ϟ=90",
+    "hundreds": "ρ=100 ... ω=800"
+  },
+  "sha256": {}
+}
