@@ -652,6 +652,141 @@ const BLOCK_CONTRACT = Object.freeze({
 });
 
 // ---------------------------------------------------------------------------
+// LLM Bridge Integration (Stap 18 v3 — kwaliteitsverbeteringen)
+// ---------------------------------------------------------------------------
+//
+// Optional LLM integration. When the local model is available, these functions
+// use it for semantic comparison, dynamic weighting, and response generation.
+// Falls back to current implementation when LLM is unavailable.
+//
+// @addr 10.18.0.3 | fd00:npr:0018:003::3 — LLM bridge layer
+
+// Lazy-load bridge to avoid hard dependency
+let _bridge = null;
+let _bridgeError = null;
+
+function loadBridge() {
+  if (_bridge || _bridgeError) return _bridge;
+  try {
+    // Try loading from npr-local field module
+    _bridge = require('../npr-local/src/field/router-llm-bridge.js');
+  } catch (e) {
+    _bridgeError = e.message;
+    console.warn(`[router-llm] bridge not available: ${_bridgeError}`);
+  }
+  return _bridge;
+}
+
+/**
+ * LLM-enhanced combine. Uses semantic similarity when LLM available.
+ * Falls back to keyword-based overlap.
+ *
+ * @param {string} textA - Content of block A
+ * @param {string} textB - Content of block B
+ * @param {string} question - The routing question
+ * @param {number} [phaseOffset] - Phase offset for npr_reduce
+ * @returns {Promise<object>} Combined result with semantic data
+ */
+async function combine_llm(textA, textB, question, phaseOffset = 0) {
+  // Always run the base combine first
+  const base = combine(textA, textB, phaseOffset);
+
+  // Try LLM semantic comparison
+  const bridge = loadBridge();
+  if (bridge) {
+    try {
+      const semantic = await bridge.semanticCompare(textA, textB, question);
+      return {
+        ...base,
+        semanticScore: semantic.score,
+        sharedConcepts: semantic.sharedConcepts,
+        divergence: semantic.divergence,
+        semanticMethod: semantic.divergence === 'keyword-based fallback' ? 'keyword' : 'llm',
+      };
+    } catch (e) {
+      console.warn(`[router-llm] combine_llm failed: ${e.message}`);
+    }
+  }
+
+  // Fallback: keyword-based
+  const keywordRes = bridge ? bridge.keywordOverlap(textA, textB) : { score: 0, sharedConcepts: [], divergence: 'no-bridge' };
+  return {
+    ...base,
+    semanticScore: keywordRes.score,
+    sharedConcepts: keywordRes.sharedConcepts,
+    divergence: keywordRes.divergence,
+    semanticMethod: 'keyword',
+  };
+}
+
+/**
+ * LLM-enhanced superpose with dynamic weights.
+ * Falls back to equal weights.
+ *
+ * @param {string[]} blocks - Array of block contents
+ * @param {string} question - The routing question
+ * @returns {Promise<object>} Superposed result with weight info
+ */
+async function superpose_llm(blocks, question) {
+  // Always run base superpose first
+  const base = superpose(...blocks);
+
+  const bridge = loadBridge();
+  if (bridge) {
+    try {
+      const { weights, assessments } = await bridge.dynamicWeights(blocks, question);
+      return {
+        ...base,
+        weights,
+        assessments,
+        weightMethod: 'dynamic-llm',
+      };
+    } catch (e) {
+      console.warn(`[router-llm] superpose_llm failed: ${e.message}`);
+    }
+  }
+
+  // Fallback: equal weights
+  const n = blocks.length || 3;
+  return {
+    ...base,
+    weights: Array(n).fill(Math.round((1 / n) * 1000) / 1000),
+    assessments: blocks.map(() => ({ quality: 0.5, relevance: 0.5, reason: 'equal-fallback' })),
+    weightMethod: 'equal',
+  };
+}
+
+/**
+ * LLM-enhanced rotor response.
+ * Generates answer from motorveld using LLM when available.
+ * Falls back to template response.
+ *
+ * @param {string} question - The user question
+ * @param {object} motorField - Combined motorveld
+ * @param {object} [opts] - Options
+ * @param {number} [opts.maxTokens=1024] - Max response tokens
+ * @returns {Promise<string>} Generated or template response
+ */
+async function rotor_response_llm(question, motorField, opts = {}) {
+  // Always have base as fallback
+  const baseResponse = rotor_response(question, motorField);
+
+  const bridge = loadBridge();
+  if (bridge) {
+    try {
+      const response = await bridge.llmRotorResponse(question, motorField, opts);
+      if (response && !response.includes('LLM unavailable')) {
+        return response;
+      }
+    } catch (e) {
+      console.warn(`[router-llm] rotor_response_llm failed: ${e.message}`);
+    }
+  }
+
+  return baseResponse;
+}
+
+// ---------------------------------------------------------------------------
 // Export
 // ---------------------------------------------------------------------------
 
@@ -663,6 +798,8 @@ module.exports = {
   // Contradiction + multi-cycle (Stap 18 v2)
   find_contradictions, contradiction_delta,
   EMPTY_BLOCK, pad_blocks, cycle_weight, combine_cycles,
+  // LLM bridge integration (Stap 18 v3 — kwaliteitsverbeteringen)
+  combine_llm, superpose_llm, rotor_response_llm,
 };
 
 // ---------------------------------------------------------------------------
