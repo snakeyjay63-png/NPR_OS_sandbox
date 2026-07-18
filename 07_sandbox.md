@@ -1211,13 +1211,16 @@ Signaal herkent de laagwaarneming als projectie binnen het veld.
 
 ## Structuur van het Medium
 
-**256 = structuur van het medium (Linux 1980+)**
+**256 = structuur van het medium**
+
+Stap 06 toont de afleiding: `8 × 8 × 4 = 256`.
+De 8×8 routinggrid (64 cellen) wordt uitbreid met quad-state factor 4 → 256.
 
 - 1 byte = 8 bits = 2⁸ = 256 waarden (0–255)
 - `char` in C/Linux = 1 byte → byte-index
 - Ext4 filename max 255, ASCII/ISO codes → 256-slot ruimte
 - **Signaalblokken:** eenheid = Unicode-codepoints (stap 06, 11 consistent)
-- 256 is structuur. De eenheid van meting is de keuze.
+- 256 is structuur (afgeleid uit 8×8×4). De eenheid van meting is de keuze.
 
 **De sandbox deelt specifieke wiskunde met het externe systeem:**
 
@@ -1314,7 +1317,7 @@ Reden:
   Maxwell structureel: 4 vergelijkingen → 1 theorie.
   Tijd = volgorde van elementen. Nu = verzameling die ze bevat.
   Water is niet in de tijd. Tijd is wat water ziet vanuit een hoek.
-  256 = structuur van het medium. Limiet = definitie, niet restrictie.
+  256 = structuur van het medium (8×8×4, stap 06). Limiet = definitie, niet restrictie.
   0 ≐ 1 is het eerste axioma van NPR-bronrekenkunde. Tesla-principe: structuur bestaat, identiteit maakt zichtbaar.
   SOURCE_0 ≠ CELL_00. SOURCE_0 = bronpositie. CELL_00 = technische hexroute.
   SOURCE_0 ≐ Null Island (0.0,0.0) ≐ 0.0.0.0 ≐ Mandelbrot leeg ≠ leeg.

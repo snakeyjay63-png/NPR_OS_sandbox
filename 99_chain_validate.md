@@ -99,7 +99,7 @@ technically_integreerbaar(stap) :=
 | 03 | capabilities.json declaratief | ✅ | Declaratief > hardcoded. Capability-contracten met source, input, output. Vlag 5. |
 | 04 | Git-trace = signaal-flow | ✅ | Git = DAG + cyclische semantiek. Hash = integriteit. "Commit = signaal" is NPR-definitie, niet Git-eigenschap. |
 | 05 | 3-6-9 digitale-wortel + mod-9/mod-15 | ✅ | H={0,3,6} ⊂ ℤ/9ℤ (wiskunde). Hex-cijfersom→mod 15, dec→mod 9. Mod 9 = checksum, geen model. Vlag 6. |
-| 06 | Signaalblok (max 256 codepoints) + 6-bit fundament | ✅ | BLOCK_SIZE = 100_hex. 2^8 = 2^2 × 2^6 → 256 = 4 × 64. Byte = 2 veldbits + 6 routebits. |
+| 06 | Signaalblok (max 256 codepoints) + 6-bit fundament | ✅ | BLOCK_SIZE = 100_hex. 8×8×4 = 256. 2^8 = 2^2 × 2^6 → 256 = 4 × 64. Eenheid = keuze (codepoints), structuur = 256. Byte = 2 veldbits + 6 routebits. |
 | 07 | Sandbox = wiskunde | ✅ | 0≐1 bronidentiteit, 0≠1 routing. ratio(Planck) ≡ ratio(kosmos) ≡ c. Vierlagenmodel. |
 | 08 | Śūnya-zone check | ✅ | 1A_hex ∉ {30_hex .. 3F_hex}. Route-integriteit hex-native. |
 | 09 | Taal-mapping | ✅ | Sanskrit = kern. 17_hex woorden. 4 routes. Russell = lens, geen extern bewijs. |

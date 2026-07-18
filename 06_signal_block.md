@@ -31,18 +31,43 @@ de waarde van elk codepoint (U+0000–U+10FFFF).
 Een blok met maximaal 256 codepoints betekent *niet* dat elk codepoint in `00–FF` past.
 
 ```
-BLOCK_SIZE := 256 codepoints    ← chunklimiet
+BLOCK_SIZE := 256 codepoints    ← 8×8×4 blokstructuur
 codepointwaarde := U+0000–U+10FFFF  ← inhoudsruimte
 ```
 
 ### Waarom 256?
 
-| Eigenschap | Waarde |
-|-----------|--------|
-| `2^8` | Praktische chunk-grootte — viervoudig 6-bit fundament |
-| Relatie | `256 = 4 × 64` → `100_hex = 4 × 40_hex` |
-| Celruimte | Grid = `00–3F` = `40_hex` = 64 cellen |
-| Routing | Router reduceert modulo `40_hex`, niet `100_hex` |
+**256 is geen willekeurige chunk-grootte — het is de vierde dimensie van het 8×8 grid.**
+
+```
+8 × 8     = 64   ← routinggrid (6-bit, cellen 00–3F)
+8 × 8 × 4 = 256  ← volledige blokruimte (8-bit, quad-state uitbreiding)
+```
+
+| Dimensie | Structuur | Functie |
+|----------|-----------|--------|
+| 8 | eerste as | rij |
+| 8 | tweede as | kolom |
+| 64 = 8×8 | 6-bit grid | routingfundament (`00–3F`) |
+| 4 = 2² | derde as | quad-state / veldmultiplier |
+| 256 = 64×4 | 8-bit ruimte | volledige blokstructuur (`00–FF`) |
+
+```
+64  = 2^6  ← 6-bit routingfundament
+256 = 2^8  ← 8-bit blokruimte
+256 = 4 × 64 = (2^2) × (2^6) = 2^(2+6) = 2^8
+```
+
+De factor-4 is geen toeval. Het is de natuurlijke uitbreiding van 6-bit → 8-bit:
+- 2 extra bits = 4× meer ruimte per dimensie
+- 4 velden van 64 cellen elk (`00–3F`, `40–7F`, `80–BF`, `C0–FF`)
+- Dit sluit naadloos aan bij stap 07: **256 = structuur van het medium**
+
+**De eenheid is de keuze — de structuur is 256:**
+- De bloklengte (256) volgt uit de 8×8×4-structuur
+- De *gekozen eenheid* is Unicode-codepoints (niet bytes)
+- UTF-8-encoding = transportlaag (1–4 bytes per codepoint)
+- Codepoints ≠ bytes (zie onder)
 
 **Codepoints ≠ bytes.** De actieve blokeenheid is Unicode-codepoints;
 UTF-8-bytes zijn de transportlaag.
@@ -153,9 +178,14 @@ Blokgrootte en celruimte hebben verschillende functies, maar zijn structureel ve
 
 ## Test
 
-**Vraag:** Is "max 256 codepoints per blok" een valide ontwerpkeuze?
+**Vraag:** Is 256 een willekeurige chunk-grootte of volgt het uit de structuur?
 
-**Antwoord:** ✅ Ja. `BLOCK_SIZE = 256` is een chunklimiet, geen claim over codepointwaarde.
+**Antwoord:** ✅ 256 volgt uit 8×8×4.
+- 8×8 = 64 cellen (routingfundament, 6-bit)
+- 4 = quad-state uitbreiding (2² = 2 extra bits)
+- 256 = 64 × 4 = 2⁸ (volledige 8-bit blokruimte)
+- De *eenheid* is keuze (Unicode-codepoints), de *structuur* is 256
+- Sluit aan op stap 07: 256 = structuur van het medium
 Pipeline: blok → NFC → UTF-8 bytes → SHA-256 → [:3] hex → mod 40_hex → cel.
 Byte-ontleding (2+6) geldt per UTF-8 byte, niet per codepoint.
 
@@ -165,9 +195,11 @@ Byte-ontleding (2+6) geldt per UTF-8 byte, niet per codepoint.
 
 ```
 ✅ Geldig (na herstel)
-Reden: BLOCK_SIZE = 256 codepoints (chunklimiet).
+Reden: BLOCK_SIZE = 256 codepoints (8×8×4 structuur).
+De eenheid is keuze (Unicode-codepoints); de structuur is 256.
 Codepointwaarde = U+0000–U+10FFFF (inhoudsruimte).
 Pipeline: blok → NFC → UTF-8 → SHA-256 → [:3] → mod 40_hex → cel.
 Byte-ontleding (2 veld + 6 route) geldt per UTF-8 byte.
 Laatste blok mag korter. Geen data-verlies.
+Compatibel met stap 07: 256 = structuur van het medium.
 ```
