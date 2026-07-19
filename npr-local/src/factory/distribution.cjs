@@ -27,7 +27,7 @@ class DistributionLayer {
     const verdict = record?.evaluation?.finalVerdict || 'pass';
     const route = this.selectRoute(output, record, verdict);
     
-    const result = {
+    let result = {
       route,
       rankingRule: this.getRankingRule(route),
       selectedOutput: output,
