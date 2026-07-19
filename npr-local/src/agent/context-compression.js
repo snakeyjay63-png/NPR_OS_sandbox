@@ -918,6 +918,7 @@ module.exports = {
   quickCompress,
   quickŚūnya,
   estimateTokens,
-  ratioToHexaSlot,
+  capacityRatioToHexaSlot,
+  ratioToHexaSlot, // @deprecated → capacityRatioToHexaSlot
   DEFAULT_CONFIG,
 };
