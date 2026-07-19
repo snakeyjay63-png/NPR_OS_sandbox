@@ -16,12 +16,16 @@ const PKG = require('../package.json');
 const log = require('./log');
 const { createServer, ticks } = require('./interface/gateway');
 const { register, manifest, parseSlot } = require('./routes/core');
-const { handleAgentChat, handleAgentChatStream, getCurrentWorkspace, setCurrentWorkspace, listSessions, forkSession, mergeSessions, getContextBreath } = require('./agent/loop');
+const { handleAgentChat, handleAgentChatStream, getCurrentWorkspace, setCurrentWorkspace, listSessions, forkSession, mergeSessions, getContextBreath, toolRegistry } = require('./agent/loop');
 const { registerMap } = require('./routes/map-registry');
 const { getContextForRoute, listWarehouse, PHASE_CONTEXT } = require('./memory/context');
 const { discoverMaps } = require('./routes/map-to-ipv6');
 const { selectByGoal, listCapabilities, routeCapability } = require('./routes/capabilities');
 const BrowserBridge = require('./net/browser-bridge');
+const RuntimeMonitor = require('./runtime-monitor.cjs');
+
+// ─── Runtime Monitor (live event bus) ───
+const runtimeMonitor = new RuntimeMonitor();
 
 // ─── Config ───
 
@@ -78,7 +82,10 @@ async function boot() {
 
   // ─── Agent routes (slot 0x10–0x1F: Pattern phase) ───
   register(0x10, '/agent/chat', handleAgentChat);
-  register(0x11, '/agent/chat-stream', handleAgentChatStream);
+  register(0x11, '/agent/chat-stream', async (req, res) => {
+    runtimeMonitor.publish('chat:stream-start');
+    await handleAgentChatStream(req, res);
+  });
   register(0x12, '/agent/workspace', (req, res) => {
     if (req.method === 'GET') {
       res.json({ workspace: getCurrentWorkspace() });
@@ -186,7 +193,31 @@ async function boot() {
   const modelRoutes = require('./routes/models');
   register(0x1D, '/models', modelRoutes.handlerModels);
   register(0x1D, '/models/metrics', modelRoutes.handlerModelMetrics);
-  register(0x1D, '/models/switch', modelRoutes.handlerSwitchModel);
+  register(0x1D, '/models/switch', async (req, res) => {
+    const result = await modelRoutes.handlerSwitchModel(req, res);
+    if (res.statusCode === 200 && result && result.to) {
+      runtimeMonitor.publish('model:switch', { from: result.from, to: result.to });
+    }
+  });
+
+  // GET /models/endpoints — load balancer endpoint health
+  register(0x1D, '/models/endpoints', async (req, res) => {
+    const statuses = await modelRoutes.getEndpointStatuses();
+    res.json({
+      endpoints: statuses,
+      strategy: 'round-robin',
+      total: statuses.length,
+    });
+  });
+
+  // ─── System Dashboard (local monitoring) ───
+  const dashboardRoutes = require('./routes/dashboard');
+  register(0x1E, '/system', dashboardRoutes.handlerDashboard);
+  register(0x1E, '/system/data', dashboardRoutes.handlerDashboardData);
+  register(0x1E, '/system/hex-grid', dashboardRoutes.handlerHexGrid);
+  register(0x1E, '/system/sessions', dashboardRoutes.handlerDashboardSessions);
+  register(0x1E, '/system/tools', dashboardRoutes.handlerDashboardTools);
+  register(0x1E, '/system/metrics/timeseries', dashboardRoutes.handlerDashboardMetricsTimeSeries);
 
   // ─── Session Management ───
   // GET /sessions — list all persisted sessions
@@ -422,6 +453,107 @@ async function boot() {
   // GET /memory/search?q= — memory search (openclaw memory search)
   register(0x16, '/memory/search', require('./routes/memory-search').handler);
 
+  // ─── Daily Memory Routes ───
+  const memoryRoutes = require('./routes/memory');
+
+  // GET/POST /memory/daily — today + yesterday / write entry
+  register(0x36, '/memory/daily', (req, res) => {
+    if (req.method === 'GET') return memoryRoutes.getDaily(req, res);
+    if (req.method === 'POST') return memoryRoutes.postDaily(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // GET /memory/daily/:dateStr — specific date
+  register(0x36, '/memory/daily/:dateStr', (req, res) => {
+    if (req.method === 'GET') return memoryRoutes.getDaily(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // POST /memory/daily/batch — batch write
+  register(0x36, '/memory/daily/batch', (req, res) => {
+    if (req.method === 'POST') return memoryRoutes.postDailyBatch(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // GET /memory/daily/search — search daily files
+  register(0x36, '/memory/daily/search', (req, res) => {
+    if (req.method === 'GET') return memoryRoutes.searchDaily(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // Auto-promote routes
+  register(0x36, '/memory/promote/candidates', (req, res) => {
+    if (req.method === 'GET') return memoryRoutes.getPromoteCandidates(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  register(0x36, '/memory/promote', (req, res) => {
+    if (req.method === 'POST') return memoryRoutes.postPromote(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // Git hexa memory routes
+  register(0x36, '/memory/git/index', (req, res) => memoryRoutes.getGitIndex(req, res));
+  register(0x36, '/memory/git/timeline', (req, res) => memoryRoutes.getGitTimeline(req, res));
+  register(0x36, '/memory/git/search', (req, res) => memoryRoutes.searchGitMemory(req, res));
+  register(0x36, '/memory/stats', (req, res) => memoryRoutes.getDailyStats(req, res));
+
+  // ─── Queue Routes (0x37) ───
+  const queueRoutes = require('./routes/queue');
+  register(0x37, '/queue/status', (req, res) => {
+    if (req.method === 'GET') return queueRoutes.getStatus(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/items', (req, res) => {
+    if (req.method === 'GET') return queueRoutes.getItems(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/items/:id', (req, res) => {
+    if (req.method === 'GET') return queueRoutes.getItem(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/enqueue', (req, res) => {
+    if (req.method === 'POST') {
+      runtimeMonitor.publish('queue:enqueue', { body: req.body });
+      return queueRoutes.enqueue(req, res);
+    }
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/pause', (req, res) => {
+    if (req.method === 'POST') return queueRoutes.pause(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/resume', (req, res) => {
+    if (req.method === 'POST') return queueRoutes.resume(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+  register(0x37, '/queue/clear', (req, res) => {
+    if (req.method === 'POST') return queueRoutes.clear(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  });
+
+  // ─── PLC Taalveld Routes (0x38) ───
+  const plcRoutes = require('./routes/plc.cjs');
+  register(0x38, '/plc/parse', async (req, res) => {
+    runtimeMonitor.publish('plc:parse', { method: req.method });
+    return plcRoutes.handlerParse(req, res);
+  });
+  register(0x38, '/plc/parse-ladder', plcRoutes.handlerParseLadder);
+  register(0x38, '/plc/convert', plcRoutes.handlerConvert);
+  register(0x38, '/plc/io-map', plcRoutes.handlerIoMap);
+  register(0x38, '/plc/trace', plcRoutes.handlerTrace);
+  register(0x38, '/plc/analyze', plcRoutes.handlerAnalyze);
+  register(0x38, '/plc/fault-tree', plcRoutes.handlerFaultTree);
+  register(0x38, '/plc/status', plcRoutes.handlerStatus);
+
+  // ─── Runtime Events (0x39) ───
+  const { openRuntimeEventStream, handleRuntimeREST } = require('./routes/runtime-events');
+  register(0x39, '/api/runtime/stream', openRuntimeEventStream(runtimeMonitor));
+  register(0x39, '/api/runtime/snapshot', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+  register(0x39, '/api/runtime/sessions', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+  register(0x39, '/api/runtime/slots', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+  register(0x39, '/api/runtime/events', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+
   // GET /doctor — self-diagnose + repair (openclaw doctor)
   register(0x17, '/doctor', require('./routes/doctor').handler);
 
@@ -500,6 +632,7 @@ async function boot() {
       }
     } else {
       // POST/PUT → fall through to handleAgentChat (priority 16)
+      runtimeMonitor.publish('chat:inbound', { method: req.method });
       handleAgentChat(req, res);
     }
   });
@@ -735,6 +868,68 @@ async function boot() {
     res.json({ island: '0.0.0.0', capabilities: listCapabilities() });
   });
 
+  // ─── Tool Registry (dynamic capabilities) ───
+  register(0x3B, '/tools', (req, res, ctx) => {
+    if (req.method === 'GET') {
+      const risk = ctx.url.searchParams.get('risk');
+      const source = ctx.url.searchParams.get('source');
+      const filter = risk ? { risk } : source ? { source } : {};
+      res.json({ tools: toolRegistry.list(filter), count: toolRegistry.list(filter).length });
+    } else if (req.method === 'POST') {
+      const tool = req.body;
+      try {
+        toolRegistry.register(tool);
+        runtimeMonitor.publish('tool:register', { name: tool.name, capabilities: tool.capabilities });
+        res.json({ registered: tool.name, capabilities: tool.capabilities });
+      } catch (e) {
+        res.status(400).json({ error: e.message });
+      }
+    }
+  });
+
+  register(0x3B, '/tools/:name', (req, res, ctx) => {
+    const name = ctx.params.name;
+    if (req.method === 'GET') {
+      const tool = toolRegistry.get(name);
+      if (!tool) return res.status(404).json({ error: 'Tool not found' });
+      res.json(tool);
+    } else if (req.method === 'DELETE') {
+      const removed = toolRegistry.unregister(name);
+      runtimeMonitor.publish('tool:unregister', { name });
+      res.json({ removed, name });
+    } else if (req.method === 'PATCH') {
+      const { enabled } = req.body;
+      const tool = toolRegistry.get(name);
+      if (!tool) return res.status(404).json({ error: 'Tool not found' });
+      tool.enabled = enabled ?? tool.enabled;
+      runtimeMonitor.publish('tool:toggle', { name, enabled: tool.enabled });
+      res.json({ name, enabled: tool.enabled });
+    }
+  });
+
+  register(0x3B, '/tools/available', (req, res) => {
+    res.json({ tools: toolRegistry.available() });
+  });
+
+  register(0x3B, '/capabilities/policy', (req, res) => {
+    if (req.method === 'GET') {
+      res.json(toolRegistry.policy());
+    } else if (req.method === 'POST') {
+      const { capability, action } = req.body;
+      if (!capability || !action) return res.status(400).json({ error: 'capability + action required' });
+      if (action === 'allow') {
+        if (!toolRegistry.allow(capability)) return res.status(404).json({ error: 'Unknown capability' });
+        runtimeMonitor.publish('policy:allow', { capability });
+      } else if (action === 'deny') {
+        toolRegistry.deny(capability);
+        runtimeMonitor.publish('policy:deny', { capability });
+      } else {
+        return res.status(400).json({ error: 'action must be allow or deny' });
+      }
+      res.json(toolRegistry.policy());
+    }
+  });
+
   register(0x3E, '/select', (req, res, ctx) => {
     const goal = ctx.url.searchParams.get('goal') || 'geen doel';
     res.json({ goal, selection: selectByGoal(goal) });
@@ -749,6 +944,8 @@ async function boot() {
       if (!sourceId) return res.status(400).json({ error: 'sourceId required' });
       const forked = forkSession(sourceId, newId);
       if (!forked) return res.status(404).json({ error: 'source session not found' });
+      runtimeMonitor.trackSession(forked.id, { source: sourceId, turns: 0 });
+      runtimeMonitor.publish('session:fork', { source: sourceId, target: forked.id });
       res.json({ forked, newId: forked.id });
     }
   });

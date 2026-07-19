@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPR Local — Chat</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#101418;color:#eef4f8;min-height:100vh;display:flex;flex-direction:column}
+
+/* ─── Header ─── */
+.header{padding:10px 20px;border-bottom:1px solid rgba(148,163,184,.12);display:flex;justify-content:space-between;align-items:center;position:relative}
+.header h1{font-size:.95rem;font-weight:600}
+.header nav{display:flex;align-items:center;gap:12px}
+.header a{color:#8bd3ff;text-decoration:none;font-size:.78rem}
+.header a:hover{text-decoration:underline}
+.btn-restart{background:none;border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:3px 10px;font-size:.75rem;cursor:pointer}
+.btn-restart:hover{background:rgba(248,113,113,.1)}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.status-dot.green{background:#4ade80}.status-dot.red{background:#f87171}.status-dot.yellow{background:#facc15}
+
+/* ─── Layout ─── */
+.layout{flex:1;display:flex;overflow:hidden}
+
+/* ─── Sidebar ─── */
+.sidebar{width:220px;min-width:220px;border-right:1px solid rgba(148,163,184,.12);display:flex;flex-direction:column;background:#0c1014}
+.sidebar-header{padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,.08)}
+.sidebar-header h2{font-size:.72rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em}
+.btn-new{background:none;border:1px solid rgba(139,211,255,.3);color:#8bd3ff;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer}
+.btn-new:hover{background:rgba(139,211,255,.1)}
+.session-list{flex:1;overflow-y:auto;padding:6px}
+.session-item{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;flex-direction:column;gap:2px}
+.session-item:hover{background:rgba(148,163,184,.08)}
+.session-item.active{background:rgba(139,211,255,.1);border:1px solid rgba(139,211,255,.15)}
+.session-item .sid{font-size:.76rem;font-weight:600;color:#c8d6e0;display:flex;justify-content:space-between}
+.session-item .sdel{color:#f87171;font-size:.7rem;opacity:.5;cursor:pointer}
+.session-item .sdel:hover{opacity:1}
+.session-item .sinfo{font-size:.62rem;color:#6b7b8a;display:flex;gap:6px}
+
+/* ─── Main Chat ─── */
+.chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
+
+/* ─── Context Bar ─── */
+.ctx-bar{padding:6px 20px;border-bottom:1px solid rgba(148,163,184,.08);display:flex;gap:16px;align-items:center;font-size:.68rem;color:#6b7b8a;background:#0c1014}
+.ctx-item{display:flex;align-items:center;gap:4px}
+.ctx-val{color:#c8d6e0;font-variant-numeric:tabular-nums}
+.ctx-bar-wrap{width:70px;height:5px;background:#1a2027;border-radius:3px;overflow:hidden}
+.ctx-bar-fill{height:100%;border-radius:3px;transition:width .3s ease}
+.ctx-bar-fill.green{background:#4ade80}.ctx-bar-fill.yellow{background:#facc15}.ctx-bar-fill.red{background:#f87171}
+
+/* ─── Messages ─── */
+.container{flex:1;display:flex;flex-direction:column;max-width:820px;width:100%;margin:0 auto;padding:16px 24px}
+.messages{flex:1;overflow-y:auto;padding:8px 0 16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:.85rem;line-height:1.55;word-wrap:break-word;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:#8bd3ff;color:#061019;border-bottom-right-radius:2px}
+.msg.assistant{align-self:flex-start;background:#1a2027;border:1px solid rgba(148,163,184,.2);border-bottom-left-radius:2px}
+.msg .meta{font-size:.62rem;color:#6b7b8a;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.msg.assistant .meta{color:#9fb0bd}
+.msg .meta span{display:inline-flex;align-items:center;gap:2px}
+.msg pre{background:#0d1117;border:1px solid rgba(148,163,184,.15);border-radius:6px;padding:8px 12px;margin:6px 0;overflow-x:auto;font-size:.78rem;line-height:1.4}
+.msg code{font-family:'Fira Code',monospace;font-size:.8em}
+.msg p{margin:4px 0}
+
+/* ─── Input ─── */
+.input-area{padding:12px 0 16px;border-top:1px solid rgba(148,163,184,.12);display:flex;gap:10px;max-width:820px;width:100%;margin:0 auto}
+.input-area textarea{flex:1;background:#1a2027;border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:10px 14px;color:#eef4f8;font:inherit;font-size:.85rem;resize:none;min-height:40px;max-height:150px;line-height:1.4}
+.input-area textarea:focus{outline:2px solid #8bd3ff;outline-offset:1px}
+.input-area button{border:none;border-radius:8px;padding:0 18px;background:#8bd3ff;color:#061019;font:inherit;font-weight:600;cursor:pointer;font-size:.85rem;white-space:nowrap;align-self:flex-end}
+.input-area button:hover{background:#66c2ff}
+.input-area button:disabled{opacity:.5;cursor:not-allowed}
+
+/* ─── Floating Buttons ─── */
+.float-btn{position:fixed;z-index:99;background:#1a2027;border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:6px 12px;font-size:.75rem;cursor:pointer;color:#eef4f8}
+.float-btn:hover{background:#222830}
+
+/* ─── Tool Panel ─── */
+.tool-panel{position:fixed;bottom:80px;right:24px;width:280px;max-height:380px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.tool-panel.open{display:flex}
+.panel-header{padding:8px 12px;background:#1a2027;border-bottom:1px solid rgba(148,163,184,.12);font-size:.7rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.panel-header button{background:none;border:none;color:#8bd3ff;cursor:pointer;font-size:.7rem}
+.tool-panel-list{flex:1;overflow-y:auto;padding:4px}
+.tool-item{padding:6px 10px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.tool-item:hover{background:rgba(139,211,255,.08)}
+.tool-item .tname{font-size:.76rem;font-weight:600;color:#c8d6e0}
+.tool-item .tdesc{font-size:.62rem;color:#6b7b8a}
+.tool-item .tusage{font-size:.6rem;color:#8bd3ff;font-family:monospace}
+
+/* ─── Autocomplete ─── */
+.autocomplete{position:fixed;bottom:140px;right:24px;width:300px;max-height:200px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:8px;overflow:hidden;z-index:101;display:none;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.autocomplete.open{display:flex}
+.ac-item{padding:6px 12px;font-size:.73rem;color:#c8d6e0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.ac-item:hover,.ac-item.active{background:rgba(139,211,255,.12)}
+.ac-item .ac-label{font-weight:600;color:#8bd3ff}
+.ac-item .ac-desc{font-size:.62rem;color:#6b7b8a}
+
+/* ─── File Browser ─── */
+.file-browser{position:fixed;bottom:80px;left:24px;width:320px;max-height:420px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.file-browser.open{display:flex}
+.fb-path{padding:5px 12px;font-size:.62rem;font-family:monospace;color:#6b7b8a;border-bottom:1px solid rgba(148,163,184,.08);background:#0d1117;display:flex;gap:4px;align-items:center;overflow-x:auto;white-space:nowrap}
+.fb-path-seg{color:#8bd3ff;cursor:pointer;text-decoration:underline}
+.fb-path-seg:hover{color:#c8d6e0}
+.fb-path-sep{color:#4a5568}
+.fb-list{flex:1;overflow-y:auto;padding:4px}
+.fb-item{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.73rem;color:#c8d6e0}
+.fb-item:hover{background:rgba(139,211,255,.08)}
+.fb-item .fb-icon{font-size:.85rem;width:16px;text-align:center}
+.fb-item .fb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fb-item .fb-size{font-size:.6rem;color:#4a5568;font-family:monospace}
+.fb-item.dir .fb-icon{color:#facc15}
+.fb-item.file .fb-icon{color:#60a5fa}
+
+/* ─── Responsive ─── */
+@media(max-width:600px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;min-width:100%;max-height:140px;border-right:none;border-bottom:1px solid rgba(148,163,184,.12)}
+  .session-list{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px}
+  .session-item{min-width:130px;flex-shrink:0}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>• NPR Local Chat <span id="statusLabel" style="font-weight:400;font-size:.7rem;color:#9fb0bd;margin-left:8px"><span class="status-dot yellow"></span>Connecting</span></h1>
+  <nav>
+    <a href="/enter">Enter</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/config">Config</a>
+    <button class="btn-restart" onclick="restartServer()">⟳ Restart</button>
+  </nav>
+</div>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Sessions</h2>
+      <button class="btn-new" onclick="createSession()">+ New</button>
+    </div>
+    <div class="session-list" id="sessionList"></div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat-main">
+    <div class="ctx-bar">
+      <div class="ctx-item">Ctx: <span class="ctx-val" id="ctxTokens">0</span>/<span id="ctxMax">32768</span></div>
+      <div class="ctx-bar-wrap"><div class="ctx-bar-fill green" id="ctxFill" style="width:0%"></div></div>
+      <div class="ctx-item">Messages: <span class="ctx-val" id="msgCount">0</span></div>
+    </div>
+
+    <div class="container">
+      <div class="messages" id="messages"></div>
+      <div class="input-area">
+        <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
+        <button id="sendBtn" onclick="sendMessage()">→</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Floating Buttons -->
+<button class="float-btn" style="bottom:140px;left:24px;color:#facc15" onclick="toggleFileBrowser()">📁 Files</button>
+<button class="float-btn" style="bottom:140px;right:24px;color:#8bd3ff" onclick="toggleToolPanel()">🔧 Tools</button>
+
+<!-- File Browser -->
+<div class="file-browser" id="fileBrowser">
+  <div class="panel-header"><span>📁 Files</span><button onclick="toggleFileBrowser()">✕</button></div>
+  <div class="fb-path" id="fbPath"></div>
+  <div class="fb-list" id="fbList"></div>
+</div>
+
+<!-- Tool Panel -->
+<div class="tool-panel" id="toolPanel">
+  <div class="panel-header"><span>• Tools</span><button onclick="toggleToolPanel()">✕</button></div>
+  <div class="tool-panel-list" id="toolPanelList"></div>
+</div>
+
+<!-- Autocomplete -->
+<div class="autocomplete" id="autocomplete"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   State
+   ═══════════════════════════════════════════ */
+const STORAGE_KEY = 'npr-chat-sessions';
+const ACTIVE_KEY  = 'npr-chat-active';
+const DEFAULT_CTX = 32768;
+
+const msgs    = document.getElementById('messages');
+const input   = document.getElementById('input');
+const sendBtn = document.getElementById('sendBtn');
+
+let currentSSE = null;
+let currentBrowseDir = null;
+let availableTools = [];
+let acIndex = 0;
+
+/* ═══════════════════════════════════════════
+   Sessions
+   ═══════════════════════════════════════════ */
+function loadSessions() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveSessions(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+function getActiveId()  { return localStorage.getItem(ACTIVE_KEY); }
+function setActiveId(id){ localStorage.setItem(ACTIVE_KEY, id); }
+
+function getOrCreateSession() {
+  let sid = getActiveId();
+  let sessions = loadSessions();
+  if (!sid || !sessions[sid]) {
+    sid = 'sess-' + Date.now().toString(16).slice(-8);
+    sessions[sid] = { id: sid, name: 'Chat ' + (Object.keys(sessions).length + 1), created: Date.now(), messages: [], tokens: 0 };
+    saveSessions(sessions); setActiveId(sid);
+  }
+  return sid;
+}
+
+function createSession() {
+  const sessions = loadSessions();
+  const sid = 'sess-' + Date.now().toString(16).slice(-8);
+  sessions[sid] = { id: sid, name: 'Chat ' + (Object.keys(sessions).length + 1), created: Date.now(), messages: [], tokens: 0 };
+  saveSessions(sessions); setActiveId(sid);
+  switchSession(sid);
+}
+
+function deleteSession(sid, e) {
+  e.stopPropagation();
+  const sessions = loadSessions();
+  delete sessions[sid];
+  saveSessions(sessions);
+  if (getActiveId() === sid) {
+    const remaining = Object.keys(sessions);
+    setActiveId(remaining[0] || null);
+    switchSession(remaining[0] || createSession());
+  }
+  renderSessionList();
+}
+
+function switchSession(sid) {
+  setActiveId(sid);
+  renderSessionList();
+  loadSessionMessages();
+  updateContextBar();
+}
+
+function renderSessionList() {
+  const sessions = loadSessions();
+  const activeId = getActiveId();
+  const list = document.getElementById('sessionList');
+  list.innerHTML = '';
+
+  Object.values(sessions)
+    .sort((a, b) => b.created - a.created)
+    .forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'session-item' + (s.id === activeId ? ' active' : '');
+      div.onclick = () => switchSession(s.id);
+      const mc = s.messages ? s.messages.length : 0;
+      const tk = s.tokens || 0;
+      const tm = new Date(s.created).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+      div.innerHTML = `<div class="sid">${esc(s.name)} <span class="sdel" onclick="deleteSession('${s.id}', event)">✕</span></div>
+        <div class="sinfo"><span>💬 ${mc}</span><span>🔢 ${tk}t</span><span>🕐 ${tm}</span></div>`;
+      list.appendChild(div);
+    });
+}
+
+function loadSessionMessages() {
+  const sid = getActiveId();
+  const session = loadSessions()[sid];
+  if (!session) return;
+  msgs.innerHTML = '';
+  (session.messages || []).forEach(m => appendMsg(m.role, m.content, m.meta));
+}
+
+function updateContextBar() {
+  const session = loadSessions()[getActiveId()];
+  if (!session) return;
+  const tokens = session.tokens || 0;
+  const mc = session.messages ? session.messages.length : 0;
+  const pct = Math.min((tokens / DEFAULT_CTX) * 100, 100);
+
+  document.getElementById('ctxTokens').textContent = tokens;
+  document.getElementById('msgCount').textContent = mc;
+  const fill = document.getElementById('ctxFill');
+  fill.style.width = pct + '%';
+  fill.className = 'ctx-bar-fill ' + (pct < 70 ? 'green' : pct < 90 ? 'yellow' : 'red');
+}
+
+/* ═══════════════════════════════════════════
+   Messages
+   ═══════════════════════════════════════════ */
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function renderContent(text) {
+  // Basic markdown: code blocks, inline code, paragraphs
+  let html = esc(text);
+  // Code blocks
+  html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Paragraphs (double newline)
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  if (!html.startsWith('<pre') && !html.startsWith('</p>')) html = '<p>' + html + '</p>';
+  return html;
+}
+
+function appendMsg(role, text, meta) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = renderContent(text);
+  if (meta) {
+    const m = document.createElement('div');
+    m.className = 'meta';
+    m.innerHTML = meta.split('|').map(s => '<span>' + s.trim() + '</span>').join('');
+    div.appendChild(m);
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function countTokens(text) {
+  return Math.ceil(text.length / 4);
+}
+
+function setStatus(status, color) {
+  document.getElementById('statusLabel').innerHTML = '<span class="status-dot ' + color + '"></span>' + status;
+}
+
+/* ═══════════════════════════════════════════
+   Send (streaming)
+   ═══════════════════════════════════════════ */
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+  if (!session) return;
+
+  // Save user message
+  session.messages.push({ role: 'user', content: text });
+  session.tokens += countTokens(text);
+  saveSessions(sessions);
+
+  appendMsg('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  // Single assistant div — starts with thinking indicator
+  const div = appendMsg('assistant', '●');
+  const contentEl = div.childNodes[0]; // the <p> with text
+  let fullText = '';
+  let slot = '?', model = '', tokenCount = 0;
+  const startTime = Date.now();
+
+  try {
+    currentSSE = new EventSourcePOST('/agent/chat-stream', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, sessionId: sid }),
+      onmessage(e) {
+        try {
+          const d = JSON.parse(e.data);
+          if (d.type === 'route') {
+            slot = d.slot; model = d.model;
+            contentEl.innerHTML = ''; // clear thinking dots
+          } else if (d.type === 'token') {
+            fullText += d.content;
+            contentEl.innerHTML = renderContent(fullText);
+            tokenCount = d.tokenCount || (tokenCount + 1);
+            msgs.scrollTop = msgs.scrollHeight;
+          } else if (d.type === 'done') {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            fullText = d.content || fullText;
+            tokenCount = d.tokenCount || tokenCount;
+            contentEl.innerHTML = renderContent(fullText);
+
+            // Meta
+            const metaStr = tokenCount + ' tok | ' + elapsed + 's | slot ' + slot + ' | ' + model;
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.innerHTML = metaStr.split('|').map(s => '<span>' + s.trim() + '</span>').join('');
+            div.appendChild(meta);
+
+            // Save
+            session.messages.push({ role: 'assistant', content: fullText, meta: metaStr });
+            session.tokens += tokenCount;
+            saveSessions(sessions);
+            updateContextBar();
+            renderSessionList();
+
+            currentSSE.close();
+            setStatus('Online', 'green');
+          }
+        } catch {}
+      },
+      onerror() {
+        currentSSE.close();
+        contentEl.innerHTML = '⚠ Stream error';
+        setStatus('Offline', 'red');
+      }
+    });
+  } catch (e) {
+    contentEl.innerHTML = 'Error: ' + e.message;
+    setStatus('Offline', 'red');
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+  updateContextBar();
+  renderSessionList();
+}
+
+/* ═══════════════════════════════════════════
+   EventSource POST polyfill
+   ═══════════════════════════════════════════ */
+class EventSourcePOST {
+  constructor(url, opts = {}) {
+    this.url = url;
+    this.opts = opts;
+    this.closed = false;
+
+    fetch(this.url, { method: 'POST', headers: opts.headers, body: opts.body })
+      .then(async resp => {
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (!this.closed) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              opts.onmessage?.({ data: line.slice(6) });
+            }
+          }
+        }
+      }).catch(() => opts.onerror?.());
+  }
+  close() { this.closed = true; }
+}
+
+/* ═══════════════════════════════════════════
+   File Browser
+   ═══════════════════════════════════════════ */
+function toggleFileBrowser() {
+  const fb = document.getElementById('fileBrowser');
+  fb.classList.toggle('open');
+  if (fb.classList.contains('open') && !currentBrowseDir) {
+    browseDir('/home/claw/.openclaw/workspace');
+  }
+}
+
+function renderBreadcrumb(dir) {
+  const parts = dir.split('/').filter(Boolean);
+  let html = '<span class="fb-path-seg" onclick="browseDir(\'/\')">/</span>';
+  let acc = '';
+  for (const p of parts) {
+    acc += '/' + p;
+    html += '<span class="fb-path-sep">›</span><span class="fb-path-seg" onclick="browseDir(\'' + acc + '\')">' + p + '</span>';
+  }
+  document.getElementById('fbPath').innerHTML = html;
+}
+
+async function browseDir(dir) {
+  try {
+    const res = await fetch('/filesystem/browse?path=' + encodeURIComponent(dir));
+    const data = await res.json();
+    if (data.error) {
+      document.getElementById('fbList').innerHTML = '<div class="fb-item" style="color:#f87171">⚠ ' + esc(data.error) + '</div>';
+      return;
+    }
+    currentBrowseDir = data.dir;
+    renderBreadcrumb(data.dir);
+    document.getElementById('fbList').innerHTML = data.items.map(item => {
+      const icon = item.type === 'dir' ? '📁' : '📄';
+      const size = item.type === 'file' ? fmtSize(item.size) : '';
+      return '<div class="fb-item ' + item.type + '" onclick="handleFileClick(\'' + item.type + '\',\'' + esc(item.path) + '\')">' +
+        '<span class="fb-icon">' + icon + '</span>' +
+        '<span class="fb-name">' + esc(item.name) + '</span>' +
+        '<span class="fb-size">' + size + '</span></div>';
+    }).join('');
+  } catch (e) {
+    document.getElementById('fbList').innerHTML = '<div class="fb-item" style="color:#f87171">⚠ ' + esc(e.message) + '</div>';
+  }
+}
+
+function handleFileClick(type, path) {
+  if (type === 'dir') {
+    browseDir(path);
+  } else {
+    input.value = 'tool:read ' + path + ' ';
+    input.focus();
+    document.getElementById('fileBrowser').classList.remove('open');
+  }
+}
+
+function fmtSize(b) {
+  if (b < 1024) return b + 'B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + 'KB';
+  return (b / 1048576).toFixed(1) + 'MB';
+}
+
+/* ═══════════════════════════════════════════
+   Tools
+   ═══════════════════════════════════════════ */
+async function loadTools() {
+  try {
+    const res = await fetch('/tools');
+    const data = await res.json();
+    availableTools = data.tools || [];
+    renderToolPanel();
+  } catch (e) { console.warn('[tools]', e.message); }
+}
+
+function renderToolPanel() {
+  document.getElementById('toolPanelList').innerHTML = availableTools.map(t =>
+    '<div class="tool-item" onclick="insertTool(\'' + t.id + '\')">' +
+      '<span class="tname">' + esc(t.name) + '</span>' +
+      '<span class="tdesc">' + esc(t.desc) + '</span>' +
+      '<span class="tusage">' + esc(t.usage) + '</span></div>'
+  ).join('');
+}
+
+function toggleToolPanel() {
+  document.getElementById('toolPanel').classList.toggle('open');
+  document.getElementById('autocomplete').classList.remove('open');
+}
+
+function insertTool(id) {
+  const tool = availableTools.find(t => t.id === id);
+  if (!tool) return;
+  input.value = tool.usage.replace('<', '').replace('>', '') + ' ';
+  input.focus();
+  toggleToolPanel();
+}
+
+/* ═══════════════════════════════════════════
+   Autocomplete
+   ═══════════════════════════════════════════ */
+input.addEventListener('input', () => {
+  const val = input.value.trim();
+  if (val.startsWith('tool:')) {
+    const rest = val.slice(5).trim().toLowerCase();
+    const matches = availableTools.filter(t =>
+      t.id.toLowerCase().includes(rest) || t.name.toLowerCase().includes(rest)
+    );
+    if (matches.length > 0) {
+      acIndex = 0;
+      renderAC(matches);
+    } else {
+      document.getElementById('autocomplete').classList.remove('open');
+    }
+  } else {
+    document.getElementById('autocomplete').classList.remove('open');
+  }
+});
+
+input.addEventListener('keydown', (e) => {
+  const ac = document.getElementById('autocomplete');
+  if (!ac.classList.contains('open')) return;
+  const items = ac.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    acIndex = (acIndex + 1) % items.length;
+    highlightAC(items, acIndex);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    acIndex = (acIndex - 1 + items.length) % items.length;
+    highlightAC(items, acIndex);
+  } else if (e.key === 'Tab' || (e.key === 'Enter' && acIndex >= 0)) {
+    e.preventDefault();
+    const usage = items[acIndex]?.dataset?.usage;
+    if (usage) {
+      input.value = usage + ' ';
+      input.focus();
+      ac.classList.remove('open');
+    }
+  }
+});
+
+function highlightAC(items, idx) {
+  items.forEach(i => i.classList.remove('active'));
+  items[idx]?.classList.add('active');
+}
+
+function renderAC(matches) {
+  document.getElementById('autocomplete').innerHTML = matches.map(t =>
+    '<div class="ac-item" data-usage="' + esc(t.usage) + '" onclick="input.value=this.dataset.usage+\' \';input.focus();document.getElementById(\'autocomplete\').classList.remove(\'open\')">' +
+      '<span class="ac-label">tool:' + esc(t.id) + '</span>' +
+      '<span class="ac-desc">' + esc(t.desc) + '</span></div>'
+  ).join('');
+  document.getElementById('autocomplete').classList.add('open');
+}
+
+/* ═══════════════════════════════════════════
+   Server Restart
+   ═══════════════════════════════════════════ */
+async function restartServer() {
+  if (!confirm('NPR-Local herstarten?')) return;
+  setStatus('Restarting...', 'yellow');
+  try { await fetch('/system/restart', { method: 'POST' }); } catch {}
+  const iv = setInterval(async () => {
+    try { await fetch('/health'); clearInterval(iv); location.reload(); } catch {}
+  }, 2000);
+}
+
+/* ═══════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════ */
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 150) + 'px';
+});
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+(async () => {
+  getOrCreateSession();
+  renderSessionList();
+  loadSessionMessages();
+  updateContextBar();
+  loadTools();
+
+  try {
+    const r = await fetch('/health');
+    const d = await r.json();
+    setStatus('Online', 'green');
+    appendMsg('assistant', 'NPR-OS ready | state: ' + (d.state || 'active') + '.', '');
+  } catch {
+    setStatus('Offline', 'red');
+  }
+})();
+</script>
+</body>
+</html>

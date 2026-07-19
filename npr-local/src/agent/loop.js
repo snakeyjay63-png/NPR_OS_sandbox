@@ -18,6 +18,10 @@ const { scanWorkspace, buildContextString } = require('../workspace-context');
 const { ContextBreath } = require('./context-breathe');
 const { parseToolCalls, detectResponseType, toolCallHash } = require('./tool-call-parser');
 const { ToolLoopGuard } = require('./tool-loop-guard');
+const { ToolRegistry } = require('../capability-registry.cjs');
+
+// Shared tool registry instance (capability policy engine)
+const toolRegistry = new ToolRegistry();
 
 // ─── Agent Event Sink (OpenClaw pattern: agent-loop.ts) ───
 // Lifecycle events: agent_start → turn_start → message_start/end → tool_* → turn_end → agent_end
@@ -100,6 +104,117 @@ const MODEL_API = process.env.MODEL_API || 'http://127.0.0.1:8765/v1/chat/comple
 const GEOWON_API = process.env.GEOWON_API || `http://127.0.0.1:${GEOWON_PORT}`;
 const MAX_HISTORY = 20;
 
+// ─── Load Balancer (deferred require to avoid circular) ───
+// Lazily resolve the endpoint getter at call time
+let _endpointGetter = null;
+function getEndpointGetter() {
+  if (!_endpointGetter) {
+    try {
+      const m = require('../routes/models');
+      _endpointGetter = m.getNextEndpointByStrategy || (() => MODEL_API);
+    } catch {
+      _endpointGetter = () => MODEL_API;
+    }
+  }
+  return _endpointGetter;
+}
+
+// ─── Daily Memory Cache (avoids re-reading every turn) ───
+let dailyMemoryCache = { data: null, timestamp: 0 };
+const DAILY_MEMORY_TTL = 5 * 60 * 1000; // 5 min cache TTL
+
+/**
+ * Get daily memory context (today + yesterday)
+ * Cached for 5 minutes to avoid excessive disk reads
+ */
+function getDailyMemoryContext() {
+  const now = Date.now();
+  if (dailyMemoryCache.data && (now - dailyMemoryCache.timestamp) < DAILY_MEMORY_TTL) {
+    return dailyMemoryCache.data;
+  }
+
+  try {
+    const daily = require('./../memory/daily');
+    const recent = daily.readRecentDailies();
+    dailyMemoryCache = {
+      data: recent,
+      timestamp: now,
+    };
+  } catch (e) {
+    dailyMemoryCache = {
+      data: { today: '', yesterday: '' },
+      timestamp: now,
+    };
+  }
+
+  return dailyMemoryCache.data;
+}
+
+// ─── Auto Memory Write (post-turn) ───
+// Writes a lightweight daily entry after each agent turn
+// @addr 10.03.2.5 | fd00:npr:0003:001::5 — memory auto-write
+let lastPromoteCycle = 0;
+const PROMOTE_INTERVAL = 60 * 60 * 1000; // max 1x per hour
+
+/**
+ * Write a daily entry summarizing the agent turn
+ * Lightweight — runs in background, doesn't block response
+ */
+async function writeDailyEntryForTurn(sessionId, userMessage, assistantResponse, toolTrace) {
+  try {
+    const daily = require('./../memory/daily');
+    const now = new Date().toLocaleTimeString('nl-NL', { timeZone: 'Europe/Amsterdam', hour12: false });
+    
+    // Truncate for brevity
+    const userShort = (userMessage || '').slice(0, 200);
+    const assistantShort = (assistantResponse || '').slice(0, 300);
+    const toolCount = toolTrace ? toolTrace.filter(t => !t.error).length : 0;
+    
+    const entry = {
+      type: 'agent-turn',
+      title: `Turn: ${userShort.slice(0, 60)}${userShort.length > 60 ? '…' : ''}`,
+      content: [assistantShort].join('\n'),
+      tags: toolCount > 0 ? [`tools:${toolCount}`] : [],
+    };
+    
+    daily.writeDailyEntry(entry);
+    
+    // Invalidate cache so next read picks up new content
+    dailyMemoryCache = { data: null, timestamp: 0 };
+  } catch (e) {
+    // Silent fail — memory write should never break the agent loop
+    // console.debug('[memory] auto-write failed:', e.message);
+  }
+}
+
+/**
+ * Run auto-promote cycle (throttled to 1x per hour)
+ * Runs in background after agent loop completes
+ */
+async function runAutoPromote() {
+  const now = Date.now();
+  if (now - lastPromoteCycle < PROMOTE_INTERVAL) {
+    return; // throttle
+  }
+  lastPromoteCycle = now;
+  
+  try {
+    const autoPromote = require('./../memory/auto-promote');
+    const result = autoPromote.runPromoteCycle({
+      daysBack: 14,
+      minCount: 3,
+      maxPromote: 3,
+    });
+    
+    if (result.promoted && result.promoted.length > 0) {
+      console.log(`[memory] auto-promote: ${result.promoted.length} topics promoted`);
+    }
+  } catch (e) {
+    // Silent fail
+    // console.debug('[memory] auto-promote failed:', e.message);
+  }
+}
+
 // ─── System Prompt Builder ───
 
 // @addr 10.03.3.1 | fd00:npr:0003:003::1 — system prompt builder
@@ -177,6 +292,26 @@ ${workspaceContext}
 
 Gebruik deze context als gebruiker over bestanden, projecten, of mappen praat.
 Als de vraag niet relevant is voor deze workspace, negeer deze sectie.`);
+  }
+
+  // Inject daily memory context (today + yesterday)
+  const dailyMem = getDailyMemoryContext();
+  if (dailyMem.today || dailyMem.yesterday) {
+    const memParts = [];
+    if (dailyMem.today) {
+      memParts.push(`### Vandaag (${dailyMem.todayDate})
+${dailyMem.today.slice(0, 1500)}`);
+    }
+    if (dailyMem.yesterday) {
+      memParts.push(`### Gisteren (${dailyMem.yesterdayDate})
+${dailyMem.yesterday.slice(0, 1000)}`);
+    }
+    parts.push(`
+## Dagelijks Geheugen
+${memParts.join('\n\n')}
+
+Dit is je dagelijkse geheugen. Gebruik het als context voor recente gesprekken.
+Als er niets relevant is, negeer deze sectie.`);
   }
 
   return parts.join('\n');
@@ -460,19 +595,27 @@ async function callModel(messages, options = {}) {
 // Streaming call to llama-server
 // @addr 10.03.3.6 | fd00:npr:0003:003::6 — model stream
 async function* callModelStream(messages, options = {}) {
-  const { timeout = 120000 } = options;
+  const { timeout = 120000, model, maxTokens = 2048 } = options;
+  const activeModel = model || MODEL_NAME;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
+  const startMs = Date.now();
+  let tokenCount = 0;
+
+  // Resolve endpoint via load balancer
+  const getter = getEndpointGetter();
+  const targetBase = getter('round-robin');
+  const targetApi = targetBase.replace(/\/$/, '') + '/v1/chat/completions';
 
   try {
-    const res = await fetch(MODEL_API, {
+    const res = await fetch(targetApi, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: MODEL_NAME,
+        model: activeModel,
         messages,
         temperature: 0.3,
-        max_tokens: 2048,
+        max_tokens: maxTokens,
         stream: true,
         enable_thinking: false,
       }),
@@ -505,7 +648,10 @@ async function* callModelStream(messages, options = {}) {
           try {
             const json = JSON.parse(trimmed.slice(6));
             const token = json.choices?.[0]?.delta?.content;
-            if (token) yield token;
+            if (token) {
+              tokenCount++;
+              yield token;
+            }
           } catch {}
         }
       }
@@ -513,8 +659,16 @@ async function* callModelStream(messages, options = {}) {
       clearTimeout(timer);
       reader.releaseLock();
     }
+
+    // Record metrics on successful stream completion
+    const elapsedMs = Date.now() - startMs;
+    try { require('../routes/models').recordInference(activeModel, tokenCount, elapsedMs, true); } catch {}
+
   } catch (e) {
     clearTimeout(timer);
+    // Record failed metrics
+    const elapsedMs = Date.now() - startMs;
+    try { require('../routes/models').recordInference(activeModel, tokenCount, elapsedMs, false); } catch {}
     if (e.name === 'AbortError') {
       throw new Error(`Stream timeout na ${timeout/1000}s`);
     }
@@ -870,6 +1024,9 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
       response: toolResponse,
     });
 
+    // ─── Auto memory write (background, non-blocking) ───
+    writeDailyEntryForTurn(sessionId, followUpInput, toolResponse, toolTrace);
+
     // ─── Stop conditions ───
 
     // 1. Custom stop hook
@@ -909,6 +1066,10 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
     halt_reason: haltReason,
   });
 
+  // ─── Auto-promote (background, throttled) ───
+  // Runs after agent loop completes, not before return (non-blocking)
+  runAutoPromote();
+
   return {
     session: sessionId,
     turns: turnCount,
@@ -925,7 +1086,22 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
 // @addr 10.03.2.4 | fd00:npr:0003:001::4 — execute tool by name
 async function executeTool(toolName, args, sessionId) {
   const session = sessions.get(sessionId);
-  
+
+  // Capability authorization check
+  try {
+    if (!toolRegistry.canUseTool(toolName)) {
+      return {
+        error: `Tool '${toolName}' denied by capability policy`,
+        tool: toolName,
+        denied: true,
+        available: toolRegistry.available(),
+      };
+    }
+  } catch (e) {
+    // Fallback: allow if registry unavailable
+    console.warn(`[agent] Capability check failed: ${e.message}`);
+  }
+
   switch (toolName) {
     case 'scan':
     case '00': {
@@ -1861,4 +2037,10 @@ module.exports = {
   deletePersistedSession,
   cleanupOldSessions,
   compressHistory,
+  // Daily memory
+  getDailyMemoryContext,
+  writeDailyEntryForTurn,
+  runAutoPromote,
+  // Capability registry
+  toolRegistry,
 };

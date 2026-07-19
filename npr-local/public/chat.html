@@ -7,306 +7,899 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,-apple-system,sans-serif;background:#101418;color:#eef4f8;min-height:100vh;display:flex;flex-direction:column}
+:root{--accent:#8bd3ff;--bg:#101418;--surface:#141921;--border:rgba(148,163,184,.12);--text:#eef4f8;--dim:#6b7b8a;--success:#4ade80;--warn:#facc15;--err:#f87171}
 
 /* ─── Header ─── */
-.header{padding:12px 24px;border-bottom:1px solid rgba(148,163,184,.12);display:flex;justify-content:space-between;align-items:center}
-.header h1{font-size:1rem;font-weight:600}
-.header a{color:#8bd3ff;text-decoration:none;font-size:.8rem;margin-left:16px}
+.header{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.header h1{font-size:.9rem;font-weight:600;display:flex;align-items:center;gap:8px}
+.header nav{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.header a{color:var(--accent);text-decoration:none;font-size:.75rem}
 .header a:hover{text-decoration:underline}
+.btn{background:none;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;font-size:.75rem;cursor:pointer;transition:all .15s}
+.btn:hover{background:rgba(139,211,255,.1);border-color:var(--accent)}
+.btn.warn{border-color:rgba(248,113,113,.3);color:var(--err)}
+.btn.warn:hover{background:rgba(248,113,113,.1)}
+.btn.small{padding:2px 8px;font-size:.65rem}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
+.status-dot.g{background:var(--success)}.status-dot.r{background:var(--err)}.status-dot.y{background:var(--warn)}
 
 /* ─── Layout ─── */
 .layout{flex:1;display:flex;overflow:hidden}
 
-/* ─── Session Sidebar ─── */
-.sidebar{width:240px;min-width:240px;border-right:1px solid rgba(148,163,184,.12);display:flex;flex-direction:column;background:#0c1014}
-.sidebar-header{padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(148,163,184,.08)}
-.sidebar-header h2{font-size:.78rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em}
-.btn-new{background:none;border:1px solid rgba(139,211,255,.3);color:#8bd3ff;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer}
-.btn-new:hover{background:rgba(139,211,255,.1)}
+/* ─── Sidebar ─── */
+.sidebar{width:210px;min-width:210px;border-right:1px solid var(--border);display:flex;flex-direction:column;background:#0c1014;transition:width .2s}
+.sidebar.collapsed{width:0;min-width:0;overflow:hidden}
+.sidebar-header{padding:8px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.sidebar-header h2{font-size:.7rem;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
 .session-list{flex:1;overflow-y:auto;padding:6px}
-.session-item{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;flex-direction:column;gap:2px}
+.session-item{padding:7px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px}
 .session-item:hover{background:rgba(148,163,184,.08)}
 .session-item.active{background:rgba(139,211,255,.1);border:1px solid rgba(139,211,255,.15)}
-.session-item .sid{font-size:.78rem;font-weight:600;color:#c8d6e0}
-.session-item .sinfo{font-size:.65rem;color:#6b7b8a;display:flex;gap:6px}
-.session-item .sdel{margin-left:auto;color:#f87171;cursor:pointer;font-size:.7rem;padding:0 2px;opacity:.5}
+.session-item .sid{font-size:.74rem;font-weight:600;color:#c8d6e0;display:flex;justify-content:space-between}
+.session-item .sdel{color:var(--err);font-size:.7rem;opacity:.4;cursor:pointer}
 .session-item .sdel:hover{opacity:1}
+.session-item .sinfo{font-size:.6rem;color:var(--dim);display:flex;gap:6px;margin-top:2px}
 
 /* ─── Main Chat ─── */
 .chat-main{flex:1;display:flex;flex-direction:column;min-width:0}
 
 /* ─── Context Bar ─── */
-.ctx-bar{padding:8px 20px;border-bottom:1px solid rgba(148,163,184,.08);display:flex;gap:20px;align-items:center;font-size:.72rem;color:#6b7b8a;background:#0c1014}
-.ctx-bar .ctx-item{display:flex;align-items:center;gap:5px}
-.ctx-bar .ctx-val{color:#c8d6e0;font-variant-numeric:tabular-nums}
-.ctx-bar .ctx-bar-wrap{width:80px;height:6px;background:#1a2027;border-radius:3px;overflow:hidden}
-.ctx-bar .ctx-bar-fill{height:100%;border-radius:3px;transition:width .3s ease}
-.ctx-bar .ctx-bar-fill.green{background:#4ade80}
-.ctx-bar .ctx-bar-fill.yellow{background:#facc15}
-.ctx-bar .ctx-bar-fill.red{background:#f87171}
+.ctx-bar{padding:5px 20px;border-bottom:1px solid var(--border);display:flex;gap:14px;align-items:center;font-size:.65rem;color:var(--dim);background:#0c1014;flex-wrap:wrap}
+.ctx-item{display:flex;align-items:center;gap:3px}
+.ctx-val{color:#c8d6e0;font-variant-numeric:tabular-nums}
+.ctx-bar-wrap{width:60px;height:4px;background:#1a2027;border-radius:2px;overflow:hidden}
+.ctx-bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.ctx-bar-fill.g{background:var(--success)}.ctx-bar-fill.y{background:var(--warn)}.ctx-bar-fill.r{background:var(--err)}
 
 /* ─── Messages ─── */
-.container{flex:1;display:flex;flex-direction:column;max-width:800px;width:100%;margin:0 auto;padding:16px 24px}
-.messages{flex:1;overflow-y:auto;padding:16px 0;display:flex;flex-direction:column;gap:12px}
-.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:.88rem;line-height:1.5;word-wrap:break-word;white-space:pre-wrap}
-.msg.user{align-self:flex-end;background:#8bd3ff;color:#061019;border-bottom-right-radius:2px}
-.msg.assistant{align-self:flex-start;background:#1a2027;border:1px solid rgba(148,163,184,.2);border-bottom-left-radius:2px}
-.msg .meta{font-size:.68rem;color:#6b7b8a;margin-top:6px;display:flex;gap:8px;flex-wrap:wrap}
+.messages-wrap{flex:1;display:flex;justify-content:center;overflow:hidden}
+.container{flex:1;display:flex;flex-direction:column;max-width:840px;width:100%;margin:0 auto;padding:12px 24px;height:100%}
+.messages{flex:1;overflow-y:auto;padding:6px 0 12px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:.84rem;line-height:1.55;word-wrap:break-word;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:var(--accent);color:#061019;border-bottom-right-radius:2px}
+.msg.assistant{align-self:flex-start;background:var(--surface);border:1px solid rgba(148,163,184,.2);border-bottom-left-radius:2px}
+.msg .meta{font-size:.58rem;color:var(--dim);margin-top:5px;display:flex;gap:8px;flex-wrap:wrap}
 .msg.assistant .meta{color:#9fb0bd}
-.msg .meta span{display:inline-flex;align-items:center;gap:3px}
+.msg pre{background:#0d1117;border:1px solid rgba(148,163,184,.15);border-radius:6px;padding:8px 12px;margin:6px 0;overflow-x:auto;font-size:.76rem;line-height:1.4}
+.msg code{font-family:'Fira Code',monospace;font-size:.8em}
+.msg p{margin:3px 0}
 
 /* ─── Input ─── */
-.input-area{padding:16px 0;border-top:1px solid rgba(148,163,184,.12);display:flex;gap:10px}
-.input-area textarea{flex:1;background:#1a2027;border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:10px 14px;color:#eef4f8;font:inherit;font-size:.88rem;resize:none;min-height:44px;max-height:150px;line-height:1.4}
-.input-area textarea:focus{outline:2px solid #8bd3ff;outline-offset:1px}
-.input-area button{border:none;border-radius:8px;padding:0 20px;background:#8bd3ff;color:#061019;font:inherit;font-weight:600;cursor:pointer;font-size:.88rem;white-space:nowrap}
+.input-area{padding:10px 0 14px;border-top:1px solid var(--border);display:flex;gap:8px;max-width:840px;width:100%;margin:0 auto}
+.input-wrap{flex:1;position:relative}
+.input-wrap textarea{width:100%;background:var(--surface);border:1px solid rgba(148,163,184,.3);border-radius:8px;padding:9px 14px;color:var(--text);font:inherit;font-size:.84rem;resize:none;min-height:38px;max-height:140px;line-height:1.4}
+.input-wrap textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.input-wrap textarea:disabled{opacity:.5}
+.input-area button{border:none;border-radius:8px;padding:0 16px;background:var(--accent);color:#061019;font:inherit;font-weight:600;cursor:pointer;font-size:.84rem;white-space:nowrap;align-self:flex-end;transition:background .15s}
 .input-area button:hover{background:#66c2ff}
-.input-area button:disabled{opacity:.5;cursor:not-allowed}
+.input-area button:disabled{opacity:.4;cursor:not-allowed}
+.input-area button#abortBtn{background:var(--err);color:#061019;display:none}
+.input-area button#abortBtn:hover{background:#ff6b6b}
+.input-hint{position:absolute;bottom:4px;right:8px;font-size:.55rem;color:var(--dim);pointer-events:none}
 
-/* ─── Status ─── */
-.status{font-size:.7rem;color:#9fb0bd;text-align:center;padding:6px}
-.status .dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.status .dot.green{background:#4ade80}
-.status .dot.red{background:#f87171}
-.status .dot.yellow{background:#facc15}
+/* ─── Streaming Progress ─── */
+.stream-progress{font-size:.6rem;color:var(--dim);margin-top:4px;display:flex;gap:8px;align-items:center}
+.stream-progress .dot-pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* ─── Panels ─── */
+.panel{position:fixed;background:var(--surface);border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.panel.open{display:flex}
+.panel-header{padding:8px 12px;background:var(--surface);border-bottom:1px solid var(--border);font-size:.68rem;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+.panel-header button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:.68rem}
+.panel-body{flex:1;overflow-y:auto;padding:4px}
+
+/* ─── Settings Panel ─── */
+.settings-panel{top:56px;right:24px;width:340px;max-height:440px}
+.setting-group{padding:8px 12px;border-bottom:1px solid var(--border)}
+.setting-group:last-child{border-bottom:none}
+.setting-label{font-size:.65rem;color:var(--dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.03em}
+.setting-select{width:100%;background:#0d1117;border:1px solid rgba(148,163,184,.2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.76rem}
+.setting-textarea{width:100%;background:#0d1117;border:1px solid rgba(148,163,184,.2);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.74rem;min-height:80px;resize:vertical;font-family:inherit}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0}
+.setting-row label{font-size:.74rem;color:#c8d6e0}
 
 /* ─── Tool Panel ─── */
-.tool-panel{position:fixed;bottom:80px;right:24px;width:280px;max-height:400px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
-.tool-panel.open{display:flex}
-.tool-panel-header{padding:8px 12px;background:#1a2027;border-bottom:1px solid rgba(148,163,184,.12);font-size:.72rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
-.tool-panel-header button{background:none;border:none;color:#8bd3ff;cursor:pointer;font-size:.7rem}
-.tool-panel-list{flex:1;overflow-y:auto;padding:4px}
-.tool-item{padding:6px 10px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.tool-panel{bottom:80px;right:24px;width:280px;max-height:380px}
+.tool-item{padding:6px 10px;border-radius:6px;cursor:pointer}
 .tool-item:hover{background:rgba(139,211,255,.08)}
-.tool-item .tname{font-size:.78rem;font-weight:600;color:#c8d6e0}
-.tool-item .tdesc{font-size:.65rem;color:#6b7b8a}
-.tool-item .tusage{font-size:.62rem;color:#8bd3ff;font-family:monospace}
+.tool-item .tname{font-size:.74rem;font-weight:600;color:#c8d6e0}
+.tool-item .tdesc{font-size:.6rem;color:var(--dim)}
+.tool-item .tusage{font-size:.58rem;color:var(--accent);font-family:monospace}
 
 /* ─── Autocomplete ─── */
-.autocomplete{position:fixed;bottom:140px;right:24px;width:300px;max-height:200px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:8px;overflow:hidden;z-index:101;display:none;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.autocomplete{position:fixed;bottom:130px;right:24px;width:300px;max-height:200px;background:var(--surface);border:1px solid rgba(148,163,184,.2);border-radius:8px;overflow:hidden;z-index:101;display:none;flex-direction:column;box-shadow:0 4px 16px rgba(0,0,0,.3)}
 .autocomplete.open{display:flex}
-.autocomplete-item{padding:6px 12px;font-size:.75rem;color:#c8d6e0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
-.autocomplete-item:hover,.autocomplete-item.active{background:rgba(139,211,255,.12)}
-.autocomplete-item .ac-label{font-weight:600;color:#8bd3ff}
-.autocomplete-item .ac-desc{font-size:.65rem;color:#6b7b8a}
+.ac-item{padding:6px 12px;font-size:.72rem;color:#c8d6e0;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.ac-item:hover,.ac-item.active{background:rgba(139,211,255,.12)}
+.ac-item .ac-label{font-weight:600;color:var(--accent)}
+.ac-item .ac-desc{font-size:.6rem;color:var(--dim)}
 
 /* ─── File Browser ─── */
-.file-browser{position:fixed;bottom:80px;left:24px;width:320px;max-height:450px;background:#141921;border:1px solid rgba(148,163,184,.2);border-radius:12px;overflow:hidden;z-index:100;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.4)}
-.file-browser.open{display:flex}
-.fb-header{padding:8px 12px;background:#1a2027;border-bottom:1px solid rgba(148,163,184,.12);font-size:.72rem;font-weight:600;color:#9fb0bd;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
-.fb-header button{background:none;border:none;color:#8bd3ff;cursor:pointer;font-size:.7rem}
-.fb-path{padding:6px 12px;font-size:.65rem;font-family:monospace;color:#6b7b8a;border-bottom:1px solid rgba(148,163,184,.08);background:#0d1117;display:flex;gap:4px;align-items:center;overflow-x:auto;white-space:nowrap}
-.fb-path-segment{color:#8bd3ff;cursor:pointer;text-decoration:underline}
-.fb-path-segment:hover{color:#c8d6e0}
+.file-browser{bottom:80px;left:24px;width:300px;max-height:400px}
+.fb-path{padding:4px 10px;font-size:.6rem;font-family:monospace;color:var(--dim);border-bottom:1px solid var(--border);background:#0d1117;display:flex;gap:3px;align-items:center;overflow-x:auto;white-space:nowrap}
+.fb-path-seg{color:var(--accent);cursor:pointer;text-decoration:underline}
+.fb-path-seg:hover{color:#c8d6e0}
 .fb-path-sep{color:#4a5568}
-.fb-list{flex:1;overflow-y:auto;padding:4px}
-.fb-item{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.75rem;color:#c8d6e0}
+.fb-item{padding:5px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:.72rem;color:#c8d6e0}
 .fb-item:hover{background:rgba(139,211,255,.08)}
-.fb-item .fb-icon{font-size:.85rem;width:16px;text-align:center}
+.fb-item .fb-icon{font-size:.85rem;width:14px;text-align:center}
 .fb-item .fb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fb-item .fb-size{font-size:.62rem;color:#4a5568;font-family:monospace}
-.fb-item.dir .fb-icon{color:#facc15}
+.fb-item .fb-size{font-size:.58rem;color:#4a5568;font-family:monospace}
+.fb-item.dir .fb-icon{color:var(--warn)}
 .fb-item.file .fb-icon{color:#60a5fa}
 
+/* ─── Toggle Buttons ─── */
+.float-btn{position:fixed;z-index:99;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:.72rem;cursor:pointer;color:var(--text);transition:all .15s}
+.float-btn:hover{background:#222830;border-color:var(--accent)}
+
+/* ─── Export Modal ─── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;justify-content:center;align-items:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:.85rem;margin-bottom:10px}
+.modal textarea{width:100%;background:#0d1117;border:1px solid rgba(148,163,184,.2);border-radius:6px;padding:8px;color:var(--text);font-size:.74rem;min-height:120px;resize:vertical;font-family:monospace}
+.modal .modal-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+
 /* ─── Responsive ─── */
-@media(max-width:768px){
-  .sidebar{width:200px;min-width:200px}
-}
-@media(max-width:600px){
+@media(max-width:640px){
   .layout{flex-direction:column}
-  .sidebar{width:100%;min-width:100%;max-height:160px;border-right:none;border-bottom:1px solid rgba(148,163,184,.12)}
+  .sidebar{width:100%;min-width:100%;max-height:120px;border-right:none;border-bottom:1px solid var(--border)}
   .session-list{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:4px}
-  .session-item{min-width:140px;flex-shrink:0}
+  .session-item{min-width:120px;flex-shrink:0}
 }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>• NPR Local Chat</h1>
-  <span>
+  <h1>
+    <button class="btn small" onclick="toggleSidebar()" title="Toggle sidebar">☰</button>
+    • NPR Local Chat
+    <span id="statusLabel" style="font-weight:400;font-size:.68rem;color:var(--dim)"><span class="status-dot y"></span>Connecting</span>
+  </h1>
+  <nav>
     <a href="/enter">Enter</a>
     <a href="/dashboard">Dashboard</a>
     <a href="/config">Config</a>
-    <button onclick="restartServer()" style="background:none;border:1px solid rgba(248,113,113,.3);color:#f87171;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer;margin-left:8px;">⟳ Restart</button>
-  </span>
+    <button class="btn" onclick="toggleSettings()">⚙ Settings</button>
+    <button class="btn warn" onclick="restartServer()">⟳ Restart</button>
+  </nav>
 </div>
 
 <div class="layout">
-
-  <!-- Session Sidebar -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <h2>Sessions</h2>
-      <button class="btn-new" onclick="createSession()" title="New session">+ New</button>
+      <button class="btn small" onclick="createSession()">+ New</button>
     </div>
     <div class="session-list" id="sessionList"></div>
   </div>
-
-  <!-- Main Chat -->
   <div class="chat-main">
-
-    <!-- Context Window Bar -->
     <div class="ctx-bar" id="ctxBar">
-      <div class="ctx-item">
-        <span>Context:</span>
-        <span class="ctx-val" id="ctxTokens">0</span>
-        <span>/</span>
-        <span id="ctxMax">32768</span>
-      </div>
-      <div class="ctx-bar-wrap">
-        <div class="ctx-bar-fill green" id="ctxFill" style="width:0%"></div>
-      </div>
-      <div class="ctx-item">
-        <span>Total tokens:</span>
-        <span class="ctx-val" id="totalTokens">0</span>
-      </div>
-      <div class="ctx-item">
-        <span>Messages:</span>
-        <span class="ctx-val" id="msgCount">0</span>
-      </div>
+      <div class="ctx-item">Ctx: <span class="ctx-val" id="ctxTokens">0</span>/<span id="ctxMax">32768</span></div>
+      <div class="ctx-bar-wrap"><div class="ctx-bar-fill g" id="ctxFill" style="width:0%"></div></div>
+      <div class="ctx-item">Messages: <span class="ctx-val" id="msgCount">0</span></div>
+      <div class="ctx-item">Model: <span class="ctx-val" id="ctxModel">—</span></div>
     </div>
-
-    <!-- File Browser -->
-    <div class="file-browser" id="fileBrowser">
-      <div class="fb-header">
-        <span>📁 Bestanden</span>
-        <button onclick="toggleFileBrowser()">✕</button>
-      </div>
-      <div class="fb-path" id="fbPath"></div>
-      <div class="fb-list" id="fbList"></div>
-    </div>
-
-    <!-- Tool Panel -->
-    <div class="tool-panel" id="toolPanel">
-      <div class="tool-panel-header">
-        <span>• Tools</span>
-        <button onclick="toggleToolPanel()">✕</button>
-      </div>
-      <div class="tool-panel-list" id="toolPanelList"></div>
-    </div>
-
-    <!-- Autocomplete -->
-    <div class="autocomplete" id="autocomplete"></div>
-
-    <div class="status" id="status"><span class="dot yellow"></span>Connecting...</div>
-    <button onclick="toggleFileBrowser()" style="position:fixed;bottom:140px;left:24px;z-index:99;background:#1a2027;border:1px solid rgba(148,163,184,.3);color:#facc15;border-radius:8px;padding:6px 12px;font-size:.75rem;cursor:pointer;" title="Bestanden">📁 Bestanden</button>
-    <button onclick="toggleToolPanel()" style="position:fixed;bottom:140px;right:24px;z-index:99;background:#1a2027;border:1px solid rgba(148,163,184,.3);color:#8bd3ff;border-radius:8px;padding:6px 12px;font-size:.75rem;cursor:pointer;" title="Tools">🔧 Tools</button>
-    <div class="container">
-      <div class="messages" id="messages"></div>
-      <div class="input-area">
-        <textarea id="input" placeholder="Type a message..." rows="1"></textarea>
-        <button id="send" onclick="send()">→</button>
+    <div class="messages-wrap">
+      <div class="container">
+        <div class="messages" id="messages"></div>
+        <div class="input-area">
+          <div class="input-wrap">
+            <textarea id="input" placeholder="Type a message... (Enter=send, Shift+Enter=newline)" rows="1"></textarea>
+            <span class="input-hint">Enter ↵ send · Shift+Enter ↵ nl</span>
+          </div>
+          <button id="sendBtn" onclick="sendMessage()">→</button>
+          <button id="abortBtn" onclick="abortStream()">■</button>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
+<!-- Settings Panel -->
+<div class="panel settings-panel" id="settingsPanel">
+  <div class="panel-header"><span>⚙ Settings</span><button onclick="toggleSettings()">✕</button></div>
+  <div class="panel-body" style="max-height:360px">
+    <div class="setting-group">
+      <div class="setting-label">Model</div>
+      <select class="setting-select" id="modelSelect" onchange="updateSetting('model', this.value)">
+        <option value="">Auto (current)</option>
+      </select>
+      <div id="modelInfo" style="margin-top:6px;font-size:.65rem;color:var(--dim);display:none">
+        <div class="setting-row"><span>Parameters</span><span id="mParams" class="ctx-val">—</span></div>
+        <div class="setting-row"><span>Context</span><span id="mCtx" class="ctx-val">—</span></div>
+        <div class="setting-row"><span>Size</span><span id="mSize" class="ctx-val">—</span></div>
+        <div class="setting-row"><span>Avg Latency</span><span id="mLatency" class="ctx-val">—</span></div>
+        <div class="setting-row"><span>Tokens/s</span><span id="mTPS" class="ctx-val">—</span></div>
+        <div class="setting-row"><span>Success Rate</span><span id="mSuccess" class="ctx-val">—</span></div>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">Context Size</div>
+      <select class="setting-select" id="ctxSelect" onchange="updateSetting('ctx', this.value)">
+        <option value="8192">8K</option>
+        <option value="16384">16K</option>
+        <option value="32768" selected>32K</option>
+        <option value="65536">64K</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">System Prompt</div>
+      <textarea class="setting-textarea" id="sysPrompt" placeholder="Leave empty for default NPR system prompt..." onchange="updateSetting('sys', this.value)"></textarea>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">Workspace</div>
+      <select class="setting-select" id="wsSelect" onchange="updateSetting('ws', this.value)">
+        <option value="">Default</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <div class="setting-row">
+        <label>Auto-save sessions</label>
+        <input type="checkbox" id="autoSave" checked onchange="updateSetting('autoSave', this.checked)">
+      </div>
+      <div class="setting-row">
+        <label>Stream retry on error</label>
+        <input type="checkbox" id="streamRetry" checked onchange="updateSetting('retry', this.checked)">
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">Actions</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn small" onclick="exportSession()">💾 Export</button>
+        <button class="btn small" onclick="showImport()">📂 Import</button>
+        <button class="btn small warn" onclick="clearSession()">🗑 Clear</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tool Panel -->
+<div class="panel tool-panel" id="toolPanel">
+  <div class="panel-header"><span>• Tools</span><button onclick="toggleToolPanel()">✕</button></div>
+  <div class="panel-body" id="toolPanelList"></div>
+</div>
+
+<!-- File Browser -->
+<div class="panel file-browser" id="fileBrowser">
+  <div class="panel-header"><span>📁 Files</span><button onclick="toggleFileBrowser()">✕</button></div>
+  <div class="fb-path" id="fbPath"></div>
+  <div class="panel-body" id="fbList"></div>
+</div>
+
+<!-- Autocomplete -->
+<div class="autocomplete" id="autocomplete"></div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>📂 Import Session</h3>
+    <textarea id="importText" placeholder="Paste exported JSON here..."></textarea>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('importModal').classList.remove('open')">Cancel</button>
+      <button class="btn" onclick="doImport()">Import</button>
+    </div>
+  </div>
 </div>
 
 <script>
-const API = '/agent/chat';
-const API_STREAM = '/agent/chat-stream';
+/* ═══════════════════════════════════════════
+   Config & State
+   ═══════════════════════════════════════════ */
+const KEY = '***';
+const ACTIVE_KEY = '***';
+let config = loadConfig();
+let availableTools = [];
+let acIndex = 0;
+
 const msgs = document.getElementById('messages');
 const input = document.getElementById('input');
-const sendBtn = document.getElementById('send');
-const status = document.getElementById('status');
-const sessionList = document.getElementById('sessionList');
-const toolPanel = document.getElementById('toolPanel');
-const toolPanelList = document.getElementById('toolPanelList');
-const autocompleteEl = document.getElementById('autocomplete');
-const fileBrowser = document.getElementById('fileBrowser');
-const fbPath = document.getElementById('fbPath');
-const fbList = document.getElementById('fbList');
+const sendBtn = document.getElementById('sendBtn');
 
-// ─── File Browser ───
-let currentBrowerDir = null;
+function loadConfig() {
+  try { return JSON.parse(localStorage.getItem('npr_config')) || {}; } catch { return {}; }
+}
+function saveConfig(c) { localStorage.setItem('npr_config', JSON.stringify(c)); config = c; }
+function getSetting(k, d) { return config[k] !== undefined ? config[k] : d; }
+
+async function updateSetting(k, v) {
+  if (k === 'model') {
+    config.model = v;
+    if (v) {
+      // Switch model on backend
+      try {
+        const r = await fetch('/models/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: v }),
+        });
+        const d = await r.json();
+        if (d.status === 'switched' || d.status === 'already-active') {
+          // Reload settings to refresh metrics
+          loadSettings();
+        } else {
+          console.warn('[model] switch failed:', d.note);
+        }
+      } catch (e) {
+        console.error('[model] switch error:', e);
+      }
+    }
+  } else if (k === 'ctx') config.ctx = parseInt(v);
+  else if (k === 'sys') config.sysPrompt = v;
+  else if (k === 'ws') config.workspace = v;
+  else if (k === 'autoSave') config.autoSave = v;
+  else if (k === 'retry') config.retry = v;
+  saveConfig(config);
+  updateContextBar();
+}
+
+/* ═══════════════════════════════════════════
+   Sessions (local + backend synced)
+   ═══════════════════════════════════════════ */
+function loadSessions() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
+}
+function saveSessions(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+function getActiveId() { return localStorage.getItem(ACTIVE_KEY); }
+function setActiveId(id) { localStorage.setItem(ACTIVE_KEY, id); }
+
+/** Fetch backend sessions from /sessions endpoint */
+async function fetchBackendSessions() {
+  try {
+    const r = await fetch('/sessions');
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+/** Fetch messages for a backend session */
+async function fetchSessionHistory(sessionId, limit = 50) {
+  try {
+    const r = await fetch(`/sessions/${encodeURIComponent(sessionId)}/history?limit=${limit}`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+/** Merge local + backend sessions into a unified list */
+async function loadUnifiedSessions() {
+  const local = loadSessions();
+  const backend = await fetchBackendSessions();
+  const unified = { ...local };
+
+  if (backend?.sessions) {
+    for (const bs of backend.sessions) {
+      const id = bs.id || bs.sessionId;
+      if (!id) continue;
+      if (!unified[id]) {
+        unified[id] = {
+          id,
+          name: bs.name || `Session ${id.slice(0, 8)}`,
+          created: bs.created || bs.createdAt || Date.now(),
+          messages: [],
+          tokens: bs.totalMessages || 0,
+          backend: true, // mark as backend session
+        };
+      } else {
+        unified[id].backend = true;
+      }
+    }
+  }
+  return unified;
+}
+
+function getOrCreateSession() {
+  let sid = getActiveId();
+  let sessions = loadSessions();
+  if (!sid || !sessions[sid]) {
+    sid = 'sess-' + Date.now().toString(16).slice(-8);
+    sessions[sid] = { id: sid, name: 'Chat ' + (Object.keys(sessions).length + 1), created: Date.now(), messages: [], tokens: 0 };
+    saveSessions(sessions); setActiveId(sid);
+  }
+  return sid;
+}
+
+function createSession() {
+  const sessions = loadSessions();
+  const sid = 'sess-' + Date.now().toString(16).slice(-8);
+  sessions[sid] = { id: sid, name: 'Chat ' + (Object.keys(sessions).length + 1), created: Date.now(), messages: [], tokens: 0 };
+  saveSessions(sessions); setActiveId(sid);
+  switchSession(sid);
+}
+
+function deleteSession(sid, e) {
+  e?.stopPropagation();
+  const sessions = loadSessions();
+  delete sessions[sid];
+  saveSessions(sessions);
+  if (getActiveId() === sid) {
+    const remaining = Object.keys(sessions);
+    if (remaining.length) { setActiveId(remaining[0]); switchSession(remaining[0]); }
+    else { setActiveId(null); createSession(); }
+  }
+  renderSessionList();
+}
+
+async function switchSession(sid) {
+  setActiveId(sid);
+  await renderSessionList();
+  await loadSessionMessages(sid);
+  updateContextBar();
+}
+
+async function renderSessionList() {
+  const sessions = await loadUnifiedSessions();
+  const activeId = getActiveId();
+  const list = document.getElementById('sessionList');
+  list.innerHTML = '';
+  Object.values(sessions).sort((a, b) => b.created - a.created).forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'session-item' + (s.id === activeId ? ' active' : '');
+    div.onclick = () => switchSession(s.id);
+    const mc = s.messages?.length || s.tokens || 0;
+    const tk = s.tokens || 0;
+    const tm = new Date(s.created).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
+    const badge = s.backend ? ' ⚡' : '';
+    div.innerHTML = `<div class="sid">${esc(s.name)}${badge} <span class="sdel" onclick="deleteSession('${s.id}', event)">✕</span></div>
+      <div class="sinfo"><span>💬 ${mc}</span><span>🔢 ${tk}t</span><span>🕐 ${tm}</span></div>`;
+    list.appendChild(div);
+  });
+}
+
+async function loadSessionMessages(sid) {
+  sid = sid || getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+  const list = document.getElementById('sessionList');
+  list.innerHTML = '';
+  msgs.innerHTML = '';
+
+  // Try backend history first (for both backend and local sessions)
+  const hist = await fetchSessionHistory(sid);
+  if (hist?.history && hist.history.length > 0) {
+    hist.history.forEach(m => appendMsg(m.role, m.content, m.meta));
+    return;
+  }
+
+  // Fall back to local
+  if (session) {
+    (session.messages || []).forEach(m => appendMsg(m.role, m.content, m.meta));
+  }
+}
+
+function updateContextBar() {
+  const session = loadSessions()[getActiveId()];
+  if (!session) return;
+  const tokens = session.tokens || 0;
+  const mc = session.messages?.length || 0;
+  const ctxMax = getSetting('ctx', 32768);
+  const pct = Math.min((tokens / ctxMax) * 100, 100);
+
+  document.getElementById('ctxTokens').textContent = tokens;
+  document.getElementById('ctxMax').textContent = ctxMax;
+  document.getElementById('msgCount').textContent = mc;
+  const fill = document.getElementById('ctxFill');
+  fill.style.width = pct + '%';
+  fill.className = 'ctx-bar-fill ' + (pct < 70 ? 'g' : pct < 90 ? 'y' : 'r');
+}
+
+/* ═══════════════════════════════════════════
+   Messages
+   ═══════════════════════════════════════════ */
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function renderContent(text) {
+  let h = esc(text);
+  h = h.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  h = h.replace(/`([^`]+)`/g, '<code>$1</code>');
+  h = h.replace(/\n\n/g, '</p><p>');
+  h = h.replace(/\n/g, '<br>');
+  if (!h.startsWith('<pre') && !h.startsWith('</p>')) h = '<p>' + h + '</p>';
+  return h;
+}
+
+function appendMsg(role, text, meta) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = renderContent(text);
+  if (meta) {
+    const m = document.createElement('div'); m.className = 'meta';
+    m.innerHTML = meta.split('|').map(s => '<span>' + s.trim() + '</span>').join('');
+    div.appendChild(m);
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function countTokens(text) { return Math.ceil(text.length / 4); }
+
+function setStatus(status, color) {
+  document.getElementById('statusLabel').innerHTML = '<span class="status-dot ' + color + '"></span>' + status;
+}
+
+/* ═══════════════════════════════════════════
+   Send (streaming)
+   ═══════════════════════════════════════════ */
+let sendRetry = 0;
+let currentAbortController = null;
+
+async function sendMessage(retry) {
+  const text = input.value.trim();
+  if (!text || sendBtn.disabled) return;
+
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  const session = sessions[sid];
+  if (!session) return;
+
+  const isRetry = !!retry;
+  if (!isRetry) {
+    session.messages.push({ role: 'user', content: text });
+    session.tokens += countTokens(text);
+    saveSessions(sessions);
+    appendMsg('user', text);
+    sendRetry = 0;
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+  sendBtn.disabled = true;
+
+  const div = appendMsg('assistant', '');
+  const contentEl = div.childNodes[0];
+  let fullText = '';
+  let slot = '?', model = '', tokenCount = 0;
+  const startTime = Date.now();
+
+  // Show abort button
+  document.getElementById('abortBtn').style.display = 'inline-block';
+  sendBtn.style.display = 'none';
+
+  // AbortController
+  currentAbortController = new AbortController();
+
+  const body = {
+    message: text,
+    sessionId: sid,
+    model: getSetting('model', ''),
+    contextSize: getSetting('ctx', 32768),
+    sysPrompt: getSetting('sysPrompt', ''),
+    workspace: getSetting('workspace', ''),
+  };
+
+  try {
+    const res = await fetch('/agent/chat-stream', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: currentAbortController.signal });
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const d = JSON.parse(line.slice(6));
+            if (d.type === 'route') {
+              slot = d.slot; model = d.model;
+              contentEl.innerHTML = '';
+              document.getElementById('ctxModel').textContent = model;
+            } else if (d.type === 'token') {
+              fullText += d.content;
+              contentEl.innerHTML = renderContent(fullText);
+              tokenCount = d.tokenCount || tokenCount + 1;
+              // Live progress
+              let prog = div.querySelector('.stream-progress');
+              if (!prog) {
+                prog = document.createElement('div');
+                prog.className = 'stream-progress';
+                div.appendChild(prog);
+              }
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+              const tps = tokenCount / (elapsed / 1000);
+              prog.innerHTML = `<span class="dot-pulse"></span> ${tokenCount} tok | ${tps.toFixed(1)} tok/s`;
+              msgs.scrollTop = msgs.scrollHeight;
+            } else if (d.type === 'done') {
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+              fullText = d.content || fullText;
+              tokenCount = d.tokenCount || tokenCount;
+              contentEl.innerHTML = renderContent(fullText);
+
+              // Hide abort button, show send, remove progress
+              document.getElementById('abortBtn').style.display = 'none';
+              sendBtn.style.display = 'inline-block';
+              let prog = div.querySelector('.stream-progress');
+              if (prog) prog.remove();
+
+              const metaStr = tokenCount + ' tok | ' + elapsed + 's | slot ' + slot + ' | ' + model;
+              const meta = document.createElement('div'); meta.className = 'meta';
+              meta.innerHTML = metaStr.split('|').map(s => '<span>' + s.trim() + '</span>').join('');
+              div.appendChild(meta);
+
+              if (!isRetry) {
+                session.messages.push({ role: 'assistant', content: fullText, meta: metaStr });
+                session.tokens += tokenCount;
+              }
+              if (getSetting('autoSave', true)) saveSessions(sessions);
+              updateContextBar();
+              renderSessionList();
+              sendRetry = 0;
+              setStatus('Online', 'g');
+            } else if (d.type === 'error') {
+              contentEl.innerHTML = '⚠ ' + esc(d.message || 'Stream error');
+              setStatus('Error', 'r');
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (e) {
+    document.getElementById('abortBtn').style.display = 'none';
+    sendBtn.style.display = 'inline-block';
+
+    if (e.name === 'AbortError') {
+      contentEl.innerHTML = '⚠ Stream gestopt';
+      let prog = div.querySelector('.stream-progress');
+      if (prog) prog.remove();
+      const meta = document.createElement('div'); meta.className = 'meta';
+      meta.innerHTML = '<span>aborted</span><span>' + tokenCount + ' tok</span>';
+      div.appendChild(meta);
+      if (!isRetry && fullText.length > 20) {
+        session.messages.push({ role: 'assistant', content: fullText, partial: true });
+        if (getSetting('autoSave', true)) saveSessions(sessions);
+      }
+      currentAbortController = null;
+      sendBtn.disabled = false;
+      input.focus();
+      updateContextBar();
+      renderSessionList();
+      return;
+    }
+    if (getSetting('retry', true) && sendRetry < 2 && !isRetry) {
+      sendRetry++;
+      contentEl.innerHTML = '⚠ Retrying... (' + sendRetry + ')';
+      input.value = text;
+      await new Promise(r => setTimeout(r, 1500 * sendRetry));
+      await sendMessage(true);
+      return;
+    }
+    contentEl.innerHTML = '⚠ ' + esc(e.message);
+    setStatus('Offline', 'r');
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+  updateContextBar();
+  renderSessionList();
+}
+
+/* ═══════════════════════════════════════════
+   Abort Stream
+   ═══════════════════════════════════════════ */
+function abortStream() {
+  if (currentAbortController) {
+    currentAbortController.abort();
+    currentAbortController = null;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Settings
+   ═══════════════════════════════════════════ */
+function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('open'); }
+
+async function loadSettings() {
+  // Models — discover from /models endpoint
+  try {
+    const r = await fetch('/models');
+    const d = await r.json();
+    const sel = document.getElementById('modelSelect');
+    sel.innerHTML = '<option value="">Auto (current)</option>';
+    if (d.models && d.models.length) {
+      d.models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id; opt.textContent = m.name;
+        if (m.id === d.active) {
+          opt.textContent = '● ' + m.name;
+          opt.selected = true;
+        }
+        if (m.id === getSetting('model', '')) opt.selected = true;
+        // Add metrics if available
+        if (m.metrics) {
+          opt.textContent += ` (${m.metrics.tokensPerSecond} tok/s)`;
+        }
+        sel.appendChild(opt);
+      });
+    } else {
+      // Fallback: show active model name
+      const opt = document.createElement('option');
+      opt.value = d.active || ''; opt.textContent = d.active || 'Unknown';
+      sel.appendChild(opt);
+    }
+    // Update context bar with model info
+    if (d.active) {
+      const activeModel = d.models?.find(m => m.id === d.active);
+      if (activeModel?.metrics) {
+        document.getElementById('ctxModel').textContent = `${d.active} (${activeModel.metrics.tokensPerSecond} tok/s)`;
+      } else {
+        document.getElementById('ctxModel').textContent = d.active;
+      }
+      // Show model info panel
+      const info = document.getElementById('modelInfo');
+      if (activeModel) {
+        document.getElementById('mParams').textContent = activeModel.params || '—';
+        document.getElementById('mCtx').textContent = activeModel.ctx ? `${activeModel.ctx.toLocaleString()}` : '—';
+        document.getElementById('mSize').textContent = activeModel.sizeHuman || '—';
+        if (activeModel.metrics) {
+          document.getElementById('mLatency').textContent = `${activeModel.metrics.avgMs}ms`;
+          document.getElementById('mTPS').textContent = activeModel.metrics.tokensPerSecond;
+          document.getElementById('mSuccess').textContent = `${activeModel.metrics.successRate}%`;
+        }
+        info.style.display = 'block';
+      }
+    }
+  } catch (e) {
+    // Fallback: use current model from ctx bar
+    const sel = document.getElementById('modelSelect');
+    const opt = document.createElement('option');
+    opt.value = ''; opt.textContent = 'Auto (current)';
+    sel.appendChild(opt);
+  }
+
+  // Workspaces
+  try {
+    const r = await fetch('/workspace');
+    const d = await r.json();
+    const sel = document.getElementById('wsSelect');
+    if (d.workspaces) {
+      d.workspaces.forEach(w => {
+        const opt = document.createElement('option');
+        opt.value = w; opt.textContent = w;
+        if (w === getSetting('workspace', '')) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+  } catch {}
+
+  // System prompt
+  document.getElementById('sysPrompt').value = getSetting('sysPrompt', '') || '';
+  document.getElementById('ctxSelect').value = getSetting('ctx', 32768);
+  document.getElementById('autoSave').checked = getSetting('autoSave', true);
+  document.getElementById('streamRetry').checked = getSetting('retry', true);
+}
+
+/* ═══════════════════════════════════════════
+   Export / Import
+   ═══════════════════════════════════════════ */
+function exportSession() {
+  const sid = getActiveId();
+  const session = loadSessions()[sid];
+  if (!session) return;
+  const blob = new Blob([JSON.stringify(session, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (session.name || sid) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function showImport() { document.getElementById('importModal').classList.add('open'); }
+
+function doImport() {
+  try {
+    const data = JSON.parse(document.getElementById('importText').value);
+    const sessions = loadSessions();
+    const sid = 'sess-' + Date.now().toString(16).slice(-8);
+    data.id = sid;
+    data.name = (data.name || 'Imported') + ' (' + new Date().toLocaleTimeString('nl-NL') + ')';
+    sessions[sid] = data;
+    saveSessions(sessions);
+    setActiveId(sid);
+    switchSession(sid);
+    document.getElementById('importModal').classList.remove('open');
+  } catch (e) {
+    alert('Invalid JSON: ' + e.message);
+  }
+}
+
+function clearSession() {
+  const sid = getActiveId();
+  const sessions = loadSessions();
+  if (sessions[sid]) {
+    sessions[sid].messages = [];
+    sessions[sid].tokens = 0;
+    saveSessions(sessions);
+    loadSessionMessages();
+    updateContextBar();
+    renderSessionList();
+  }
+}
+
+/* ═══════════════════════════════════════════
+   File Browser
+   ═══════════════════════════════════════════ */
+let currentBrowseDir = null;
 
 function toggleFileBrowser() {
-  fileBrowser.classList.toggle('open');
-  if (fileBrowser.classList.contains('open') && !currentBrowerDir) {
-    browseDir(processCwd || '/home/claw/.openclaw/workspace');
-  }
+  const fb = document.getElementById('fileBrowser');
+  fb.classList.toggle('open');
+  if (fb.classList.contains('open') && !currentBrowseDir) browseDir('/home/claw/.openclaw/workspace');
 }
 
 function renderBreadcrumb(dir) {
   const parts = dir.split('/').filter(Boolean);
-  let html = '<span class="fb-path-segment" onclick="browseDir(\'/' + '")">/</span>';
+  let html = '<span class="fb-path-seg" onclick="browseDir(\'/\')">/</span>';
   let acc = '';
   for (const p of parts) {
     acc += '/' + p;
-    html += `<span class="fb-path-sep">›</span><span class="fb-path-segment" onclick="browseDir('${acc}')">${p}</span>`;
+    html += '<span class="fb-path-sep">›</span><span class="fb-path-seg" onclick="browseDir(\'' + esc(p) + '\')">' + esc(p) + '</span>';
   }
-  fbPath.innerHTML = html;
+  document.getElementById('fbPath').innerHTML = html;
 }
 
 async function browseDir(dir) {
   try {
-    const res = await fetch(`/filesystem/browse?path=${encodeURIComponent(dir)}`);
+    const res = await fetch('/filesystem/browse?path=' + encodeURIComponent(dir));
     const data = await res.json();
     if (data.error) {
-      fbList.innerHTML = `<div class="fb-item" style="color:#f87171">⚠ ${data.error}</div>`;
+      document.getElementById('fbList').innerHTML = '<div class="fb-item" style="color:var(--err)">⚠ ' + esc(data.error) + '</div>';
       return;
     }
-    currentBrowerDir = data.dir;
+    currentBrowseDir = data.dir;
     renderBreadcrumb(data.dir);
-    fbList.innerHTML = data.items.map(item => {
+    document.getElementById('fbList').innerHTML = data.items.map(item => {
       const icon = item.type === 'dir' ? '📁' : '📄';
-      const size = item.type === 'file' ? formatSize(item.size) : '';
-      return `<div class="fb-item ${item.type}" onclick="handleFileClick('${item.type}','${item.path}','${item.name}')">
-        <span class="fb-icon">${icon}</span>
-        <span class="fb-name">${item.name}</span>
-        <span class="fb-size">${size}</span>
-      </div>`;
+      const size = item.type === 'file' ? fmtSize(item.size) : '';
+      return '<div class="fb-item ' + item.type + '" onclick="handleFileClick(\'' + item.type + '\',\'' + esc(item.path) + '\')">' +
+        '<span class="fb-icon">' + icon + '</span><span class="fb-name">' + esc(item.name) + '</span>' +
+        '<span class="fb-size">' + size + '</span></div>';
     }).join('');
-  } catch(e) {
-    fbList.innerHTML = `<div class="fb-item" style="color:#f87171">⚠ ${e.message}</div>`;
+  } catch (e) {
+    document.getElementById('fbList').innerHTML = '<div class="fb-item" style="color:var(--err)">⚠ ' + esc(e.message) + '</div>';
   }
 }
 
-function handleFileClick(type, filePath, name) {
-  if (type === 'dir') {
-    browseDir(filePath);
-  } else {
-    // Insert tool:read command into chat input
-    input.value = `tool:read ${filePath} `;
-    input.focus();
-    fileBrowser.classList.remove('open');
-  }
+function handleFileClick(type, path) {
+  if (type === 'dir') browseDir(path);
+  else { input.value = 'tool:read ' + path + ' '; input.focus(); document.getElementById('fileBrowser').classList.remove('open'); }
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return bytes + 'B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
-  return (bytes / 1048576).toFixed(1) + 'MB';
+function fmtSize(b) {
+  if (b < 1024) return b + 'B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + 'KB';
+  return (b / 1048576).toFixed(1) + 'MB';
 }
 
-// ─── Tool Panel ───
-let availableTools = [];
-
+/* ═══════════════════════════════════════════
+   Tools
+   ═══════════════════════════════════════════ */
 async function loadTools() {
   try {
     const res = await fetch('/tools');
     const data = await res.json();
     availableTools = data.tools || [];
     renderToolPanel();
-  } catch(e) {
-    console.warn('[tools] Failed to load:', e.message);
-  }
+  } catch (e) { console.warn('[tools]', e.message); }
 }
 
 function renderToolPanel() {
-  toolPanelList.innerHTML = availableTools.map(t => `
-    <div class="tool-item" onclick="insertTool('${t.id}')">
-      <span class="tname">${t.name}</span>
-      <span class="tdesc">${t.desc}</span>
-      <span class="tusage">${t.usage}</span>
-    </div>
-  `).join('');
+  document.getElementById('toolPanelList').innerHTML = availableTools.map(t =>
+    '<div class="tool-item" onclick="insertTool(\'' + t.id + '\')">' +
+      '<span class="tname">' + esc(t.name) + '</span><br>' +
+      '<span class="tdesc">' + esc(t.desc) + '</span><br>' +
+      '<span class="tusage">' + esc(t.usage) + '</span></div>'
+  ).join('');
 }
 
 function toggleToolPanel() {
-  toolPanel.classList.toggle('open');
-  autocompleteEl.classList.remove('open');
+  document.getElementById('toolPanel').classList.toggle('open');
+  document.getElementById('autocomplete').classList.remove('open');
 }
 
 function insertTool(id) {
@@ -317,413 +910,91 @@ function insertTool(id) {
   toggleToolPanel();
 }
 
-// ─── Autocomplete ───
-let acIndex = -1;
-
+/* ═══════════════════════════════════════════
+   Autocomplete
+   ═══════════════════════════════════════════ */
 input.addEventListener('input', () => {
   const val = input.value.trim();
   if (val.startsWith('tool:')) {
     const rest = val.slice(5).trim().toLowerCase();
-    const matches = availableTools.filter(t =>
-      t.id.toLowerCase().includes(rest) || t.name.toLowerCase().includes(rest)
-    );
+    const matches = availableTools.filter(t => t.id.toLowerCase().includes(rest) || t.name.toLowerCase().includes(rest));
     if (matches.length > 0) {
       acIndex = 0;
-      renderAutocomplete(matches);
-    } else {
-      autocompleteEl.classList.remove('open');
-    }
-  } else {
-    autocompleteEl.classList.remove('open');
-  }
+      renderAC(matches);
+    } else document.getElementById('autocomplete').classList.remove('open');
+  } else document.getElementById('autocomplete').classList.remove('open');
 });
 
 input.addEventListener('keydown', (e) => {
-  if (!autocompleteEl.classList.contains('open')) return;
-  const items = autocompleteEl.querySelectorAll('.autocomplete-item');
-  if (e.key === 'ArrowDown') {
+  const ac = document.getElementById('autocomplete');
+  if (!ac.classList.contains('open')) return;
+  const items = ac.querySelectorAll('.ac-item');
+  if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = (acIndex + 1) % items.length; highlightAC(items, acIndex); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = (acIndex - 1 + items.length) % items.length; highlightAC(items, acIndex); }
+  else if (e.key === 'Tab' || (e.key === 'Enter' && acIndex >= 0)) {
     e.preventDefault();
-    acIndex = (acIndex + 1) % items.length;
-    items.forEach(i => i.classList.remove('active'));
-    items[acIndex]?.classList.add('active');
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    acIndex = (acIndex - 1 + items.length) % items.length;
-    items.forEach(i => i.classList.remove('active'));
-    items[acIndex]?.classList.add('active');
-  } else if (e.key === 'Tab' || (e.key === 'Enter' && acIndex >= 0)) {
-    e.preventDefault();
-    const active = autocompleteEl.querySelectorAll('.autocomplete-item')[acIndex];
-    if (active) {
-      const usage = active.dataset.usage;
-      input.value = usage + ' ';
-      input.focus();
-      autocompleteEl.classList.remove('open');
-    }
+    const usage = items[acIndex]?.dataset?.usage;
+    if (usage) { input.value = usage + ' '; input.focus(); ac.classList.remove('open'); }
   }
 });
 
-function renderAutocomplete(matches) {
-  autocompleteEl.innerHTML = matches.map(t => `
-    <div class="autocomplete-item${t.id === matches[acIndex]?.id ? ' active' : ''}" 
-         data-usage="${t.usage}" 
-         onclick="this.dataset.usage && (input.value=this.dataset.usage+' ', input.focus(), autocompleteEl.classList.remove('open'))">
-      <span class="ac-label">tool:${t.id}</span>
-      <span class="ac-desc">${t.desc}</span>
-    </div>
-  `).join('');
-  autocompleteEl.classList.add('open');
+function highlightAC(items, idx) { items.forEach(i => i.classList.remove('active')); items[idx]?.classList.add('active'); }
+
+function renderAC(matches) {
+  document.getElementById('autocomplete').innerHTML = matches.map(t =>
+    '<div class="ac-item" data-usage="' + esc(t.usage) + '" onclick="input.value=this.dataset.usage+\' \';input.focus();document.getElementById(\'autocomplete\').classList.remove(\'open\')">' +
+      '<span class="ac-label">tool:' + esc(t.id) + '</span><span class="ac-desc">' + esc(t.desc) + '</span></div>'
+  ).join('');
+  document.getElementById('autocomplete').classList.add('open');
 }
 
-// ─── Server Restart ───
+/* ═══════════════════════════════════════════
+   Sidebar
+   ═══════════════════════════════════════════ */
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('collapsed'); }
+
+/* ═══════════════════════════════════════════
+   Server Restart
+   ═══════════════════════════════════════════ */
 async function restartServer() {
-  if (!confirm('NPR-Local server herstarten?')) return;
-  status.innerHTML = '<span class="dot yellow"></span>Restarting...';
-  try {
-    await fetch('/system/restart', { method: 'POST' });
-  } catch(e) {
-    // Connection will drop anyway
-  }
-  // Show reconnect message
-  msgs.innerHTML += '<div class="msg assistant">Server herstart. Herverbinding...</div>';
-  // Auto-reconnect
-  const checkInterval = setInterval(async () => {
-    try {
-      await fetch('/health');
-      clearInterval(checkInterval);
-      location.reload();
-    } catch {}  
-  }, 2000);
+  if (!confirm('NPR-Local herstarten?')) return;
+  setStatus('Restarting...', 'y');
+  try { await fetch('/system/restart', { method: 'POST' }); } catch {}
+  const iv = setInterval(async () => { try { await fetch('/health'); clearInterval(iv); location.reload(); } catch {} }, 2000);
 }
 
-// ─── Session Management ───
-const STORAGE_KEY = 'npr-chat-sessions';
-const ACTIVE_KEY = 'npr-chat-active';
+/* ═══════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════ */
+input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; });
 
-const DEFAULT_CTX_MAX = 32768;
-
-function loadSessions() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch { return {}; }
-}
-
-function saveSessions(sessions) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
-}
-
-function getActiveId() {
-  return localStorage.getItem(ACTIVE_KEY) || null;
-}
-
-function setActiveId(id) {
-  localStorage.setItem(ACTIVE_KEY, id);
-}
-
-function getOrCreateSession() {
-  let sid = getActiveId();
-  let sessions = loadSessions();
-  if (!sid || !sessions[sid]) {
-    sid = `sess-${Date.now().toString(16).slice(-8)}`;
-    sessions[sid] = { id: sid, name: `Chat ${Object.keys(sessions).length + 1}`, created: Date.now(), messages: [], tokens: 0 };
-    saveSessions(sessions);
-    setActiveId(sid);
-  }
-  return sid;
-}
-
-function createSession() {
-  const sessions = loadSessions();
-  const sid = `sess-${Date.now().toString(16).slice(-8)}`;
-  sessions[sid] = { id: sid, name: `Chat ${Object.keys(sessions).length + 1}`, created: Date.now(), messages: [], tokens: 0 };
-  saveSessions(sessions);
-  setActiveId(sid);
-  switchSession(sid);
-}
-
-function deleteSession(sid, e) {
-  e.stopPropagation();
-  const sessions = loadSessions();
-  delete sessions[sid];
-  saveSessions(sessions);
-  if (getActiveId() === sid) {
-    const remaining = Object.keys(sessions);
-    if (remaining.length) {
-      setActiveId(remaining[0]);
-      switchSession(remaining[0]);
-    } else {
-      setActiveId(null);
-      createSession();
-    }
-  }
-  renderSessionList();
-}
-
-function switchSession(sid) {
-  setActiveId(sid);
-  renderSessionList();
-  loadSessionMessages();
-  updateContextBar();
-}
-
-function renderSessionList() {
-  const sessions = loadSessions();
-  const activeId = getActiveId();
-  sessionList.innerHTML = '';
-
-  Object.values(sessions).sort((a, b) => b.created - a.created).forEach(s => {
-    const div = document.createElement('div');
-    div.className = `session-item${s.id === activeId ? ' active' : ''}`;
-    div.onclick = () => switchSession(s.id);
-
-    const msgCount = s.messages ? s.messages.length : 0;
-    const tokCount = s.tokens || 0;
-    const time = new Date(s.created).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
-
-    div.innerHTML = `
-      <div class="sid">${escHtml(s.name)} <span class="sdel" onclick="deleteSession('${s.id}', event)">✕</span></div>
-      <div class="sinfo">
-        <span>💬 ${msgCount}</span>
-        <span>🔢 ${tokCount} tok</span>
-        <span>🕐 ${time}</span>
-      </div>
-    `;
-    sessionList.appendChild(div);
-  });
-}
-
-function loadSessionMessages() {
-  const sid = getActiveId();
-  const sessions = loadSessions();
-  const session = sessions[sid];
-  if (!session) return;
-
-  msgs.innerHTML = '';
-  if (session.messages) {
-    for (const m of session.messages) {
-      addMsg(m.role, m.content, m.meta || '');
-    }
-  }
-}
-
-function updateContextBar() {
-  const sid = getActiveId();
-  const sessions = loadSessions();
-  const session = sessions[sid];
-  if (!session) return;
-
-  const tokens = session.tokens || 0;
-  const msgCount = session.messages ? session.messages.length : 0;
-  const pct = Math.min((tokens / DEFAULT_CTX_MAX) * 100, 100);
-
-  document.getElementById('ctxTokens').textContent = tokens;
-  document.getElementById('totalTokens').textContent = tokens;
-  document.getElementById('msgCount').textContent = msgCount;
-
-  const fill = document.getElementById('ctxFill');
-  fill.style.width = pct + '%';
-  fill.className = 'ctx-bar-fill ' + (pct < 70 ? 'green' : pct < 90 ? 'yellow' : 'red');
-}
-
-function escHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-// ─── Messaging ───
-
-function addMsg(role, text, meta) {
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  div.textContent = text;
-  if (meta) {
-    const m = document.createElement('div');
-    m.className = 'meta';
-    m.innerHTML = meta.split('|').map(s => `<span>${s.trim()}</span>`).join('');
-    div.appendChild(m);
-  }
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-  return div;
-}
-
-let currentSSE = null;
-let sessionTokens = 0;
-
-function countTokens(text) {
-  // Rough estimate: ~4 chars per token for English/Dutch
-  return Math.ceil(text.length / 4);
-}
-
-async function send() {
-  const text = input.value.trim();
-  if (!text) return;
-
-  const sid = getActiveId();
-  const sessions = loadSessions();
-  const session = sessions[sid];
-
-  // Track user message
-  const userTokens = countTokens(text);
-  session.messages.push({ role: 'user', content: text });
-  session.tokens += userTokens;
-  saveSessions(sessions);
-
-  addMsg('user', text);
-  input.value = '';
-  input.style.height = 'auto';
-  sendBtn.disabled = true;
-
-  // Thinking indicator
-  const thinkingDiv = document.createElement('div');
-  thinkingDiv.className = 'msg assistant';
-  thinkingDiv.innerHTML = '<span>• • •</span>';
-  msgs.appendChild(thinkingDiv);
-  msgs.scrollTop = msgs.scrollHeight;
-
-  // Content div
-  const contentDiv = document.createElement('div');
-  contentDiv.className = 'msg assistant';
-  contentDiv.style.display = 'none';
-  const metaSpan = document.createElement('div');
-  metaSpan.className = 'meta';
-  msgs.appendChild(contentDiv);
-
-  let fullText = '';
-  let slot = '?', model = '', tokenCount = 0;
-  const startTime = Date.now();
-
-  try {
-    const evt = new EventSourcePolyfill(API_STREAM, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      payload: JSON.stringify({ message: text, sessionId: sid })
-    });
-    currentSSE = evt;
-
-    evt.onmessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-
-        if (data.type === 'route') {
-          slot = data.slot;
-          model = data.model;
-          thinkingDiv.remove();
-          contentDiv.style.display = 'block';
-        } else if (data.type === 'token') {
-          if (thinkingDiv.parentNode) thinkingDiv.remove();
-          contentDiv.style.display = 'block';
-          fullText += data.content;
-          contentDiv.textContent = fullText;
-          tokenCount = data.tokenCount || (tokenCount + 1);
-          const tps = data.tps ? `${data.tps} tok/s` : '';
-          metaSpan.textContent = `${tokenCount} tok | ${tps} | slot ${slot}`;
-          msgs.scrollTop = msgs.scrollHeight;
-        } else if (data.type === 'done') {
-          const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-          fullText = data.content || fullText;
-          tokenCount = data.tokenCount || tokenCount;
-          contentDiv.textContent = fullText;
-          const metaStr = `${tokenCount} tok | ${elapsed}s | slot ${slot} | ${model}`;
-          metaSpan.textContent = metaStr;
-          contentDiv.appendChild(metaSpan);
-
-          // Save assistant message
-          session.messages.push({ role: 'assistant', content: fullText, meta: metaStr });
-          session.tokens += (data.tokenCount || countTokens(fullText));
-          saveSessions(sessions);
-          updateContextBar();
-          renderSessionList();
-
-          evt.close();
-          status.innerHTML = '<span class="dot green"></span>Online';
-        }
-      } catch (parseErr) {
-        // Ignore parse errors on partial SSE
-      }
-    };
-
-    evt.onerror = () => {
-      evt.close();
-      if (thinkingDiv.parentNode) thinkingDiv.remove();
-      status.innerHTML = '<span class="dot red"></span>Offline';
-    };
-
-  } catch (e) {
-    if (thinkingDiv.parentNode) thinkingDiv.remove();
-    addMsg('assistant', `Error: ${e.message}`, '');
-    status.innerHTML = '<span class="dot red"></span>Offline';
-  }
-
-  sendBtn.disabled = false;
-  input.focus();
-  updateContextBar();
-  renderSessionList();
-}
-
-// ─── Auto-resize textarea ───
-input.addEventListener('input', () => {
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 150) + 'px';
-});
-
-// ─── Send on Enter ───
 input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+});
+
+// Close panels on escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.panel.open').forEach(p => p.classList.remove('open'));
+    document.getElementById('autocomplete').classList.remove('open');
+    document.getElementById('importModal').classList.remove('open');
   }
 });
 
-// ─── Minimal EventSource POST polyfill ───
-const EventSourcePolyfill = class {
-  constructor(url, opts = {}) {
-    this.url = url;
-    this.opts = opts;
-
-    fetch(this.url, {
-      method: opts.method || 'GET',
-      headers: opts.headers || {},
-      body: opts.payload || undefined,
-    }).then(async resp => {
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop();
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            this.onmessage?.({ data: line.slice(6) });
-          }
-        }
-      }
-    }).catch(() => this.onerror?.());
-  }
-  close() { /* cleanup */ }
-};
-
-// ─── Init ───
 (async () => {
   getOrCreateSession();
-  renderSessionList();
-  loadSessionMessages();
+  await renderSessionList();
+  await loadSessionMessages();
   updateContextBar();
   loadTools();
+  loadSettings();
 
   try {
     const r = await fetch('/health');
     const d = await r.json();
-    status.innerHTML = '<span class="dot green"></span>Online';
-    addMsg('assistant', `NPR-OS ready | state: ${d.state || 'active'}.`, '');
-  } catch {
-    status.innerHTML = '<span class="dot red"></span>Offline — check gateway';
-  }
+    setStatus('Online', 'g');
+    appendMsg('assistant', 'NPR-OS ready | state: ' + (d.state || 'active') + '.', '');
+  } catch { setStatus('Offline', 'r'); }
 })();
 </script>
 </body>

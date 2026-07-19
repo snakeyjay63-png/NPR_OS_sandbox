@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "savedAt": "2026-07-19T15:17:30.464Z",
+  "jobs": [
+    {
+      "id": "job_1784474250463_wwfmvrqg",
+      "name": "Quick interval test",
+      "schedule": {
+        "type": "every",
+        "value": 60000
+      },
+      "type": "systemEvent",
+      "payload": {
+        "text": "Hello from scheduler!"
+      },
+      "enabled": true,
+      "lastRun": null,
+      "nextRun": "2026-07-19T15:18:30.464Z",
+      "runCount": 0,
+      "maxRuns": 2,
+      "ttl": null,
+      "createdAt": "2026-07-19T15:17:30.463Z",
+      "expiresAt": null
+    },
+    {
+      "id": "job_1784474250463_bx2b58g2",
+      "name": "Daily morning scan",
+      "schedule": {
+        "type": "cron",
+        "value": "0 6 * * *"
+      },
+      "type": "nprCycle",
+      "payload": {
+        "noise": "Morning system scan",
+        "pattern": "scan -> analyze -> report",
+        "return": "memory/today.md"
+      },
+      "enabled": true,
+      "lastRun": null,
+      "nextRun": "2026-07-20T04:00:00.000Z",
+      "runCount": 0,
+      "maxRuns": null,
+      "ttl": null,
+      "createdAt": "2026-07-19T15:17:30.463Z",
+      "expiresAt": null
+    },
+    {
+      "id": "job_1784474250464_djnt3nh9",
+      "name": "Script job",
+      "schedule": {
+        "type": "every",
+        "value": 120000
+      },
+      "type": "script",
+      "payload": {
+        "script": "console.log(\"heartbeat\"); return { beat: Date.now() };"
+      },
+      "enabled": true,
+      "lastRun": null,
+      "nextRun": "2026-07-19T15:19:30.464Z",
+      "runCount": 0,
+      "maxRuns": null,
+      "ttl": null,
+      "createdAt": "2026-07-19T15:17:30.464Z",
+      "expiresAt": null
+    }
+  ],
+  "history": {}
+}
