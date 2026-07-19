@@ -1,1 +1,8 @@
 logs/
+data/scheduler.json
+data/sessions/
+*.bak
+*.swp
+*.swo
+node_modules/
+.env

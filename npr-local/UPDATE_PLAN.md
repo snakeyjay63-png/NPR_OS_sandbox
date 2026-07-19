@@ -2,30 +2,66 @@
 
 **Basis:** v2026.6.10-beta.2 (87b40c71)  
 **Fork:** 2026-07-16  
+**Versie:** v0.0.2  
+**Poort:** 17000  
 **Doel:** Eén-agent, lokaal-only runtime
 
 ---
 
-## Huidige Kern (v0.0.1)
+## Huidige Kern (v0.0.2 — juli 2026)
 
+### Core
 | Onderdeel | Bestand | Status |
 |-----------|---------|--------|
 | Entry + routes | `src/index.js` | ✅ |
 | HTTP gateway + tick interceptor | `src/interface/gateway.js` | ✅ |
 | Agent loop + chat handlers | `src/agent/loop.js` | ✅ |
 | NPR field engine | `src/field/npr.js` | ✅ |
-| Keyboard → NPR | `src/field/keyboard-npr.js` | ✅ |
-| Route core (register/manifest) | `src/routes/core.js` | ✅ |
-| Map registry | `src/routes/map-registry.js` | ✅ |
-| IPv6 mapper | `src/routes/map-to-ipv6.js` | ✅ |
-| Capabilities + select | `src/routes/capabilities.js` | ✅ |
 | Memory context | `src/memory/context.js` | ✅ |
-| Context sources | `src/sources/index.js` | ✅ |
-| Echo handler | `src/sources/echo/handler.js` | ✅ |
-| System scan | `src/sources/system-scan.js` | ✅ |
-| Workspace context | `src/workspace-context.js` | ✅ |
-| Config server (UI) | `src/server-config.js` | ✅ |
 | Boot (lifecycle) | `boot.js` | ✅ |
+
+### Agent Layer
+| Onderdeel | Bestand | Status |
+|-----------|---------|--------|
+| Session Manager (state machine) | `src/agent/session-manager.js` | ✅ |
+| Context Compression (śūnya) | `src/agent/context-compression.js` | ✅ |
+| Context Breath | `src/agent/context-breathe.js` | ✅ |
+| Tool Call Parser | `src/agent/tool-call-parser.js` | ✅ |
+| Tool Loop Guard | `src/agent/tool-loop-guard.js` | ✅ |
+
+### Memory
+| Onderdeel | Bestand | Status |
+|-----------|---------|--------|
+| Daily memory | `src/memory/daily.js` | ✅ |
+| Auto-promote | `src/memory/auto-promote.js` | ✅ |
+| FTS5 Memory Search | `src/memory/fts5-search.js` | ✅ |
+
+### Architecture
+| Onderdeel | Bestand | Status |
+|-----------|---------|--------|
+| Model Provider Abstraction | `src/model-provider/` | ✅ |
+| Skill System | `src/skills/` | ✅ |
+| Cron/Scheduler | `src/scheduler/` | ✅ |
+| Capability/Tool Registry | `src/capability-registry.cjs` | ✅ |
+| Runtime Monitor (SSE) | `src/runtime-monitor.cjs` | ✅ |
+| Message Queue | `src/queue/message-queue.cjs` | ✅ |
+
+### PLC Taalveld (0x38)
+| Onderdeel | Bestand | Status |
+|-----------|---------|--------|
+| ST Parser | `src/language-fields/plc/parser/st-parser.cjs` | ✅ |
+| Ladder Parser | `src/language-fields/plc/parser/ladder-parser.cjs` | ✅ |
+| Fault Tree Analyzer | `src/language-fields/plc/analyzer/fault-tree.cjs` | ✅ |
+| Canonical Representation | `src/language-fields/plc/canonical/representation.cjs` | ✅ |
+
+### Routes
+| Onderdeel | Bestand | Status |
+|-----------|---------|--------|
+| Dashboard | `src/routes/dashboard.js` | ✅ |
+| Memory REST | `src/routes/memory.js` | ✅ |
+| Models | `src/routes/models.js` | ✅ |
+| PLC | `src/routes/plc.cjs` | ✅ |
+| Queue | `src/routes/queue.js` | ✅ |
 
 ---
 
@@ -250,7 +286,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [ ] — OpenClaw CLI Pariteitslaag
+### [x] — OpenClaw CLI Pariteitslaag (gedaan 2026-07-16, zie Update Log hieronder)
 
 **Type:** add
 
@@ -273,7 +309,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [x] — Selective Import uit OpenClaw Bron
+### [x] — Selective Import uit OpenClaw Bron (gedaan 2026-07-16)
 
 **Type:** add
 
@@ -305,7 +341,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [ ] — Local Model Integration
+### [x] — Local Model Integration (gedaan — zie Stap 4 Model Router)
 
 **Type:** add
 
@@ -321,7 +357,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [ ] — Session Persistence
+### [x] — Session Persistence (gedaan — zie Stap 3)
 
 **Type:** add
 
@@ -337,7 +373,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [ ] — Local Knowledge Sources
+### [x] — Local Knowledge Sources (gedaan — zie Stap 1 + 10)
 
 **Type:** add
 
@@ -353,7 +389,7 @@ Gebruik dit sjabloon voor elke update:
 
 ---
 
-### [ ] — Canvas Integration
+### [ ] — Canvas Integration (nog te doen)
 
 **Type:** add
 
@@ -379,8 +415,8 @@ Zie `REDUCTIE_PLAN.md` voor 7 fasen.
 | 2 | Multi-agent | ❌ |
 | 3 | Mobile apps | ❌ |
 | 4 | Externe providers | ❌ |
-| 5 | Plugin system | ❌ |
-| 6 | Background jobs | ❌ |
+| 5 | Plugin system | ⚠️ skills partial |
+| 6 | Background jobs | ⚠️ scheduler partial |
 | 7 | Config schema's | ❌ |
 
 ---
