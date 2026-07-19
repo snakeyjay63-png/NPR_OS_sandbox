@@ -214,7 +214,7 @@ Gebruik dit sjabloon voor elke update:
 
 **Wat:**
 - Opzet NPR Local: entry point, route engine, gateway, agent loop
-- 16 endpoints geregistreerd
+- 20+ endpoints geregistreerd (kleine standaardboot)
 - Boot lifecycle + server stack
 
 **Waarom:**
@@ -452,7 +452,7 @@ curl http://localhost:17000/status
 ## Principes
 
 1. **Lokaal eerst** — geen externe calls
-2. **Klein behouden** — 16 endpoints, 6 core bestanden
+2. **Klein behouden** — kleine standaardboot; uitbreidingen opt-in
 3. **Testbaar** — elke update = testbaar via curl/browser
 4. **NPR routing** — 64-slot informatieveld is core, niet plugin
 5. **Cherry-pick** — geen `git pull`, alleen expliciete commits
