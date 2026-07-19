@@ -71,6 +71,8 @@ function handleFavicon(req, res) {
  * @addr 10.01.0.2 | fd00:npr:0001:000::2
  * @returns {http.Server} Running server instance
  */
+const SESSION_RETENTION_DAYS = parseInt(process.env.SESSION_RETENTION_DAYS) || 7;
+
 async function boot() {
   const routes = require('./routes/core');
 
@@ -167,11 +169,102 @@ async function boot() {
         { id: 'select', name: 'Select', desc: 'Wiskundige selectie via digitale root', usage: 'tool:select <doel>' },
         { id: 'workspace', name: 'Workspace', desc: 'Workspace info (+ --scan, --full)', usage: 'tool:workspace [--scan] [--full]' },
         { id: 'read', name: 'Read File', desc: 'Bestand inhoud ophalen', usage: 'tool:read <pad>' },
+        { id: 'write', name: 'Write File', desc: 'Bestand schrijven (workspace only)', usage: 'tool:write <pad> <inhoud>' },
+        { id: 'edit', name: 'Edit File', desc: 'Bestand bewerken (JSON: path, oldText, newText)', usage: 'tool:edit {"path":"...","oldText":"...","newText":"..."}' },
+        { id: 'exec', name: 'Shell Exec', desc: 'Shell command uitvoeren (30s timeout)', usage: 'tool:exec <command>' },
         { id: 'web-fetch', name: 'Web Fetch', desc: 'Webpagina ophalen (GET/POST)', usage: 'tool:web-fetch <url> [--raw]' },
         { id: 'echo', name: 'Echo', desc: 'Echo test / latency check', usage: 'tool:echo <message>' },
-        { id: 'memory', name: 'Memory', desc: 'Geowon memory query', usage: 'tool:memory <query>' },
+        { id: 'memory', name: 'Memory Search', desc: 'Zoeken in memory files', usage: 'tool:memory <query>' },
+        { id: 'hex_encode', name: 'Hex Encode', desc: 'Text → hex + digitale root', usage: 'tool:hex_encode <text>' },
+        { id: 'npr_trace', name: 'NPR Trace', desc: 'NPR routing trace', usage: 'tool:npr_trace <input>' },
       ],
     });
+  });
+
+  // ─── Model Router (0x1D) ───
+  // GET /models — discover available models + metrics
+  const modelRoutes = require('./routes/models');
+  register(0x1D, '/models', modelRoutes.handlerModels);
+  register(0x1D, '/models/metrics', modelRoutes.handlerModelMetrics);
+  register(0x1D, '/models/switch', modelRoutes.handlerSwitchModel);
+
+  // ─── Session Management ───
+  // GET /sessions — list all persisted sessions
+  register(0x1A, '/sessions', (req, res) => {
+    const { listPersistedSessions, cleanupOldSessions } = require('./agent/loop');
+    const sessions = listPersistedSessions();
+
+    // Auto-cleanup old sessions on first request
+    if (!globalThis._cleanupDone) {
+      cleanupOldSessions();
+      globalThis._cleanupDone = true;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      sessions,
+      total: sessions.length,
+      retention_days: SESSION_RETENTION_DAYS,
+    }, null, 2));
+  });
+
+  // GET /sessions/:id/history — get conversation history
+  register(0x1B, '/sessions/:id/history', (req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    const segments = url.pathname.split('/').filter(Boolean);
+    const sessionId = segments[1]; // /sessions/<id>/history
+    const limit = parseInt(url.searchParams.get('limit')) || 50;
+
+    if (!sessionId) {
+      return res.writeHead(400, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: 'session id required' })
+      );
+    }
+
+    const { loadSessionFromDisk, compressHistory } = require('./agent/loop');
+    const history = loadSessionFromDisk(sessionId);
+
+    if (!history) {
+      return res.writeHead(404, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: `session ${sessionId} not found` })
+      );
+    }
+
+    const compressed = compressHistory(history, limit * 2);
+    const recent = compressed.slice(-limit);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      session: sessionId,
+      total_messages: history.length,
+      returned: recent.length,
+      history: recent,
+    }, null, 2));
+  });
+
+  // DELETE /sessions/:id — delete a session
+  register(0x1C, '/sessions/:id', (req, res) => {
+    if (req.method !== 'DELETE') {
+      return res.writeHead(405, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: 'method not allowed, use DELETE' })
+      );
+    }
+
+    const url = new URL(req.url, 'http://localhost');
+    const segments = url.pathname.split('/').filter(Boolean);
+    const sessionId = segments[1];
+
+    const { deletePersistedSession } = require('./agent/loop');
+    const deleted = deletePersistedSession(sessionId);
+
+    if (!deleted) {
+      return res.writeHead(404, { 'Content-Type': 'application/json' }).end(
+        JSON.stringify({ error: `session ${sessionId} not found` })
+      );
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ session: sessionId, deleted: true }));
   });
 
   // ─── Filesystem Browse ───
@@ -604,6 +697,24 @@ async function boot() {
     const slot = parseSlot(ctx.url.searchParams.get('slot') ?? '0');
     const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
     res.json(getContextForRoute(slot, wsDir));
+  });
+
+  // GET/POST /memory/hexa — hexa-memory index + search (git-backed)
+  register(0x33, '/memory/hexa', (req, res) => {
+    const { getMemoryIndex, searchMemory, getGitTimeline } = require('./memory/git-hexa-memory');
+    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const q = url.searchParams.get('q');
+    const timeline = url.searchParams.get('timeline');
+
+    if (timeline) {
+      return res.json({ timeline: getGitTimeline(Number(timeline) || 20) });
+    }
+
+    if (q) {
+      return res.json({ query: q, results: searchMemory(q) });
+    }
+
+    res.json({ index: getMemoryIndex() });
   });
 
   register(0x34, '/warehouse', (req, res, ctx) => {

@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════════
 
 const path = require('path');
+const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
 const EventEmitter = require('events');
 const { nprRoute, getPhaseContext } = require('../field/npr');
@@ -14,6 +16,8 @@ const { fullScan, quickScan, scheduleScan } = require('../sources/system-scan');
 const { selectByGoal, listCapabilities } = require('../routes/capabilities');
 const { scanWorkspace, buildContextString } = require('../workspace-context');
 const { ContextBreath } = require('./context-breathe');
+const { parseToolCalls, detectResponseType, toolCallHash } = require('./tool-call-parser');
+const { ToolLoopGuard } = require('./tool-loop-guard');
 
 // ─── Agent Event Sink (OpenClaw pattern: agent-loop.ts) ───
 // Lifecycle events: agent_start → turn_start → message_start/end → tool_* → turn_end → agent_end
@@ -40,7 +44,7 @@ class AgentEventSink extends EventEmitter {
   }
 
   emitRaw(event) {
-    this.emit(event.type, event);
+    super.emit(event.type, event);
   }
 
   // Get buffered events (for /agent/debug, SSE streaming)
@@ -70,7 +74,22 @@ const defaultLoopConfig = {
   maxToolCallsPerTurn: 10,
   // Max turns per agent-loop (veiligheid)
   maxTurnsPerLoop: 20,
+  // Tool-loop guard config
+  loopGuard: {
+    windowSize: 10,
+    maxRepeat: 3,
+    maxPingPong: 3,
+    maxTotalCalls: 30,
+    mode: 'block', // warn | block | reflect | halt
+  },
+  // Auto-stop when model returns plain text (no tool calls)
+  autoStopOnText: true,
+  // Persist session state to disk after each turn
+  persistSession: true,
 };
+
+// Session retention: auto-delete sessions older than X days
+const SESSION_RETENTION_DAYS = parseInt(process.env.SESSION_RETENTION_DAYS) || 7;
 
 // ─── Runtime Config (hoisted for buildSystemPrompt) ───
 
@@ -120,8 +139,15 @@ ${phaseInfo?.tools ? 'Beschikbare fase-tools: ' + phaseInfo.tools.join(', ') : '
 - tool:select <doel> — wiskundige selectie via digitale root
 - tool:workspace — workspace info (optioneel: --scan, --full)
 - tool:read <pad> — bestand inhoud ophalen (injecteert in context)
+- tool:write <pad> <inhoud> — bestand schrijven (workspace only)
+- tool:edit {"path":"...","oldText":"...","newText":"..."} — bestand bewerken
+- tool:exec <command> — shell command (30s timeout)
 - tool:web-fetch <url> — webpagina ophalen (GET/POST)
 - tool:web-fetch --url=<url> --method=POST --body=... --raw
+- tool:echo <message> — echo test
+- tool:memory <query> — zoeken in memory files
+- tool:hex_encode <text> — text → hex + digitale root
+- tool:npr_trace <input> — NPR routing trace
 
 ## Capabilities (digitale root 1-9)
 1=Identiteit | 2=Communicatie | 3=Analyse | 4=Structuur
@@ -204,9 +230,19 @@ function getSession(id, options = {}) {
   }
   if (!sessions.has(id)) {
     const newSession = { id, turns: 0, createdAt: Date.now() };
+
+    // Load from disk first (fast, local)
+    const diskHistory = loadSessionFromDisk(id);
+    if (diskHistory && diskHistory.length > 0) {
+      newSession.history = diskHistory;
+      if (diskHistory.turns) newSession.turns = diskHistory.turns;
+      console.log(`[agent] Loaded ${diskHistory.messages?.length || diskHistory.length} messages from disk for ${id}`);
+    }
+
     sessions.set(id, newSession);
-    // Async: load history from geowon if requested
-    if (options.loadHistory) {
+
+    // Async: load history from geowon if requested and no disk history
+    if (options.loadHistory && (!newSession.history || newSession.history.length === 0)) {
       loadFromGeowon(id).then(history => {
         if (history.length > 0) {
           newSession.history = history;
@@ -342,56 +378,83 @@ async function syncTurnToGeowon(sessionId, userMsg, assistantMsg, route) {
 }
 
 // @addr 10.03.3.5 | fd00:npr:0003:003::5 — model call
+// Fallback models: tried in order if primary fails
+const MODEL_FALLBACKS = process.env.MODEL_FALLBACKS
+  ? process.env.MODEL_FALLBACKS.split(',')
+  : [];
+
 async function callModel(messages, options = {}) {
-  const { timeout = 120000, retry = 1, maxTokens = 2048 } = options;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeout);
+  const { timeout = 120000, retry = 1, maxTokens = 2048, model } = options;
+  const modelsToTry = [
+    model || MODEL_NAME,
+    ...MODEL_FALLBACKS.filter(m => m !== (model || MODEL_NAME)),
+  ];
 
-  for (let attempt = 0; attempt <= retry; attempt++) {
-    try {
-      const res = await fetch(MODEL_API, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: MODEL_NAME,
-          messages,
-          temperature: 0.3,
-          max_tokens: maxTokens,
-          enable_thinking: false,
-        }),
-        signal: controller.signal,
-      });
+  for (const modelName of modelsToTry) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeout);
+    const startMs = Date.now();
 
-      clearTimeout(timer);
+    for (let attempt = 0; attempt <= retry; attempt++) {
+      try {
+        console.log(`[model] ${modelName} (poging ${attempt + 1}/${retry + 1})`);
+        const res = await fetch(MODEL_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: modelName,
+            messages,
+            temperature: 0.3,
+            max_tokens: maxTokens,
+            enable_thinking: false,
+          }),
+          signal: controller.signal,
+        });
 
-      if (!res.ok) {
-        const errBody = await res.text().catch(() => '');
-        throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
-      }
-
-      const data = await res.json();
-      const msg = data.choices?.[0]?.message;
-      // Sommige modellen (Qwen3.6) retourneren alleen reasoning_content
-      const content = msg?.content || msg?.reasoning_content || '';
-
-      if (!content || typeof content !== 'string') {
-        throw new Error(`Ongeldig model response formaat: ${JSON.stringify(data).slice(0, 200)}`);
-      }
-
-      return content;
-    } catch (e) {
-      if (attempt < retry) {
-        console.warn(`[model] Poging ${attempt + 1} faalde, retry...: ${e.message}`);
-        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
-      } else {
         clearTimeout(timer);
-        if (e.name === 'AbortError') {
-          throw new Error(`Model timeout na ${timeout/1000}s`);
+
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          throw new Error(`HTTP ${res.status}: ${errBody.slice(0, 200)}`);
         }
-        throw e;
+
+        const data = await res.json();
+        const msg = data.choices?.[0]?.message;
+        // Sommige modellen (Qwen3.6) retourneren alleen reasoning_content
+        const content = msg?.content || msg?.reasoning_content || '';
+
+        if (!content || typeof content !== 'string') {
+          throw new Error(`Ongeldig model response formaat: ${JSON.stringify(data).slice(0, 200)}`);
+        }
+
+        // Record metrics
+        const elapsedMs = Date.now() - startMs;
+        const tokenCount = data.usage?.completion_tokens || content.split(/\s+/).length;
+        try { require('../routes/models').recordInference(modelName, tokenCount, elapsedMs, true); } catch {};
+
+        return { content, model: modelName };
+      } catch (e) {
+        if (attempt < retry) {
+          console.warn(`[model] ${modelName} poging ${attempt + 1} faalde, retry...: ${e.message}`);
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        } else {
+          clearTimeout(timer);
+          const errMsg = e.name === 'AbortError'
+            ? `Model timeout na ${timeout/1000}s`
+            : e.message;
+          console.warn(`[model] ${modelName} faalde: ${errMsg}`);
+          // Record failed metrics
+          const elapsedMs = Date.now() - startMs;
+          try { require('../routes/models').recordInference(modelName, 0, elapsedMs, false); } catch {};
+          // Continue to next fallback model
+          break;
+        }
       }
     }
   }
+
+  // All models failed
+  throw new Error(`Alle modellen faalde: ${modelsToTry.join(', ')}`);
 }
 
 // Streaming call to llama-server
@@ -512,13 +575,16 @@ async function agentTurn(sessionId, input, options = {}) {
   history.push({ role: 'user', content: input });
 
   // Call local model (skip on dryRun — test routing only)
-  let modelResponse;
+  let modelResponse, usedModel;
   if (maxTokens !== undefined) {
-    modelResponse = await callModel([sysMsg, ...history], { maxTokens });
+    const res = await callModel([sysMsg, ...history], { maxTokens });
+    modelResponse = res?.content || res; usedModel = res?.model;
   } else if (!dryRun) {
-    modelResponse = await callModel([sysMsg, ...history]);
+    const res = await callModel([sysMsg, ...history]);
+    modelResponse = res?.content || res; usedModel = res?.model;
   } else {
     modelResponse = '[dryRun] routing OK, model call skipped';
+    usedModel = MODEL_NAME;
   }
 
   // Log + sync to geowon (event-driven)
@@ -540,17 +606,24 @@ async function agentTurn(sessionId, input, options = {}) {
       levels: breathRoute.route.levels,
     },
     response: modelResponse,
-    model: MODEL_NAME,
+    model: usedModel || MODEL_NAME,
     origin: '0.0.0.0',
   };
 }
 
 // @addr 10.03.2.3 | fd00:npr:0003:001::3 — run single agent loop
 // Full OpenClaw pattern: two-loop with events, tool lifecycle, config hooks
+// Enhanced: structured tool-call parsing, loop guard, halt_reason, session persist
 async function runAgentLoop(sessionId, input, loopConfig = {}) {
   const config = { ...defaultLoopConfig, ...loopConfig };
   const sink = createAgentEventSink();
   const session = getSession(sessionId, { loadHistory: true });
+
+  // Tool-loop guard (loop-wide, not per-turn)
+  const guard = new ToolLoopGuard(config.loopGuard || {});
+
+  // Track full tool-call trace for replay
+  const toolTrace = [];
 
   // Emit agent_start
   await sink.emit('agent_start', { sessionId, input });
@@ -558,17 +631,28 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
   let turnCount = 0;
   let followUpInput = input;
   let lastResponse = null;
+  let haltReason = null;
 
   // ─── Buitenste loop: follow-up turns ───
-  while (true) {
+  while (!haltReason) {
     turnCount++;
     if (turnCount > config.maxTurnsPerLoop) {
+      haltReason = 'max_turns_reached';
       await sink.emit('agent_end', {
         sessionId,
-        reason: 'max_turns_reached',
+        reason: haltReason,
         turns: turnCount,
       });
-      return { error: `max turns (${config.maxTurnsPerLoop}) reached`, turns: turnCount, events: sink.getEvents() };
+      return {
+        session: sessionId,
+        error: `max turns (${config.maxTurnsPerLoop}) reached`,
+        turns: turnCount,
+        halt_reason: haltReason,
+        tool_trace: toolTrace,
+        guard_state: guard.getState(),
+        events: sink.getEvents(),
+        origin: '0.0.0.0',
+      };
     }
 
     // Prepare next turn (config hook)
@@ -615,12 +699,23 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
     await sink.emit('message_start', { sessionId, turn: turnCount });
 
     // Model call
-    let modelResponse;
+    let modelResponse, usedModel;
     try {
-      modelResponse = await callModel([sysMsg, ...history]);
+      const res = await callModel([sysMsg, ...history]);
+      modelResponse = res?.content || res; usedModel = res?.model;
     } catch (e) {
+      haltReason = 'model_error';
       await sink.emit('turn_end', { sessionId, turn: turnCount, error: e.message });
-      return { error: `model call failed: ${e.message}`, events: sink.getEvents() };
+      await sink.emit('agent_end', { sessionId, turns: turnCount, reason: haltReason });
+      return {
+        session: sessionId,
+        error: `model call failed: ${e.message}`,
+        turns: turnCount,
+        halt_reason: haltReason,
+        tool_trace: toolTrace,
+        events: sink.getEvents(),
+        origin: '0.0.0.0',
+      };
     }
 
     await sink.emit('message_end', { sessionId, turn: turnCount, response: modelResponse });
@@ -629,12 +724,59 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
     let toolCallCount = 0;
     let toolResponse = modelResponse;
 
-    while (toolResponse && toolResponse.startsWith('tool:') && toolCallCount < config.maxToolCallsPerTurn) {
-      toolCallCount++;
-      const toolMatch = toolResponse.match(/^tool:(\w+)\s*(.*)$/s);
-      if (!toolMatch) break;
+    while (toolCallCount < config.maxToolCallsPerTurn) {
+      // Parse tool calls (structured, multi-format)
+      const toolCalls = parseToolCalls(toolResponse);
+      if (toolCalls.length === 0) break; // no tool calls → stop inner loop
 
-      const [, toolName, toolArgs] = toolMatch;
+      toolCallCount++;
+      const call = toolCalls[0]; // Execute first call per iteration
+      const { name: toolName, args: toolArgs, hash: callHash } = call;
+
+      // ─── Tool-loop guard check ───
+      const guardResult = guard.checkBefore(toolName, toolArgs);
+      if (!guardResult.allowed) {
+        if (guardResult.action === 'halt') {
+          haltReason = 'loop_guard_halt';
+          await sink.emit('tool_guard_halt', {
+            sessionId,
+            turn: turnCount,
+            reason: guardResult.reason,
+            message: guardResult.message,
+          });
+          // Return guard message as response
+          toolResponse = guardResult.message;
+          break;
+        }
+
+        if (guardResult.action === 'block') {
+          // Feed reflection back to model instead of executing
+          const reflectMsg = guardResult.reflectPrompt || guardResult.message;
+          await sink.emit('tool_guard_block', {
+            sessionId,
+            turn: turnCount,
+            reason: guardResult.reason,
+            reflect: reflectMsg,
+          });
+
+          history.push({ role: 'assistant', content: toolResponse });
+          history.push({ role: 'user', content: `⚠ Tool call blocked: ${reflectMsg}` });
+
+          try {
+            const res2 = await callModel([sysMsg, ...history]);
+            toolResponse = res2?.content || res2;
+          } catch (e) {
+            toolResponse = `Error: ${e.message}`;
+            break;
+          }
+          continue; // Re-check new response
+        }
+
+        // warn/reflect: allow but inject warning
+        if (guardResult.reflectPrompt) {
+          history.push({ role: 'system', content: guardResult.reflectPrompt });
+        }
+      }
 
       // Before tool call hook
       if (config.beforeToolCall) {
@@ -657,6 +799,9 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
         toolResult = { error: `tool execution failed: ${e.message}` };
       }
 
+      // Record in guard (after execution)
+      guard.record(toolName, toolArgs);
+
       // Emit tool_execution_end
       await sink.emit('tool_execution_end', {
         sessionId,
@@ -670,23 +815,47 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
         toolResult = config.afterToolCall({ toolName, toolArgs, result: toolResult, turn: turnCount }) ?? toolResult;
       }
 
+      // Record in trace
+      toolTrace.push({
+        turn: turnCount,
+        iteration: toolCallCount,
+        tool: toolName,
+        args: toolArgs,
+        hash: callHash,
+        result: toolResult,
+        guard: guardResult,
+      });
+
       // Feed tool result back to model for next iteration
       const toolResultMsg = JSON.stringify(toolResult, null, 2);
       history.push({ role: 'assistant', content: toolResponse });
       history.push({ role: 'user', content: `Tool result: ${toolResultMsg}` });
 
       try {
-        toolResponse = await callModel([sysMsg, ...history]);
+        const res3 = await callModel([sysMsg, ...history]);
+        toolResponse = res3?.content || res3;
       } catch (e) {
         toolResponse = `Error: ${e.message}`;
         break;
       }
     }
 
-    // Store in session
+    // Store in session (full conversation + tool trace)
     if (!session.history) session.history = [];
     session.history.push(canonicalMessage('user', followUpInput));
+
+    // Store each tool call + result for future context
+    for (const t of toolTrace) {
+      session.history.push(canonicalMessage('assistant', `→ ${t.tool}(${t.args})`));
+      session.history.push(canonicalMessage('system', `[${t.tool}] ${JSON.stringify(t.result)}`));
+    }
+
     session.history.push(canonicalMessage('assistant', toolResponse));
+
+    // Keep history bounded to prevent context bloat
+    while (session.history.length > MAX_HISTORY * 2) {
+      session.history.shift();
+    }
 
     // Sync to geowon
     syncTurnToGeowon(sessionId, followUpInput, toolResponse, route);
@@ -701,13 +870,35 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
       response: toolResponse,
     });
 
-    // Check stop condition
+    // ─── Stop conditions ───
+
+    // 1. Custom stop hook
     if (config.shouldStopAfterTurn && config.shouldStopAfterTurn(lastResponse, turnCount)) {
+      haltReason = 'custom_stop';
       break;
     }
 
-    // Default: stop after one turn unless config says otherwise
-    break;
+    // 2. Auto-stop on plain text (no tool calls detected)
+    if (config.autoStopOnText) {
+      const response = detectResponseType(lastResponse);
+      if (response.type === 'text') {
+        haltReason = 'text_response';
+        break;
+      }
+    }
+
+    // 3. No auto-stop → loop continues with model output as next input
+    //    (only if autoStopOnText is false or tool calls still detected)
+  }
+
+  // ─── Session persistence ───
+  if (config.persistSession) {
+    persistSessionState(sessionId, session, {
+      halt_reason: haltReason,
+      tool_trace: toolTrace,
+      guard_state: guard.getState(),
+      turns: turnCount,
+    });
   }
 
   // Emit agent_end
@@ -715,13 +906,17 @@ async function runAgentLoop(sessionId, input, loopConfig = {}) {
     sessionId,
     turns: turnCount,
     finalResponse: lastResponse,
+    halt_reason: haltReason,
   });
 
   return {
     session: sessionId,
     turns: turnCount,
     response: lastResponse,
-    model: MODEL_NAME,
+    halt_reason: haltReason,
+    tool_trace: toolTrace,
+    guard_state: guard.getState(),
+    model: usedModel || MODEL_NAME,
     events: sink.getEvents(),
     origin: '0.0.0.0',
   };
@@ -882,8 +1077,203 @@ async function executeTool(toolName, args, sessionId) {
         req.end();
       });
     }
+    case 'echo':
+      return { tool: 'echo', message: args, timestamp: new Date().toISOString() };
+
+    case 'memory':
+    case 'memory_search': {
+      const query = args.trim();
+      if (!query) {
+        return { error: 'memory: query vereist', usage: 'tool:memory <query>' };
+      }
+      // Search daily memory files + MEMORY_claw.md
+      try {
+        const memoryDir = path.join(currentWorkspace || process.cwd(), 'memory');
+        const memoryFile = path.join(currentWorkspace || process.cwd(), 'MEMORY_claw.md');
+        const results = [];
+        const q = query.toLowerCase();
+
+        // Search MEMORY_claw.md
+        if (fs.existsSync(memoryFile)) {
+          const content = fs.readFileSync(memoryFile, 'utf8');
+          const lines = content.split('\n').filter(l => l.toLowerCase().includes(q));
+          if (lines.length > 0) {
+            results.push({ source: 'MEMORY_claw.md', matches: lines.slice(0, 10).join('\n') });
+          }
+        }
+
+        // Search daily files
+        if (fs.existsSync(memoryDir)) {
+          const files = fs.readdirSync(memoryDir)
+            .filter(f => f.endsWith('.md'))
+            .sort().reverse()
+            .slice(0, 7); // last 7 days
+          for (const f of files) {
+            const content = fs.readFileSync(path.join(memoryDir, f), 'utf8');
+            const lines = content.split('\n').filter(l => l.toLowerCase().includes(q));
+            if (lines.length > 0) {
+              results.push({ source: f, matches: lines.slice(0, 5).join('\n') });
+            }
+          }
+        }
+
+        return { tool: 'memory_search', query, results, count: results.length };
+      } catch (e) {
+        return { error: `memory search failed: ${e.message}` };
+      }
+    }
+
+    case 'write':
+    case '04': { // 04 = Structure
+      const parts = args.split(' ').slice(1); // first word is filename
+      let filePath = parts.shift();
+      const content = parts.join(' ') || '';
+
+      if (!filePath) {
+        return { error: 'write: bestandspad vereist', usage: 'tool:write <pad> <inhoud>' };
+      }
+
+      try {
+        const fullPath = path.isAbsolute(filePath)
+          ? filePath
+          : path.resolve(currentWorkspace || process.cwd(), filePath);
+
+        // Security: only allow writing within workspace
+        const allowedRoot = path.resolve(currentWorkspace || process.cwd());
+        if (!fullPath.startsWith(allowedRoot)) {
+          return { error: 'write: pad buiten workspace niet toegestaan' };
+        }
+
+        // Create parent dirs
+        const dir = path.dirname(fullPath);
+        if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+        }
+
+        fs.writeFileSync(fullPath, content, 'utf8');
+        return { tool: 'write', path: filePath, fullPath, size: content.length, success: true };
+      } catch (e) {
+        return { error: `write failed: ${e.message}`, path: filePath };
+      }
+    }
+
+    case 'edit':
+    case '05': { // 05 = Creation
+      // Simple edit: { path, oldText, newText } as JSON or "path|old|new" format
+      let editData;
+      try {
+        editData = JSON.parse(args);
+      } catch {
+        // Fallback: path|oldText|newText (URL-encoded)
+        const parts = args.split('|');
+        if (parts.length < 3) {
+          return { error: 'edit: invalid format', usage: 'tool:edit {"path":"...","oldText":"...","newText":"..."}' };
+        }
+        editData = { path: parts[0], oldText: parts[1], newText: parts.slice(2).join('|') };
+      }
+
+      const { path: editPath, oldText, newText } = editData;
+      if (!editPath || oldText === undefined) {
+        return { error: 'edit: path + oldText vereist' };
+      }
+
+      try {
+        const fullPath = path.isAbsolute(editPath)
+          ? editPath
+          : path.resolve(currentWorkspace || process.cwd(), editPath);
+
+        if (!fs.existsSync(fullPath)) {
+          return { error: `edit: bestand niet gevonden: ${editPath}` };
+        }
+
+        const content = fs.readFileSync(fullPath, 'utf8');
+        if (!content.includes(oldText)) {
+          return { error: `edit: oldText niet gevonden in ${editPath}` };
+        }
+
+        const newContent = content.replace(oldText, newText);
+        fs.writeFileSync(fullPath, newContent, 'utf8');
+        return { tool: 'edit', path: editPath, fullPath, success: true };
+      } catch (e) {
+        return { error: `edit failed: ${e.message}`, path: editPath };
+      }
+    }
+
+    case 'exec':
+    case '06': { // 06 = Integration
+      const cmd = args.trim();
+      if (!cmd) {
+        return { error: 'exec: command vereist', usage: 'tool:exec <command>' };
+      }
+
+      const { execSync } = require('child_process');
+      try {
+        const output = execSync(cmd, {
+          cwd: currentWorkspace || process.cwd(),
+          timeout: 30000,
+          maxBuffer: 1024 * 1024,
+          encoding: 'utf8',
+        });
+        return {
+          tool: 'exec',
+          command: cmd,
+          output: output.length > 2000 ? output.slice(0, 2000) + '\n\n... [geknipt]' : output,
+          exitCode: 0,
+          success: true,
+        };
+      } catch (e) {
+        return {
+          tool: 'exec',
+          command: cmd,
+          error: e.message,
+          exitCode: e.status ?? -1,
+          output: e.stdout ? e.stdout.toString() : '',
+          stderr: e.stderr ? e.stderr.toString() : '',
+          success: false,
+        };
+      }
+    }
+
+    case 'hex_encode':
+    case 'hexa': {
+      const text = args.trim();
+      if (!text) {
+        return { error: 'hex_encode: text vereist' };
+      }
+      const hex = Buffer.from(text, 'utf8').toString('hex');
+      const bytes = text.split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0'));
+      return {
+        tool: 'hex_encode',
+        text,
+        hex,
+        bytes,
+        digitalRoot: (() => {
+          let sum = 0;
+          for (const b of bytes) sum += parseInt(b, 16);
+          let dr = sum % 9 || 9;
+          while (dr > 9) dr = dr.toString().split('').reduce((a, b) => a + parseInt(b), 0);
+          return dr;
+        })(),
+      };
+    }
+
+    case 'npr_trace':
+    case 'trace': {
+      const traceInput = args.trim();
+      const route = traceInput ? nprRoute(traceInput) : nprRoute('trace-default');
+      return {
+        tool: 'npr_trace',
+        input: traceInput || 'default',
+        route: route.pattern,
+        slot: route.pattern?.slot,
+        phase: route.phase,
+        digitalRoot: route.pattern?.digitalRoot,
+        nprLogicValue: route.pattern?.nprLogicValue,
+      };
+    }
+
     default:
-      return { error: `unknown tool: ${toolName}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read', 'web-fetch'] };
+      return { error: `unknown tool: ${toolName}`, available: ['scan', '00', 'select', 'capabilities', 'workspace', 'read', 'web-fetch', 'echo', 'memory', 'write', 'edit', 'exec', 'hex_encode', 'npr_trace'] };
   }
 }
 
@@ -915,8 +1305,46 @@ async function handleAgentChat(req, res, ctx) {
   // Optional: max_tokens override, dryRun to skip model
   const maxTokens = data.maxTokens || data.max_tokens;
   const dryRun = data.dryRun === true;
+  const persist = data.persist === true;
 
-  const result = await agentTurn(sessionId, input, { maxTokens, dryRun });
+  // ─── Use full agent loop (tool-call → execute → re-prompt cycle) ───
+  let loopConfig = {
+    maxToolCallsPerTurn: 10,
+    maxTurnsPerLoop: 20,
+    autoStopOnText: true,
+    persistSession: persist,
+    loopGuard: {
+      windowSize: 10,
+      maxRepeat: 3,
+      maxPingPong: 3,
+      maxTotalCalls: 30,
+      mode: 'block',
+    },
+  };
+
+  // dryRun: skip model call entirely (routing test only)
+  if (dryRun) {
+    // Use simple agentTurn for dry-run (no loop overhead)
+    const result = await agentTurn(sessionId, input, { maxTokens, dryRun });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(result, null, 2));
+  }
+
+  const loopResult = await runAgentLoop(sessionId, input, loopConfig);
+
+  // Normalize response: preserve backward-compatible shape
+  const result = {
+    session: loopResult.session,
+    turn: loopResult.turns,
+    input,
+    response: loopResult.response,
+    model: loopResult.model,
+    origin: loopResult.origin,
+    // Loop metadata
+    halt_reason: loopResult.halt_reason,
+    tool_trace: loopResult.tool_trace,
+    guard_state: loopResult.guard_state,
+  };
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(result, null, 2));
@@ -1162,10 +1590,26 @@ async function handleAgentChatStream(req, res, ctx) {
     })}\n\n`);
   }
 
+  // Record metrics (streaming path)
+  const elapsedMs = Date.now() - startTime;
+  try { require('../routes/models').recordInference(MODEL_NAME, tokenCount, elapsedMs, !isAborted); } catch {};
+
   // Store (partial) response in session
   if (!session.history) session.history = [];
   session.history.push(canonicalMessage('user', input));
   session.history.push(canonicalMessage('assistant', fullResponse, { partial: isAborted }));
+
+  // Persist session to disk
+  try {
+    persistSessionState(sessionId, session, {
+      halt_reason: isAborted ? 'stream_aborted' : 'complete',
+      model: MODEL_NAME,
+      tokens: tokenCount,
+      elapsedMs,
+    });
+  } catch (e) {
+    console.error(`[agent/stream] Persist failed: ${e.message}`);
+  }
 
   // Sync full turn (user + assistant) to geowon
   if (fullResponse.length > 20) {
@@ -1173,6 +1617,223 @@ async function handleAgentChatStream(req, res, ctx) {
   }
 
   res.end();
+}
+
+// ─── Session Persistence ───
+// Disk-backed session state with halt_reason and tool trace
+// @addr 10.03.4.0 | fd00:npr:0004:000::0
+
+// Sessions stored outside the codebase (open-source clean)
+// Falls back to npr-local/sessions/ for dev, but prefers external memory dir
+const SESSIONS_DIR = process.env.NPR_SESSIONS_DIR ||
+  path.join(os.homedir(), '.openclaw', 'workspace', 'NPR_OS_sandbox-memory', 'sessions');
+
+/**
+ * Ensure sessions directory exists.
+ */
+function ensureSessionsDir() {
+  if (!fs.existsSync(SESSIONS_DIR)) {
+    fs.mkdirSync(SESSIONS_DIR, { recursive: true, mode: 0o755 });
+  }
+}
+
+/**
+ * Get path for a session state file.
+ * @param {string} sessionId
+ * @returns {string}
+ */
+function sessionStatePath(sessionId) {
+  return path.join(SESSIONS_DIR, `${sessionId}.json`);
+}
+
+/**
+ * Persist session state to disk.
+ * @param {string} sessionId
+ * @param {object} session - In-memory session object
+ * @param {object} meta - Additional metadata (halt_reason, tool_trace, etc.)
+ */
+function persistSessionState(sessionId, session, meta = {}) {
+  try {
+    ensureSessionsDir();
+    const state = {
+      sessionId,
+      turns: session.turns,
+      history: session.history || [],
+      halted_at: Date.now(),
+      halt_reason: meta.halt_reason || null,
+      tool_trace: meta.tool_trace || [],
+      guard_state: meta.guard_state || null,
+      turns_in_run: meta.turns || 0,
+      // SOURCE→ROUTE→RETURN trace preservation
+      route_trace: (session.history || []).map(h => ({
+        role: h.role,
+        slot: h.slot || null,
+        phase: h.phase || null,
+        timestamp: h.timestamp,
+      })),
+    };
+
+    const filePath = sessionStatePath(sessionId);
+    fs.writeFileSync(filePath, JSON.stringify(state, null, 2), 'utf8');
+    console.log(`[agent/persist] Session ${sessionId} saved → ${filePath}`);
+
+    // Hexa-memory: compress + git commit
+    try {
+      const { commitSessionMemory } = require('../memory/git-hexa-memory');
+      const result = commitSessionMemory(sessionId, state);
+      if (result.hash) {
+        console.log(`[agent/hexa] Session ${sessionId} → hexa-commit ${result.hash}`);
+      }
+    } catch (e) {
+      console.warn(`[agent/hexa] Git commit skipped: ${e.message}`);
+    }
+  } catch (e) {
+    console.error(`[agent/persist] Failed to save session ${sessionId}: ${e.message}`);
+  }
+}
+
+/**
+ * Load persisted session state from disk.
+ * @param {string} sessionId
+ * @returns {object|null} Session state or null if not found
+ */
+function loadSessionState(sessionId) {
+  try {
+    const filePath = sessionStatePath(sessionId);
+    if (!fs.existsSync(filePath)) return null;
+
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const state = JSON.parse(raw);
+
+    // Restore to in-memory session
+    const session = sessions.get(sessionId) || {
+      id: sessionId,
+      turns: 0,
+      history: [],
+    };
+    session.turns = state.turns || 0;
+    session.history = state.history || [];
+
+    return state;
+  } catch (e) {
+    console.error(`[agent/load] Failed to load session ${sessionId}: ${e.message}`);
+    return null;
+  }
+}
+
+/**
+ * List all persisted sessions.
+ * @returns {Array} Array of session summaries
+ */
+function listPersistedSessions() {
+  try {
+    ensureSessionsDir();
+    const files = fs.readdirSync(SESSIONS_DIR).filter(f => f.endsWith('.json'));
+    return files.map(f => {
+      const filePath = path.join(SESSIONS_DIR, f);
+      const stat = fs.statSync(filePath);
+      const sessionId = f.replace('.json', '');
+      try {
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const state = JSON.parse(raw);
+        return {
+          sessionId,
+          turns: state.turns,
+          historyLength: (state.history || []).length,
+          halt_reason: state.halt_reason,
+          halted_at: state.halted_at,
+          modified: stat.mtime.toISOString(),
+        };
+      } catch {
+        return {
+          sessionId,
+          error: 'unreadable',
+          modified: stat.mtime.toISOString(),
+        };
+      }
+    });
+  } catch (e) {
+    console.error(`[agent/list] Failed to list sessions: ${e.message}`);
+    return [];
+  }
+}
+
+/**
+ * Delete a persisted session.
+ * @param {string} sessionId
+ * @returns {boolean}
+ */
+function deletePersistedSession(sessionId) {
+  try {
+    const filePath = sessionStatePath(sessionId);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.error(`[agent/delete] Failed to delete session ${sessionId}: ${e.message}`);
+    return false;
+  }
+}
+
+/**
+ * Load session from disk (simplified wrapper).
+ * @param {string} sessionId
+ * @returns {Array|null} History array or null
+ */
+function loadSessionFromDisk(sessionId) {
+  const state = loadSessionState(sessionId);
+  return state?.history || null;
+}
+
+/**
+ * Clean up old sessions beyond retention period.
+ * @returns {number} Number of sessions deleted
+ */
+function cleanupOldSessions() {
+  const cutoff = Date.now() - (SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  let deleted = 0;
+
+  for (const session of listPersistedSessions()) {
+    if (session.halted_at && session.halted_at < cutoff) {
+      if (deletePersistedSession(session.sessionId)) {
+        deleted++;
+        console.log(`[agent/cleanup] Deleted old session: ${session.sessionId}`);
+      }
+    }
+  }
+
+  if (deleted > 0) {
+    console.log(`[agent/cleanup] Cleaned up ${deleted} sessions older than ${SESSION_RETENTION_DAYS} days`);
+  }
+  return deleted;
+}
+
+/**
+ * Compress conversation history for context window.
+ * Keeps recent messages, summarizes older ones.
+ * @param {Array} history - Full conversation history
+ * @param {number} maxMessages - Max messages to keep (default: MAX_HISTORY)
+ * @returns {Array} Compressed history
+ */
+function compressHistory(history, maxMessages = MAX_HISTORY) {
+  if (!history || history.length <= maxMessages) return history;
+
+  const recent = history.slice(-maxMessages);
+  const oldCount = history.length - maxMessages;
+
+  // Count tool calls and messages in the old portion
+  const oldToolCalls = history.slice(0, -maxMessages).filter(m => m.content?.includes('[tool'))?.length || 0;
+  const oldMessages = history.slice(0, -maxMessages).filter(m => m.role === 'user' || m.role === 'assistant')?.length || 0;
+
+  const summary = {
+    role: 'system',
+    content: `[Compressed history: ${oldCount} messages (${oldMessages} exchanges, ${oldToolCalls} tool calls) omitted for context window]`,
+    timestamp: new Date().toISOString(),
+  };
+
+  return [summary, ...recent];
 }
 
 module.exports = {
@@ -1192,4 +1853,12 @@ module.exports = {
   getContextBreath,
   getCurrentWorkspace: () => currentWorkspace,
   setCurrentWorkspace: (p) => { currentWorkspace = p; },
+  // Session persistence
+  persistSessionState,
+  loadSessionState,
+  loadSessionFromDisk,
+  listPersistedSessions,
+  deletePersistedSession,
+  cleanupOldSessions,
+  compressHistory,
 };

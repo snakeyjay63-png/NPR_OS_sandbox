@@ -67,9 +67,9 @@ function register(slot, path, handler) {
 
   PATH_TO_SLOT.set(path, slot);
 
-  // Check if path has parameters (:name)
+  // Check if path has parameters (:name) — supports hyphens, underscores, dots
   if (path.includes(':')) {
-    const pattern = new RegExp('^' + path.replace(/:\w+/g, '(\w+)') + '$');
+    const pattern = new RegExp('^' + path.replace(/:\w+/g, '([\\w-]+)') + '$');
     PATH_PARAM.set(pattern, { path, handler });
   } else {
     PATH_EXACT.set(path, handler);
