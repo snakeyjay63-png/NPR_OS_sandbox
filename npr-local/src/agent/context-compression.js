@@ -859,6 +859,43 @@ function estimateTokens(messages, method = 'rough') {
   return total;
 }
 
+/**
+ * Compression ratio → hexa-slot routing.
+ *
+ * Maps compression ratio (0.0–1.0) to NPR hexa slot (0x00–0x3F).
+ * High ratio (near 1.0) = low compression needed → expansion slots (0x30-0x3F)
+ * Low ratio (near 0.0) = high compression needed → compression slots (0x00-0x0F)
+ *
+ * @param {number} ratio - Compression ratio (0.0 = fully compressed, 1.0 = no compression)
+ * @returns {object} Hexa slot info
+ */
+function ratioToHexaSlot(ratio) {
+  // Clamp to [0, 1), then map to 0x00-0x3F
+  const clamped = Math.max(0, Math.min(0.999, ratio));
+  const slot = Math.floor(clamped * 0x40);
+  const slotHex = `0x${slot.toString(16).padStart(2, '0').toUpperCase()}`;
+  
+  // Route based on slot range
+  let route;
+  if (slot < 0x10) {
+    route = 'compress';      // 0x00-0x0F: aggressive compression zone
+  } else if (slot < 0x20) {
+    route = 'balance';       // 0x10-0x1F: balanced zone
+  } else if (slot < 0x30) {
+    route = 'expand';        // 0x20-0x2F: expansion zone
+  } else {
+    route = 'full';          // 0x30-0x3F: full capacity, no compression
+  }
+  
+  return {
+    slot,
+    slotHex,
+    ratio,
+    route,
+    description: `${slotHex} (${route}) — ${Math.round(ratio * 100)}% capacity`,
+  };
+}
+
 // ─── Exports ───
 
 module.exports = {
@@ -867,5 +904,6 @@ module.exports = {
   quickCompress,
   quickŚūnya,
   estimateTokens,
+  ratioToHexaSlot,
   DEFAULT_CONFIG,
 };
