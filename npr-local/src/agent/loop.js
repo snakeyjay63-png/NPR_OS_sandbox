@@ -687,6 +687,135 @@ function createAgentEventSink() {
   return new AgentEventSink();
 }
 
+// ─── Factory Integration (Auditable Inference) ───
+// Optionele NPR Factory: volledige audit trail van Source → Context → Inference → Eval → Distribution
+// Activeer via factory config, fallback naar directe callModel als factory niet beschikbaar
+
+let nprFactory = null;
+
+/**
+ * Initialize the NPR Factory for auditable inference.
+ * @param {Object} config - Factory configuration.
+ */
+function initFactory(config = {}) {
+  try {
+    const NPRFactory = require('../factory/index.cjs');
+    nprFactory = new NPRFactory({
+      modelEndpoint: config.modelEndpoint || MODEL_API,
+      temperature: config.temperature ?? 0.3,
+      maxTokens: config.maxTokens ?? 2048,
+      convergenceWindow: config.convergenceWindow || 5,
+      evaluation: config.evaluation || {},
+      distribution: config.distribution || { defaultRoute: 'direct' },
+    });
+    console.log('[Factory] Initialized for agent loop');
+    return nprFactory;
+  } catch (e) {
+    console.warn(`[Factory] Init failed, falling back to direct: ${e.message}`);
+    nprFactory = null;
+  }
+}
+
+/**
+ * Run a single agent turn through the factory (auditable).
+ * Falls back to standard agentTurn if factory not initialized.
+ * @param {string} sessionId - Session identifier.
+ * @param {string} input - User input.
+ * @param {Object} options - Turn options.
+ * @returns {Object} Turn result with audit trail.
+ */
+async function factoryAgentTurn(sessionId, input, options = {}) {
+  if (!nprFactory) {
+    console.warn('[Factory] Not initialized, using direct agentTurn');
+    return agentTurn(sessionId, input, options);
+  }
+
+  const session = getSession(sessionId, { loadHistory: true });
+  session.turns++;
+
+  // NPR route + workspace context
+  const route = nprRoute(input);
+  let workspaceContext = null;
+  try {
+    if (currentWorkspace) {
+      const ctx = await scanWorkspace(currentWorkspace);
+      workspaceContext = buildContextString(ctx);
+    }
+  } catch (e) { /* silent */ }
+
+  const breathRoute = getContextBreath().route(input);
+
+  // Build input payload for factory
+  const factoryInput = {
+    system: buildSystemPrompt(route, workspaceContext, breathRoute),
+    history: (session.history || []).slice(-MAX_HISTORY),
+    user: input,
+    route,
+    breath: breathRoute,
+  };
+
+  // Execute factory run
+  const result = await nprFactory.run(factoryInput);
+
+  if (!result.success) {
+    return { error: result.error, audit: result.audit };
+  }
+
+  // Log + sync
+  if (!session.history) session.history = [];
+  session.history.push(canonicalMessage('user', input));
+  session.history.push(canonicalMessage('assistant', result.output));
+  syncTurnToGeowon(sessionId, input, result.output, route);
+
+  return {
+    session: sessionId,
+    turn: session.turns,
+    input,
+    route,
+    response: result.output,
+    convergence: result.convergence,
+    audit: result.audit,
+    origin: 'factory',
+  };
+}
+
+/**
+ * Run iterative factory loop until convergence.
+ * @param {string} sessionId - Session identifier.
+ * * @param {string} input - Initial user input.
+ * @param {Object} options - Iteration options.
+ * @returns {Object} Final result with iteration chain.
+ */
+async function factoryIterativeTurn(sessionId, input, options = {}) {
+  if (!nprFactory) {
+    console.warn('[Factory] Not initialized');
+    return { error: 'Factory not initialized' };
+  }
+
+  const result = await nprFactory.runIterative(input, {
+    maxIterations: options.maxIterations || 10,
+    feedbackFn: options.feedbackFn,
+  });
+
+  // Persist final result to session
+  const session = getSession(sessionId);
+  if (!session.history) session.history = [];
+  session.history.push(canonicalMessage('user', input));
+  session.history.push(canonicalMessage('assistant', result.output || '[convergence chain]'));
+
+  return {
+    session: sessionId,
+    iterations: result.iterations,
+    chain: result.chain ? result.chain.map(r => ({
+      iteration: r.audit?.runId,
+      output: r.output,
+      convergence: r.convergence,
+    })) : [],
+    response: result.output,
+    origin: 'factory-iterative',
+  };
+}
+
 // @addr 10.03.1.5 | fd00:npr:0003:001::5 — agent turn (single turn, no loop)
 async function agentTurn(sessionId, input, options = {}) {
   const { maxTokens, dryRun } = options;
@@ -2043,4 +2172,8 @@ module.exports = {
   runAutoPromote,
   // Capability registry
   toolRegistry,
+  // Factory integration
+  initFactory,
+  factoryAgentTurn,
+  factoryIterativeTurn,
 };

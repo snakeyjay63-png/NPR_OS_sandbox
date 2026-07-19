@@ -23,11 +23,22 @@ const { discoverMaps } = require('./routes/map-to-ipv6');
 const { selectByGoal, listCapabilities, routeCapability } = require('./routes/capabilities');
 const BrowserBridge = require('./net/browser-bridge');
 const RuntimeMonitor = require('./runtime-monitor.cjs');
+const { getWorkspaceRoot, isInWorkspace } = require('./workspace-root.cjs');
 
 // ─── Runtime Monitor (live event bus) ───
 const runtimeMonitor = new RuntimeMonitor();
 
 // ─── Config ───
+
+// ─── Boot Profile (audit punt 2: conditional feature loading) ───
+// core = minimal (health, gateway, agent, memory)
+// agent = core + tools, sessions, models, queue
+// full = everything (dashboard, plc, hex-vm, bridge, doctor, etc.)
+const PROFILE = (process.env.NPR_PROFILE || 'full').toLowerCase();
+const PROFILE_CORE = PROFILE === 'core';
+const PROFILE_AGENT = PROFILE_CORE || PROFILE === 'agent';
+
+log.info('NPR-Local boot profile', { profile: PROFILE });
 
 const PORT = process.env.NPR_PORT || 17000;
 const HOST = process.env.HOST || '::1';
@@ -77,7 +88,16 @@ function handleFavicon(req, res) {
  */
 const SESSION_RETENTION_DAYS = parseInt(process.env.SESSION_RETENTION_DAYS) || 7;
 
+// Idempotency guard: prevent double-registration on re-boot / hot-reload / tests
+let _booted = false;
+
 async function boot() {
+  if (_booted) {
+    log.info('boot() called again — returning existing server');
+    return global.__nprServer;
+  }
+  _booted = true;
+
   const routes = require('./routes/core');
 
   // ─── Agent routes (slot 0x10–0x1F: Pattern phase) ───
@@ -134,14 +154,17 @@ async function boot() {
   });
 
   // ─── Context 64K: Harmonisch Blokmodel ───
+  // Singleton — state persists across requests
+  const context64kModule = require('./field/context-64k.cjs');
+  const context64k = new context64kModule.Context64K();
+
   register(0x36, '/context/64k', (req, res) => {
-    const { Context64K, FIELDS, BLOCK_SIZE, BLOCK_COUNT, MAX_CONTEXT_TOKENS, analyzeContext64K } = require('./field/context-64k.cjs');
-    const ctx = new Context64K();
+    const { FIELDS, BLOCK_SIZE, BLOCK_COUNT, MAX_CONTEXT_TOKENS, analyzeContext64K } = context64kModule;
 
     if (req.method === 'GET') {
       res.json({
-        status: ctx.status(),
-        validation: ctx.validate(),
+        status: context64k.status(),
+        validation: context64k.validate(),
         constants: { BLOCK_SIZE, BLOCK_COUNT, MAX_CONTEXT_TOKENS },
         fields: FIELDS,
       });
@@ -149,43 +172,46 @@ async function boot() {
       const { action, field, blocks, ratio } = req.body || {};
 
       if (action === 'allocate') {
-        const result = ctx.allocate(field, blocks);
-        res.json({ allocated: result, status: ctx.status(), validation: ctx.validate() });
+        const result = context64k.allocate(field, blocks);
+        res.json({ allocated: result, status: context64k.status(), validation: context64k.validate() });
       } else if (action === 'compact') {
-        const result = ctx.compact(field || 'recent', 'summary', ratio || 4);
-        res.json({ result, status: ctx.status(), validation: ctx.validate() });
+        const result = context64k.compact(field || 'recent', 'summary', ratio || 4);
+        res.json({ result, status: context64k.status(), validation: context64k.validate() });
       } else if (action === 'analyze') {
-        const result = analyzeContext64K(ctx);
-        res.json({ analysis: result, status: ctx.status() });
+        const result = analyzeContext64K(context64k);
+        res.json({ analysis: result, status: context64k.status() });
       } else if (action === 'reset') {
-        ctx.reset();
-        res.json({ status: ctx.status(), validation: ctx.validate() });
+        context64k.reset();
+        res.json({ status: context64k.status(), validation: context64k.validate() });
       } else {
         res.status(400).json({ error: 'require: {action: "allocate"|"compact"|"analyze"|"reset"}' });
       }
     }
   });
 
-  // ─── Tool Registry ───
-  // GET /tools — list all available tools (for chat UI autocomplete)
+  // ─── Tool Registry (audit punt 5: unified, was 0x14 static + 0x3B dynamic) ───
+  // GET /tools — merged: static tools + dynamic registry
   register(0x14, '/tools', (req, res) => {
-    res.json({
-      tools: [
-        { id: 'scan', name: 'System Scan', desc: 'Systeem scannen (quick of --full)', usage: 'tool:scan [--full] [--save]' },
-        { id: 'capabilities', name: 'Capabilities', desc: 'Alle capabilities tonen', usage: 'tool:capabilities' },
-        { id: 'select', name: 'Select', desc: 'Wiskundige selectie via digitale root', usage: 'tool:select <doel>' },
-        { id: 'workspace', name: 'Workspace', desc: 'Workspace info (+ --scan, --full)', usage: 'tool:workspace [--scan] [--full]' },
-        { id: 'read', name: 'Read File', desc: 'Bestand inhoud ophalen', usage: 'tool:read <pad>' },
-        { id: 'write', name: 'Write File', desc: 'Bestand schrijven (workspace only)', usage: 'tool:write <pad> <inhoud>' },
-        { id: 'edit', name: 'Edit File', desc: 'Bestand bewerken (JSON: path, oldText, newText)', usage: 'tool:edit {"path":"...","oldText":"...","newText":"..."}' },
-        { id: 'exec', name: 'Shell Exec', desc: 'Shell command uitvoeren (30s timeout)', usage: 'tool:exec <command>' },
-        { id: 'web-fetch', name: 'Web Fetch', desc: 'Webpagina ophalen (GET/POST)', usage: 'tool:web-fetch <url> [--raw]' },
-        { id: 'echo', name: 'Echo', desc: 'Echo test / latency check', usage: 'tool:echo <message>' },
-        { id: 'memory', name: 'Memory Search', desc: 'Zoeken in memory files', usage: 'tool:memory <query>' },
-        { id: 'hex_encode', name: 'Hex Encode', desc: 'Text → hex + digitale root', usage: 'tool:hex_encode <text>' },
-        { id: 'npr_trace', name: 'NPR Trace', desc: 'NPR routing trace', usage: 'tool:npr_trace <input>' },
-      ],
-    });
+    const risk = req.url.includes('?risk=') ? new URL(req.url, 'http://l').searchParams.get('risk') : null;
+    const source = req.url.includes('?source=') ? new URL(req.url, 'http://l').searchParams.get('source') : null;
+    const filter = risk ? { risk } : source ? { source } : {};
+    const dynamic = toolRegistry.list(filter);
+    const static = [
+      { id: 'scan', name: 'System Scan', desc: 'Systeem scannen (quick of --full)', usage: 'tool:scan [--full] [--save]' },
+      { id: 'capabilities', name: 'Capabilities', desc: 'Alle capabilities tonen', usage: 'tool:capabilities' },
+      { id: 'select', name: 'Select', desc: 'Wiskundige selectie via digitale root', usage: 'tool:select <doel>' },
+      { id: 'workspace', name: 'Workspace', desc: 'Workspace info (+ --scan, --full)', usage: 'tool:workspace [--scan] [--full]' },
+      { id: 'read', name: 'Read File', desc: 'Bestand inhoud ophalen', usage: 'tool:read <pad>' },
+      { id: 'write', name: 'Write File', desc: 'Bestand schrijven (workspace only)', usage: 'tool:write <pad> <inhoud>' },
+      { id: 'edit', name: 'Edit File', desc: 'Bestand bewerken (JSON: path, oldText, newText)', usage: 'tool:edit {"path":"...","oldText":"...","newText":"..."}' },
+      { id: 'exec', name: 'Shell Exec', desc: 'Shell command uitvoeren (30s timeout)', usage: 'tool:exec <command>' },
+      { id: 'web-fetch', name: 'Web Fetch', desc: 'Webpagina ophalen (GET/POST)', usage: 'tool:web-fetch <url> [--raw]' },
+      { id: 'echo', name: 'Echo', desc: 'Echo test / latency check', usage: 'tool:echo <message>' },
+      { id: 'memory', name: 'Memory Search', desc: 'Zoeken in memory files', usage: 'tool:memory <query>' },
+      { id: 'hex_encode', name: 'Hex Encode', desc: 'Text → hex + digitale root', usage: 'tool:hex_encode <text>' },
+      { id: 'npr_trace', name: 'NPR Trace', desc: 'NPR routing trace', usage: 'tool:npr_trace <input>' },
+    ];
+    res.json({ tools: [...static, ...dynamic], staticCount: static.length, dynamicCount: dynamic.length });
   });
 
   // ─── Model Router (0x1D) ───
@@ -210,14 +236,17 @@ async function boot() {
     });
   });
 
-  // ─── System Dashboard (local monitoring) ───
-  const dashboardRoutes = require('./routes/dashboard');
-  register(0x1E, '/system', dashboardRoutes.handlerDashboard);
-  register(0x1E, '/system/data', dashboardRoutes.handlerDashboardData);
-  register(0x1E, '/system/hex-grid', dashboardRoutes.handlerHexGrid);
-  register(0x1E, '/system/sessions', dashboardRoutes.handlerDashboardSessions);
-  register(0x1E, '/system/tools', dashboardRoutes.handlerDashboardTools);
-  register(0x1E, '/system/metrics/timeseries', dashboardRoutes.handlerDashboardMetricsTimeSeries);
+  // ─── System Dashboard (local monitoring) [profile: agent+] ───
+  // (audit punt 2: conditional loading — skipped in core profile)
+  if (!PROFILE_CORE) {
+    const dashboardRoutes = require('./routes/dashboard');
+    register(0x1E, '/system', dashboardRoutes.handlerDashboard);
+    register(0x1E, '/system/data', dashboardRoutes.handlerDashboardData);
+    register(0x1E, '/system/hex-grid', dashboardRoutes.handlerHexGrid);
+    register(0x1E, '/system/sessions', dashboardRoutes.handlerDashboardSessions);
+    register(0x1E, '/system/tools', dashboardRoutes.handlerDashboardTools);
+    register(0x1E, '/system/metrics/timeseries', dashboardRoutes.handlerDashboardMetricsTimeSeries);
+  }
 
   // ─── Session Management ───
   // GET /sessions — list all persisted sessions
@@ -303,21 +332,20 @@ async function boot() {
   register(0x2F, '/filesystem/browse', (req, res) => {
     const fs = require('fs');
     const url = new URL(req.url, 'http://localhost');
-    let targetDir = url.searchParams.get('path') || '/home/claw/.openclaw/workspace';
+    let targetDir = url.searchParams.get('path') || getWorkspaceRoot();
 
-    // Security: resolve and validate path
-    const realPath = path.resolve(targetDir);
-    const allowedRoot = path.resolve('/home/claw/.openclaw/workspace');
-    if (!realPath.startsWith(allowedRoot)) {
+    // Security: resolve and validate path with realpath containment check
+    const check = isInWorkspace(path.resolve(targetDir));
+    if (!check.allowed) {
       return res.writeHead(403, { 'Content-Type': 'application/json' }).end(
         JSON.stringify({ error: 'access denied: path outside workspace' })
       );
     }
 
     try {
-      const entries = fs.readdirSync(realPath, { withFileTypes: true });
+      const entries = fs.readdirSync(check.realPath, { withFileTypes: true });
       const items = entries.map(e => {
-        const p = path.join(realPath, e.name);
+        const p = path.join(check.realPath, e.name);
         const stat = fs.statSync(p);
         return {
           name: e.name,
@@ -332,7 +360,7 @@ async function boot() {
         return a.name.localeCompare(b.name);
       });
 
-      res.json({ dir: realPath, items });
+      res.json({ dir: check.realPath, items });
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: err.message }));
@@ -394,7 +422,12 @@ async function boot() {
   // ─── Llama proxy (OpenAI-compatible API) ───
   // Forwards /llama* → configured model endpoint (default: http://127.0.0.1:8765/v1/*)
   // NOTE: path ending with * triggers prefix match in dispatch
+  // Guardrails (audit punt 9): body limit, timeout, SSE streaming
   register(0x15, '/llama*', (req, res) => {
+    const MAX_BODY = 10 * 1024 * 1024; // 10 MB
+    const TIMEOUT_MS = 120_000; // 2 min — llm inference is slow
+    let bodySize = 0;
+
     const config = require('./routes/config-route').runtimeConfig;
     const endpoint = config.model?.endpoint || 'http://127.0.0.1:8765';
     const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -403,47 +436,61 @@ async function boot() {
 
     console.log(`[llama-proxy] ${req.method} ${urlObj.pathname} → ${targetUrl}`);
 
-    // For GET/HEAD, fetch immediately without waiting for body
-    if (req.method === 'GET' || req.method === 'HEAD') {
-      (async () => {
-        try {
-          const proxyRes = await fetch(targetUrl, { method: req.method });
-          const proxyBody = await proxyRes.text();
+    const timeoutId = setTimeout(() => {
+      if (!res.writableEnded) {
+        res.writeHead(504, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Proxy timeout', timeoutMs: TIMEOUT_MS }));
+      }
+    }, TIMEOUT_MS);
+
+    const proxyResponse = async (method, body) => {
+      try {
+        const fetchOpts = { method, headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(TIMEOUT_MS) };
+        const proxyRes = await fetch(targetUrl, fetchOpts);
+        const ct = proxyRes.headers.get('content-type') || 'application/json';
+
+        if (ct.includes('text/event-stream') || ct.includes('streaming')) {
+          // SSE streaming — pipe chunks directly, no buffer
           res.writeHead(proxyRes.status, {
-            'Content-Type': proxyRes.headers.get('content-type') || 'application/json',
-            'Access-Control-Allow-Origin': '*',
+            'Content-Type': ct,
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
           });
+          for await (const chunk of proxyRes.body) res.write(chunk);
+          res.end();
+        } else {
+          const proxyBody = await proxyRes.text();
+          res.writeHead(proxyRes.status, { 'Content-Type': ct });
           res.end(proxyBody);
-        } catch (err) {
-          console.error(`[llama-proxy] error:`, err.message);
+        }
+      } catch (err) {
+        console.error(`[llama-proxy] error:`, err.message);
+        if (!res.writableEnded) {
           res.writeHead(502, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Llama proxy failed', detail: err.message }));
         }
-      })();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    // GET/HEAD: no body
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      proxyResponse(req.method, undefined);
       return;
     }
 
-    // POST/PUT: collect body then fetch
+    // POST/PUT: collect body with size guard
     const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
+    req.on('data', chunk => { bodySize += chunk.length; chunks.push(chunk); });
     req.on('end', () => {
-      const body = Buffer.concat(chunks).toString();
-      (async () => {
-        try {
-          const fetchOpts = { method: req.method, headers: { 'Content-Type': 'application/json' }, body };
-          const proxyRes = await fetch(targetUrl, fetchOpts);
-          const proxyBody = await proxyRes.text();
-          res.writeHead(proxyRes.status, {
-            'Content-Type': proxyRes.headers.get('content-type') || 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          });
-          res.end(proxyBody);
-        } catch (err) {
-          console.error(`[llama-proxy] error:`, err.message);
-          res.writeHead(502, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Llama proxy failed', detail: err.message }));
-        }
-      })();
+      if (bodySize > MAX_BODY) {
+        clearTimeout(timeoutId);
+        return res.writeHead(413, { 'Content-Type': 'application/json' }).end(
+          JSON.stringify({ error: 'Request too large', limit: MAX_BODY })
+        );
+      }
+      proxyResponse(req.method, Buffer.concat(chunks).toString());
     });
   });
 
@@ -498,67 +545,86 @@ async function boot() {
   register(0x36, '/memory/git/search', (req, res) => memoryRoutes.searchGitMemory(req, res));
   register(0x36, '/memory/stats', (req, res) => memoryRoutes.getDailyStats(req, res));
 
-  // ─── Queue Routes (0x37) ───
-  const queueRoutes = require('./routes/queue');
-  register(0x37, '/queue/status', (req, res) => {
-    if (req.method === 'GET') return queueRoutes.getStatus(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/items', (req, res) => {
-    if (req.method === 'GET') return queueRoutes.getItems(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/items/:id', (req, res) => {
-    if (req.method === 'GET') return queueRoutes.getItem(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/enqueue', (req, res) => {
-    if (req.method === 'POST') {
-      runtimeMonitor.publish('queue:enqueue', { body: req.body });
-      return queueRoutes.enqueue(req, res);
-    }
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/pause', (req, res) => {
-    if (req.method === 'POST') return queueRoutes.pause(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/resume', (req, res) => {
-    if (req.method === 'POST') return queueRoutes.resume(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
-  register(0x37, '/queue/clear', (req, res) => {
-    if (req.method === 'POST') return queueRoutes.clear(req, res);
-    res.status(405).json({ error: 'Method not allowed' });
-  });
+  // ─── Queue Routes (0x37) [profile: agent+] ───
+  if (!PROFILE_CORE) {
+    const queueRoutes = require('./routes/queue');
+    register(0x37, '/queue/status', (req, res) => {
+      if (req.method === 'GET') return queueRoutes.getStatus(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/items', (req, res) => {
+      if (req.method === 'GET') return queueRoutes.getItems(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/items/:id', (req, res) => {
+      if (req.method === 'GET') return queueRoutes.getItem(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/enqueue', (req, res) => {
+      if (req.method === 'POST') {
+        runtimeMonitor.publish('queue:enqueue', { body: req.body });
+        return queueRoutes.enqueue(req, res);
+      }
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/pause', (req, res) => {
+      if (req.method === 'POST') return queueRoutes.pause(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/resume', (req, res) => {
+      if (req.method === 'POST') return queueRoutes.resume(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+    register(0x37, '/queue/clear', (req, res) => {
+      if (req.method === 'POST') return queueRoutes.clear(req, res);
+      res.status(405).json({ error: 'Method not allowed' });
+    });
+  }
 
-  // ─── PLC Taalveld Routes (0x38) ───
-  const plcRoutes = require('./routes/plc.cjs');
-  register(0x38, '/plc/parse', async (req, res) => {
-    runtimeMonitor.publish('plc:parse', { method: req.method });
-    return plcRoutes.handlerParse(req, res);
-  });
-  register(0x38, '/plc/parse-ladder', plcRoutes.handlerParseLadder);
-  register(0x38, '/plc/convert', plcRoutes.handlerConvert);
-  register(0x38, '/plc/io-map', plcRoutes.handlerIoMap);
-  register(0x38, '/plc/trace', plcRoutes.handlerTrace);
-  register(0x38, '/plc/analyze', plcRoutes.handlerAnalyze);
-  register(0x38, '/plc/fault-tree', plcRoutes.handlerFaultTree);
-  register(0x38, '/plc/status', plcRoutes.handlerStatus);
+  // ─── PLC Taalveld Routes (0x38) [profile: full] ───
+  if (!PROFILE_AGENT) {
+    const plcRoutes = require('./routes/plc.cjs');
+    register(0x38, '/plc/parse', async (req, res) => {
+      runtimeMonitor.publish('plc:parse', { method: req.method });
+      return plcRoutes.handlerParse(req, res);
+    });
+    register(0x38, '/plc/parse-ladder', plcRoutes.handlerParseLadder);
+    register(0x38, '/plc/convert', plcRoutes.handlerConvert);
+    register(0x38, '/plc/io-map', plcRoutes.handlerIoMap);
+    register(0x38, '/plc/trace', plcRoutes.handlerTrace);
+    register(0x38, '/plc/analyze', plcRoutes.handlerAnalyze);
+    register(0x38, '/plc/fault-tree', plcRoutes.handlerFaultTree);
+    register(0x38, '/plc/status', plcRoutes.handlerStatus);
+  }
 
-  // ─── Runtime Events (0x39) ───
-  const { openRuntimeEventStream, handleRuntimeREST } = require('./routes/runtime-events');
-  register(0x39, '/api/runtime/stream', openRuntimeEventStream(runtimeMonitor));
-  register(0x39, '/api/runtime/snapshot', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
-  register(0x39, '/api/runtime/sessions', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
-  register(0x39, '/api/runtime/slots', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
-  register(0x39, '/api/runtime/events', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+  // ─── Runtime Events (0x39) [profile: agent+] ───
+  if (!PROFILE_CORE) {
+    const { openRuntimeEventStream, handleRuntimeREST } = require('./routes/runtime-events');
+    register(0x39, '/api/runtime/stream', openRuntimeEventStream(runtimeMonitor));
+    register(0x39, '/api/runtime/snapshot', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+    register(0x39, '/api/runtime/sessions', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+    register(0x39, '/api/runtime/slots', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+    register(0x39, '/api/runtime/events', (req, res) => handleRuntimeREST(runtimeMonitor)(req, res));
+  }
 
-  // GET /doctor — self-diagnose + repair (openclaw doctor)
-  register(0x17, '/doctor', require('./routes/doctor').handler);
+  // ─── NPR Factory (0x3A) [profile: agent+] ───
+  if (!PROFILE_CORE) {
+    const { handleRun, handleIterative, handleArchive, handleReset, handleStatus } = require('./routes/factory');
+    register(0x3A, '/factory/run', handleRun);
+    register(0x3A, '/factory/iterative', handleIterative);
+    register(0x3A, '/factory/archive', handleArchive);
+    register(0x3A, '/factory/reset', handleReset);
+    register(0x3A, '/factory/status', handleStatus);
+  }
 
-  // GET/POST /tool/exec — system tool integration (bluetoothctl, tmux, lazygit, ffmpeg, htop, git)
-  register(0x19, '/tool/exec', require('./routes/tool-exec').handler);
+  // ─── Diagnostics + Tools [profile: agent+] ───
+  if (!PROFILE_CORE) {
+    // GET /doctor — self-diagnose + repair (openclaw doctor)
+    register(0x17, '/doctor', require('./routes/doctor').handler);
+
+    // GET/POST /tool/exec — system tool integration (bluetoothctl, tmux, lazygit, ffmpeg, htop, git)
+    register(0x19, '/tool/exec', require('./routes/tool-exec').handler);
+  }
 
   // POST /tty/agent — terminal agent turn (for --tty mode)
   register(0x18, '/tty/agent', (req, res) => {
@@ -616,38 +682,37 @@ async function boot() {
     });
   });
 
-  // ─── Chat UI (GET = HTML, POST/other = agent handler from priority 16) ───
-  // Note: handleAgentChat already registered at priority 16 above
-  // This priority-0 handler serves the HTML page on GET requests only
-  register(0x00, '/agent/chat', (req, res) => {
+  // ─── Chat UI + API (audit punt 5: unified handler, was 0x10 + 0x00 duplicate) ───
+  // GET → HTML page; POST/PUT → agent handler
+  register(0x10, '/agent/chat', (req, res) => {
     if (req.method === 'GET') {
       const fs = require('fs');
       const chatPath = path.join(__dirname, '..', 'public', 'chat.html');
       if (fs.existsSync(chatPath)) {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         fs.createReadStream(chatPath).pipe(res);
-      } else {
-        res.writeHead(404, { 'Content-Type': 'text/html' });
-        res.end('<h1>Chat not found</h1>');
+        return;
       }
-    } else {
-      // POST/PUT → fall through to handleAgentChat (priority 16)
-      runtimeMonitor.publish('chat:inbound', { method: req.method });
-      handleAgentChat(req, res);
     }
+    // POST/PUT/agent → unified agent handler
+    runtimeMonitor.publish('chat:inbound', { method: req.method });
+    handleAgentChat(req, res);
   });
 
-  // ─── Settings UI ───
-  register(0x00, '/config', (req, res) => {
-    const fs = require('fs');
-    const configPath = path.join(__dirname, '..', 'public', 'config-llama.html');
-    if (fs.existsSync(configPath)) {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      fs.createReadStream(configPath).pipe(res);
-    } else {
-      res.writeHead(404, { 'Content-Type': 'text/html' });
-      res.end('<h1>Config not found</h1>');
+  // ─── Config UI + API (audit punt 5: unified handler, was 0x15 + 0x00 duplicate) ───
+  // GET → HTML page if Accept=text/html, else JSON config
+  const configHandler = require('./routes/config-route').handler;
+  register(0x15, '/config', (req, res) => {
+    if (req.method === 'GET' && (req.headers['accept'] || '').includes('text/html')) {
+      const fs = require('fs');
+      const configPath = path.join(__dirname, '..', 'public', 'config-llama.html');
+      if (fs.existsSync(configPath)) {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        fs.createReadStream(configPath).pipe(res);
+        return;
+      }
     }
+    configHandler(req, res);
   });
 
   // ─── Verificatie endpoint ───
@@ -721,20 +786,22 @@ async function boot() {
   register(0x3D, '/llama/stream', llamaControl.handlerStream);
   register(0x3D, '/llama/probe', llamaControl.handlerProbe);
 
-  // ─── NPR Hex VM (slot 63 — assembly sandbox) ───
-  const hexVm = require('./routes/hex-vm');
-  register(0x3F, '/hex-vm/status', hexVm.handlerStatus);
-  register(0x3F, '/hex-vm/opcode', hexVm.handlerOpcode);
-  register(0x3F, '/hex-vm/assemble', hexVm.handlerAssemble);
-  register(0x3F, '/hex-vm/run', hexVm.handlerRun);
-  register(0x3F, '/hex-vm/execute', hexVm.handlerExecute);
-  register(0x3F, '/hex-vm/disassemble', hexVm.handlerDisassemble);
+  // ─── NPR Hex VM (slot 63 — assembly sandbox) [profile: full] ───
+  if (!PROFILE_AGENT) {
+    const hexVm = require('./routes/hex-vm');
+    register(0x3F, '/hex-vm/status', hexVm.handlerStatus);
+    register(0x3F, '/hex-vm/opcode', hexVm.handlerOpcode);
+    register(0x3F, '/hex-vm/assemble', hexVm.handlerAssemble);
+    register(0x3F, '/hex-vm/run', hexVm.handlerRun);
+    register(0x3F, '/hex-vm/execute', hexVm.handlerExecute);
+    register(0x3F, '/hex-vm/disassemble', hexVm.handlerDisassemble);
+  }
 
   // ─── Memory API (read-only viewer routes) ───
   // Files accessed via API route, not bundled into npr-local.
   // Validates the full connection path: browser → runtime → workspace.
   register(0x35, '/api/memory/surface', (req, res) => {
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     const memDir = path.join(wsDir, 'memory');
     const fs = require('fs');
     try {
@@ -760,7 +827,7 @@ async function boot() {
   });
 
   register(0x35, '/api/memory/deep', (req, res) => {
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     const fs = require('fs');
     try {
       const f = path.join(wsDir, 'MEMORY_claw.md');
@@ -772,7 +839,7 @@ async function boot() {
   });
 
   register(0x35, '/api/memory/bedrock', (req, res) => {
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     const fs = require('fs');
     try {
       const files = ['SOUL.md', 'USER.md', 'IDENTITY.md'];
@@ -796,18 +863,23 @@ async function boot() {
   });
 
   register(0x35, '/api/memory/file', (req, res, ctx) => {
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     const name = ctx.url.searchParams.get('name');
     const fs = require('fs');
     if (!name) return res.json({ error: 'name required' });
     try {
-      // Sanitize: only allow .md files from memory/ or workspace root
-      const safeName = name.replace(/\.\./g, '').replace(/^\//, '');
-      let p = path.join(wsDir, 'memory', safeName);
-      if (!fs.existsSync(p)) p = path.join(wsDir, safeName);
+      // Containment check: resolve path and verify it stays within workspace
+      let p = path.join(wsDir, 'memory', name);
+      if (!fs.existsSync(p)) p = path.join(wsDir, name);
       if (!fs.existsSync(p)) return res.json({ error: 'file not found' });
-      const c = fs.readFileSync(p, 'utf8');
-      res.json({ content: c, lines: c.split('\n').length, path: p });
+
+      const check = isInWorkspace(p);
+      if (!check.allowed) {
+        return res.json({ error: 'access denied: path outside workspace' });
+      }
+
+      const c = fs.readFileSync(check.realPath, 'utf8');
+      res.json({ content: c, lines: c.split('\n').length, path: check.realPath });
     } catch (e) {
       res.json({ error: e.message });
     }
@@ -828,7 +900,7 @@ async function boot() {
   // ─── Context endpoints ───
   register(0x30, '/context', (req, res, ctx) => {
     const slot = parseSlot(ctx.url.searchParams.get('slot') ?? '0');
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     res.json(getContextForRoute(slot, wsDir));
   });
 
@@ -851,7 +923,7 @@ async function boot() {
   });
 
   register(0x34, '/warehouse', (req, res, ctx) => {
-    const wsDir = process.env.WORKSPACE || path.join(__dirname, '..', '..', '..');
+    const wsDir = getWorkspaceRoot();
     res.json({ warehouse: listWarehouse(wsDir), phases: PHASE_CONTEXT });
   });
 
@@ -935,10 +1007,24 @@ async function boot() {
     res.json({ goal, selection: selectByGoal(goal) });
   });
 
-  // ─── Sessions ───
-  register(0x0A, '/sessions', (req, res, ctx) => {
+  // ─── Sessions (audit punt 5: unified handler, was 0x1A persisted + 0x0A in-memory) ───
+  register(0x1A, '/sessions', (req, res, ctx) => {
     if (req.method === 'GET') {
-      res.json({ sessions: listSessions(), count: listSessions().length });
+      // Unified: return both persisted + in-memory runtime sessions
+      const { listPersistedSessions, cleanupOldSessions } = require('./agent/loop');
+      const persisted = listPersistedSessions();
+      const runtime = listSessions();
+      if (!globalThis._cleanupDone) {
+        cleanupOldSessions();
+        globalThis._cleanupDone = true;
+      }
+      res.json({
+        sessions: persisted,
+        runtime: runtime,
+        total: persisted.length,
+        runtimeCount: runtime.length,
+        retention_days: SESSION_RETENTION_DAYS,
+      });
     } else if (req.method === 'POST') {
       const { sourceId, newId } = req.body;
       if (!sourceId) return res.status(400).json({ error: 'sourceId required' });
@@ -1596,56 +1682,68 @@ function enterHTML(req, res) {
   res.end(html);
 }
 
-// ─── Uncaught exception handler (global safety net) ───
+// ─── Lifecycle: graceful shutdown coordinator ───
 // @addr 10.01.0.9 — process-level error boundary
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  log.info(`Shutdown triggered by ${signal}`);
+
+  const server = global.__nprServer;
+  if (server) {
+    server.close(() => {
+      log.info('HTTP server closed');
+    });
+    // Force close after 3s
+    setTimeout(() => process.exit(1), 3000).unref();
+  }
+
+  if (gateway) {
+    try { await gateway.stop(); } catch { /* ignore */ }
+  }
+
+  setTimeout(() => process.exit(0), 2000).unref();
+}
+
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught exception:', err.message, err.stack?.split('\n')[1]);
   log.error('Uncaught exception', { message: err.message, stack: err.stack?.split('\n').slice(0, 3).join(' | ') });
-  // Graceful shutdown — do NOT exit immediately, let pending requests finish
-  const timer = setTimeout(() => {
-    log.error('Force shutdown after 5s timeout');
-    process.exit(1);
-  }, 5000);
-  timer.unref();
+  gracefulShutdown('uncaughtException').catch(() => process.exit(1));
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   log.error('Unhandled rejection', { reason: String(reason) });
 });
 
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
 // ─── Direct run ───
 
-if (require.main === module) {
+async function main() {
   const args = process.argv.slice(2);
-  
+
   if (args.includes('--tty') || args.includes('-t')) {
-    // Terminal mode — fysiek toetsenbord → NPR field
     const terminal = require('./terminal');
-    
+
     if (terminal.initTTY()) {
       console.log('Terminal mode active — press ESC to quit');
-    } else {
-      console.log('TTY mode failed — falling back to HTTP server');
-      const server = boot();
-      process.on('SIGINT', () => {
-        console.log('\nShutting down...');
-        server.close(() => process.exit(0));
-      });
+      return;
     }
-  } else {
-    // HTTP mode (default)
-    const server = boot();
-
-    process.on('SIGINT', () => {
-      console.log('\nShutting down...');
-      server.close(() => process.exit(0));
-    });
-
-    process.on('SIGTERM', () => {
-      console.log('\nShutting down...');
-      server.close(() => process.exit(0));
-    });
+    console.log('TTY mode failed — falling back to HTTP server');
   }
+
+  const server = await boot();
+  log.info(`NPR Local listening on ${HOST}:${PORT}`);
+}
+
+if (require.main === module) {
+  main().catch((error) => {
+    log.error('Boot failed', { error: error.stack || error.message });
+    process.exit(1);
+  });
 }
 
 module.exports = { boot, verifyHTML };
