@@ -860,21 +860,27 @@ function estimateTokens(messages, method = 'rough') {
 }
 
 /**
- * Compression ratio → hexa-slot routing.
+ * Context headroom ratio → hexa-slot routing.
  *
- * Maps compression ratio (0.0–1.0) to NPR hexa slot (0x00–0x3F).
- * High ratio (near 1.0) = low compression needed → expansion slots (0x30-0x3F)
- * Low ratio (near 0.0) = high compression needed → compression slots (0x00-0x0F)
+ * Maps headroom ratio (0.0–1.0) to NPR hexa slot (0x00–0x3F).
+ *   headroomRatio = 1 - (usedTokens / contextLimit)
  *
- * @param {number} ratio - Compression ratio (0.0 = fully compressed, 1.0 = no compression)
- * @returns {object} Hexa slot info
+ * Low ratio (near 0.0) = tight context → compress slots (0x00-0x0F)
+ * High ratio (near 1.0) = open context → full slots (0x30-0x3F)
+ *
+ * @param {number} headroomRatio - Available capacity ratio (0.0 = full, 1.0 = empty)
+ * @returns {object} Hexa slot info (all values based on normalized input)
  */
-function ratioToHexaSlot(ratio) {
-  // Clamp to [0, 1), then map to 0x00-0x3F
-  const clamped = Math.max(0, Math.min(0.999, ratio));
-  const slot = Math.floor(clamped * 0x40);
+function capacityRatioToHexaSlot(headroomRatio) {
+  // Guard: NaN → treat as 0 (full context, compress)
+  if (typeof headroomRatio !== 'number' || Number.isNaN(headroomRatio)) {
+    headroomRatio = 0;
+  }
+  // Clamp to [0, 1)
+  const norm = Math.max(0, Math.min(0.999, headroomRatio));
+  const slot = Math.floor(norm * 0x40);
   const slotHex = `0x${slot.toString(16).padStart(2, '0').toUpperCase()}`;
-  
+
   // Route based on slot range
   let route;
   if (slot < 0x10) {
@@ -886,14 +892,22 @@ function ratioToHexaSlot(ratio) {
   } else {
     route = 'full';          // 0x30-0x3F: full capacity, no compression
   }
-  
+
   return {
     slot,
     slotHex,
-    ratio,
+    headroomRatio: norm,
     route,
-    description: `${slotHex} (${route}) — ${Math.round(ratio * 100)}% capacity`,
+    description: `${slotHex} (${route}) — ${Math.round(norm * 100)}% capacity`,
   };
+}
+
+/**
+ * @deprecated Use capacityRatioToHexaSlot instead.
+ * Kept for backward compatibility during transition.
+ */
+function ratioToHexaSlot(ratio) {
+  return capacityRatioToHexaSlot(ratio);
 }
 
 // ─── Exports ───
